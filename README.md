@@ -1,36 +1,135 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EVENTUS — демо платформы для организации мероприятий
 
-## Getting Started
+Кликабельный прототип маркетплейса услуг для свадеб и тоев в Кыргызстане (старт: Бишкек).
 
-First, run the development server:
+Путь клиента:
+1. Клиент пишет или говорит, что ему нужно.
+2. Ассистент показывает поставщиков, у которых есть свободные единицы на дату («свободно 6 из 8»).
+3. «Забронировать».
+4. Предоплата (демо).
+5. Клиент сразу оказывается в чате с поставщиком.
+
+## Быстрый старт
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Нужен Node.js 20 или новее. Без ключей и без базы данных демо работает полностью.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Команда | Что делает |
+| --- | --- |
+| `npm run dev` | Dev-сервер |
+| `npm run build` / `npm start` | Продакшн-сборка и запуск |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | Проверка типов |
+| `npm test` | Unit-тесты (vitest): доступность, права, сид, разбор запросов ассистентом |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Деплой на Vercel:** импортируйте репозиторий, никакие настройки не нужны. Данные демо живут в браузере каждого зрителя.
 
-## Learn More
+## Сценарий показа (3 минуты)
 
-To learn more about Next.js, take a look at the following resources:
+1. **Клиент, главная.** Нажмите «Кортеж» или напишите: «Организую свадьбу 14 июня, 150 гостей, нужен кортеж из 5 геликов». Можно голосом (кнопка микрофона, работает в Chrome и Safari).
+2. Ассистент проверяет доступность и показывает карточки с точками «свободно N из M». Нажмите «Забронировать».
+3. Выберите дату и количество, нажмите «Внести предоплату», затем «Оплатить (демо)».
+4. Откроется чат с поставщиком: карточка брони сверху, через пару секунд придёт автоответ.
+5. Откройте **вторую вкладку**, в меню аватара выберите «Поставщик». В Кабинете видна новая бронь, её можно подтвердить. Сообщения синхронизируются между вкладками в реальном времени.
+6. **«Мои события»:** бюджет, предоплаты, чек-лист (пункт «Кортеж» отметился сам), избранное.
+7. **Админ:** список поставщиков, скрыть или показать, отметить проверенным, «Войти как владелец».
+8. Перед следующим показом: меню аватара → «Сбросить демо».
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Переменные окружения
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Скопируйте `.env.example` в `.env.local`. Ключи используются только на сервере и не коммитятся (`.env*` в `.gitignore`).
 
-## Deploy on Vercel
+| Переменная | Нужна | Описание |
+| --- | --- | --- |
+| `ANTHROPIC_API_KEY` | нет | С ключом ассистент работает на Claude, без ключа в демо-режиме по правилам |
+| `ANTHROPIC_MODEL` | нет | По умолчанию `claude-opus-5-5`. Для удешевления можно поставить `claude-sonnet-5-5` |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Как устроено
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Стек:** Next.js 16 (App Router), TypeScript, Tailwind v4, shadcn/ui (Base UI), zustand, zod, date-fns, Anthropic SDK.
+
+```
+app/                      маршруты: / (ассистент), /vendors, /vendors/[slug], /book/[offerId],
+                          /checkout/[bookingId], /messages, /dashboard, /vendor, /admin, /api/chat
+components/               chat, vendor, booking, messages, layout, ui (shadcn)
+config/brand.ts           название, логотип, цвета — один файл для ребрендинга
+config/demo.ts            флаги демо-режима (фоновая занятость, автоответы, версия сида)
+lib/data/                 типы, сид, хранилище, права (policies), запросы, действия, доступность
+lib/ai/                   протокол, инструменты, Claude-агент, демо-агент, системный промпт, хук чата
+lib/payments/provider.ts  абстракция платёжного провайдера + демо-провайдер
+lib/voice/use-speech.ts   голосовой ввод (Web Speech API)
+messages/{ru,en}.json     строки интерфейса
+supabase/schema.sql       схема Postgres + RLS для переезда на Supabase
+```
+
+### Данные
+- Mock-база хранится в браузере (`lib/data/store.ts`, zustand + localStorage). Вкладки синхронизируются через событие `storage`.
+- Все записи проходят через `lib/data/actions.ts`. Каждое действие проверяет правила из `lib/data/policies.ts`; те же правила записаны как RLS-политики в `supabase/schema.sql`.
+- **Сид** (`lib/data/seed/`): 33 вымышленных поставщика в 12 категориях, 75 предложений с ценами в сомах, отзывы, событие клиента, стартовые брони и чаты. Фото с Unsplash.
+  - Все названия и имена выдуманы.
+  - Чтобы пересоздать сид у всех зрителей, увеличьте `seedVersion` в `config/demo.ts`. У одного зрителя: «Сбросить демо».
+- **Доступность** считается так: всего − заблокировано поставщиком − забронировано на дату.
+  - Неоплаченная бронь держит единицы 15 минут.
+  - Для живости календарей в демо есть детерминированная «фоновая занятость»; она выключается флагом `baselineOccupancy`.
+
+### Ассистент
+- `POST /api/chat` стримит один ход ответа (SSE).
+- Если на сервере есть `ANTHROPIC_API_KEY`, ответ идёт через Claude:
+  - streaming, tool calling;
+  - серверный fallback при отказе модели (`fallbacks: "default"`);
+  - кешируемый системный промпт.
+- Без ключа работает **демо-агент** (`lib/ai/mock-agent.ts`). Он понимает дату, категорию, число гостей, количество и бюджет и вызывает **те же инструменты** по тому же протоколу.
+- Инструменты (`search_vendors`, `check_availability`, `get_vendor`, `suggest_alternatives`) выполняются в браузере по той же базе, что видит каталог. Поэтому ассистент физически не может показать несуществующего поставщика или цену. Ввод инструментов проверяется zod-схемами.
+- Если подходящих вариантов нет, ассистент предлагает ближайшие даты со свободными единицами.
+
+### Голосовой ввод
+Web Speech API: ru-RU по умолчанию; кыргызский (ky-KG) и английский переключаются кнопкой с кодом языка у микрофона. В браузерах без поддержки кнопка объясняет, что делать. Для промышленного распознавания кыргызского замените реализацию в `lib/voice/use-speech.ts` на серверный STT: интерфейс хука останется тем же.
+
+## Брендинг
+
+- Все настройки в `config/brand.ts`: название, цвета (подставляются как CSS-переменные), пути к логотипу.
+- Логотип:
+  - `public/brand/logo-original.png`: исходник;
+  - `public/brand/logo.svg`: векторная обводка;
+  - `components/brand/logo.tsx`: инлайн-версия.
+- Дизайн-направление: голубой и белый, мягкое золото только на значке «проверен», рейтинге и плашке демо-режима.
+- Фирменная деталь: ряд точек «свободно N из M».
+- Полировка сделана по чек-листу [unslop](https://github.com/heydamir/unslop) (Damir Sokolovsky, CC BY 4.0).
+
+## Языки
+
+Сейчас русский и английский. Чтобы добавить кыргызский, узбекский или таджикский:
+1. Создайте `messages/<код>.json` с теми же ключами.
+2. Добавьте язык в `LOCALES`, `DICTIONARIES` и `DATE_LOCALES` в `lib/i18n/index.tsx`.
+3. Добавьте поле в тип `LText` (`lib/data/types.ts`) и переводы в сиде.
+
+Множественное число («1 гость, 2 гостя, 5 гостей») выбирается автоматически через `Intl.PluralRules`.
+
+## Как подключить настоящие платежи
+
+Сейчас оплата **полностью фейковая**: `DemoPaymentProvider` в `lib/payments/provider.ts`, данные карты нигде не запрашиваются.
+
+1. Реализуйте интерфейс `PaymentProvider` для выбранного провайдера (банковский эквайринг, кошелёк, международный PSP).
+2. Создавайте платёж **на сервере** (route handler) с секретным ключом из env (`PAYMENT_SECRET_KEY`).
+3. Верните `redirectUrl` на страницу оплаты провайдера: страница checkout уже умеет делать редирект. Тогда данные карты не попадают на наши серверы.
+4. Подтверждайте оплату по **webhook** провайдера и только после этого переводите бронь в `prepaid` (логика в `markBookingPrepaid`).
+5. Поменяйте `getPaymentProvider()` и выключите `demoConfig.enabled`.
+
+## Переезд на Supabase
+
+1. Создайте проект и выполните `supabase/schema.sql`: таблицы, RLS-политики, Realtime для сообщений.
+2. Залейте сид: функция `buildSeed()` отдаёт данные в той же форме, что и таблицы.
+3. Замените тела функций в `lib/data/actions.ts` на вызовы supabase-js, а чтение в `useDB` — на запросы или подписки.
+4. Переключатель ролей замените на Supabase Auth: роль берётся из `profiles.role`.
+5. Инструменты ассистента (`lib/ai/tool-exec.ts`) перенесите в серверный роут: им нужен только снимок данных.
+
+## Ограничения демо
+
+- Данные у каждого зрителя свои (localStorage), общей базы нет.
+- Автоответ поставщика шаблонный; выключается в `config/demo.ts`.
+- Демо-агент без ключа понимает типичные формулировки, но не свободный диалог. С ключом Claude этих ограничений нет.
+- `/api/chat` без ограничения частоты запросов. Перед публичным запуском с реальным ключом добавьте rate limit.
