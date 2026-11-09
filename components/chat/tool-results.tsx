@@ -87,7 +87,7 @@ function ChatVendorCard({ h, date, qty, index }: { h: VendorHit; date: string | 
       </Link>
       <div className="flex flex-1 flex-col gap-1.5 p-4">
         <div className="flex items-center gap-1.5">
-          <Link href={`/vendors/${h.slug}`} className="truncate text-[15px] font-medium hover:underline">
+          <Link href={`/vendors/${h.slug}`} className="truncate text-md font-medium hover:underline">
             {h.name}
           </Link>
           {h.verified && <VerifiedSeal />}
@@ -138,7 +138,7 @@ function AltDates({ alts, onPick }: { alts: AlternativeDate[]; onPick: (text: st
           key={a.date}
           type="button"
           onClick={() => onPick(locale === "ru" ? `Давайте ${date(a.date, "d MMMM")}` : `Let's do ${date(a.date, "MMMM d")}`)}
-          className="h-9 rounded-full border border-border bg-card px-4 text-sm transition-colors hover:border-primary/40 hover:bg-secondary"
+          className="h-8 rounded-lg border border-border bg-card px-3 text-sm text-text-secondary transition-colors hover:bg-muted hover:text-foreground"
         >
           {date(a.date, "d MMMM, EEEEEE")}
           <span className="ml-2 text-muted-foreground tabular-nums">{a.vendors}</span>

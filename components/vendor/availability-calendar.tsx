@@ -41,7 +41,7 @@ export function AvailabilityCalendar({
             {!d.past && (
               <span
                 className={cn(
-                  "text-[11px] leading-none tabular-nums",
+                  "text-2xs leading-none tabular-nums",
                   d.selected ? "text-primary-foreground/80" : none ? "text-muted-foreground/60" : "text-primary",
                 )}
               >

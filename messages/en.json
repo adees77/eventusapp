@@ -23,7 +23,9 @@
     "all": "All",
     "more": "More",
     "saved": "Saved",
-    "optional": "optional"
+    "optional": "optional",
+    "splashHint": "If the page does not open, update your browser or open the site in Safari or Chrome.",
+    "reload": "Reload"
   },
   "nav": {
     "assistant": "Assistant",
@@ -56,7 +58,9 @@
     "titleEvent": "What else does the celebration need?",
     "titleEmpty": "What are you celebrating?",
     "subtitle": "Type or say what you need. I'll show who is free on your date and help you book",
-    "eventLine": "{title} · {date} · {guests}"
+    "eventLine": "{title} · {date} · {guests}",
+    "checklist": "Checklist · {done} of {total}",
+    "openPlan": "Open event plan"
   },
   "chat": {
     "newChat": "New chat",

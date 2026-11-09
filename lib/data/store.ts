@@ -12,7 +12,7 @@
  */
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { serverStorage } from "@/lib/utils";
+import { safeStorage } from "@/lib/utils";
 import { demoConfig } from "@/config/demo";
 import { buildSeed } from "./seed";
 import type { DB } from "./types";
@@ -39,7 +39,7 @@ export const useDataStore = create<DataState>()(
     }),
     {
       name: demoConfig.storageKey,
-      storage: createJSONStorage(() => (typeof window === "undefined" ? serverStorage : localStorage)),
+      storage: createJSONStorage(() => safeStorage("localStorage")),
       partialize: (s) => ({ db: s.db }),
       onRehydrateStorage: () => (state, error) => {
         const stale = !state?.db || state.db.version !== demoConfig.seedVersion;

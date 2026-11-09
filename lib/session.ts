@@ -7,7 +7,7 @@
  */
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { serverStorage } from "./utils";
+import { safeStorage } from "./utils";
 import type { Actor } from "./data/policies";
 import { DEMO_ADMIN_ID, DEMO_CLIENT_ID, demoVendorOwnerId } from "./data/seed";
 import type { Role } from "./data/types";
@@ -31,7 +31,7 @@ export const useSession = create<SessionState>()(
     }),
     {
       name: "eventus-session",
-      storage: createJSONStorage(() => (typeof window === "undefined" ? serverStorage : sessionStorage)),
+      storage: createJSONStorage(() => safeStorage("sessionStorage")),
       partialize: (s) => ({ id: s.id, role: s.role }),
     },
   ),

@@ -40,7 +40,7 @@ export default function VendorPanelPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 pt-8 pb-16 md:px-6 md:pt-12">
+    <div className="container-app pt-8 pb-16 md:pt-12">
       <PageHeader
         title={vendor.name}
         subtitle={t("vp.title")}
@@ -358,7 +358,7 @@ function Calendar({ vendor }: { vendor: Vendor }) {
               <>
                 <span>{format(d.date, "d")}</span>
                 {!d.past && (
-                  <span className={cn("text-[11px] leading-none tabular-nums", d.selected ? "text-primary-foreground/80" : av.free ? "text-primary" : "text-muted-foreground/60")}>
+                  <span className={cn("text-2xs leading-none tabular-nums", d.selected ? "text-primary-foreground/80" : av.free ? "text-primary" : "text-muted-foreground/60")}>
                     {av.free}/{av.total}
                   </span>
                 )}
@@ -382,7 +382,7 @@ function Calendar({ vendor }: { vendor: Vendor }) {
               >
                 <Minus className="size-4" />
               </button>
-              <span className="w-12 text-center text-[15px] font-medium tabular-nums">{a.blocked}</span>
+              <span className="w-12 text-center text-md font-medium tabular-nums">{a.blocked}</span>
               <button
                 type="button"
                 className="flex size-11 items-center justify-center text-text-secondary disabled:opacity-30"

@@ -161,20 +161,20 @@ export default function ThreadPage() {
                   <div className="my-3 text-center text-xs text-muted-foreground">{fmt(day, "d MMMM")}</div>
                 )}
                 {m.system ? (
-                  <div className="my-1 self-center rounded-full bg-muted px-3 py-1 text-xs text-text-secondary">
+                  <div className="my-1 self-center px-3 py-1 text-xs text-muted-foreground">
                     {t(`messages.system.${m.text}` as never)}
                   </div>
                 ) : (
                   <div className={cn("flex max-w-[80%] flex-col", mine ? "self-end items-end" : "self-start items-start")}>
                     <div
                       className={cn(
-                        "rounded-2xl px-3.5 py-2 text-[15px] leading-relaxed whitespace-pre-wrap",
+                        "rounded-2xl px-3.5 py-2 text-md leading-relaxed whitespace-pre-wrap",
                         mine ? "rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md bg-muted text-foreground",
                       )}
                     >
                       {m.text}
                     </div>
-                    <span className="mt-1 px-1 text-[11px] text-muted-foreground tabular-nums">{format(new Date(m.createdAt), "HH:mm")}</span>
+                    <span className="mt-1 px-1 text-2xs text-muted-foreground tabular-nums">{format(new Date(m.createdAt), "HH:mm")}</span>
                   </div>
                 )}
               </li>
@@ -214,7 +214,7 @@ export default function ThreadPage() {
             maxLength={4000}
             placeholder={t("messages.placeholder")}
             aria-label={t("messages.placeholder")}
-            className="max-h-32 min-h-11 flex-1 resize-none rounded-xl border border-input bg-background px-3.5 py-2.5 text-[15px] outline-none placeholder:text-muted-foreground focus-visible:border-ring"
+            className="max-h-32 min-h-11 flex-1 resize-none rounded-xl border border-input bg-background px-3.5 py-2.5 text-md outline-none placeholder:text-muted-foreground focus-visible:border-ring"
           />
           <button
             type="submit"

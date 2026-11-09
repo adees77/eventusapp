@@ -1,4 +1,5 @@
 import { streamClaudeTurn } from "@/lib/ai/claude-agent";
+import { streamDeepSeekTurn } from "@/lib/ai/deepseek-agent";
 import { streamMockTurn } from "@/lib/ai/mock-agent";
 import { chatRequestSchema, sse, type ChatEvent, type ChatRequest } from "@/lib/ai/protocol";
 
@@ -7,8 +8,9 @@ export const dynamic = "force-dynamic";
 
 /**
  * POST /api/chat — one assistant turn as Server-Sent Events.
- * Uses Claude when ANTHROPIC_API_KEY is set on the server, otherwise the
- * scripted demo agent. The key never leaves the server.
+ * Uses DeepSeek (DEEPSEEK_API_KEY) or Claude (ANTHROPIC_API_KEY) when a key
+ * is set on the server, otherwise the scripted demo agent. Keys never leave
+ * the server.
  */
 export async function POST(req: Request) {
   let body: unknown;
@@ -22,8 +24,22 @@ export async function POST(req: Request) {
     return Response.json({ error: "Invalid request", issues: parsed.error.issues.slice(0, 5) }, { status: 400 });
   }
   const { messages, context } = parsed.data as unknown as ChatRequest;
-  const mode = process.env.ANTHROPIC_API_KEY ? "claude" : "mock";
-  const turn: AsyncGenerator<ChatEvent> = mode === "claude" ? streamClaudeTurn(messages, context) : streamMockTurn(messages, context);
+  // Provider: AI_PROVIDER forces one; otherwise the first configured key wins
+  const forced = process.env.AI_PROVIDER;
+  const mode =
+    forced === "mock"
+      ? "mock"
+      : (forced === "deepseek" || !forced) && process.env.DEEPSEEK_API_KEY
+        ? "deepseek"
+        : process.env.ANTHROPIC_API_KEY
+          ? "claude"
+          : "mock";
+  const turn: AsyncGenerator<ChatEvent> =
+    mode === "deepseek"
+      ? streamDeepSeekTurn(messages, context)
+      : mode === "claude"
+        ? streamClaudeTurn(messages, context)
+        : streamMockTurn(messages, context);
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

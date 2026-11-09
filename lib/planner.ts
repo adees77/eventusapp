@@ -7,7 +7,7 @@
  */
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { serverStorage } from "./utils";
+import { safeStorage } from "./utils";
 
 interface PlannerState {
   date: string | null;
@@ -26,7 +26,7 @@ export const usePlanner = create<PlannerState>()(
     }),
     {
       name: "eventus-planner",
-      storage: createJSONStorage(() => (typeof window === "undefined" ? serverStorage : localStorage)),
+      storage: createJSONStorage(() => safeStorage("localStorage")),
       partialize: ({ date, city, guests }) => ({ date, city, guests }),
     },
   ),

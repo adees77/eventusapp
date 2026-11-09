@@ -37,7 +37,7 @@ export function VendorCard({ r, date, priority }: { r: VendorResult; date?: stri
         </div>
         <div className="flex flex-col gap-1 px-0.5">
           <div className="flex items-center gap-1.5">
-            <h3 className="truncate text-[15px] font-medium text-foreground">{vendor.name}</h3>
+            <h3 className="truncate text-md font-medium text-foreground">{vendor.name}</h3>
             {vendor.verified && <VerifiedSeal />}
           </div>
           <p className="line-clamp-1 text-sm text-text-secondary">{l(vendor.tagline)}</p>

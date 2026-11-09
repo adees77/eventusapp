@@ -38,7 +38,7 @@ export function BookingSummary({
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-xs text-muted-foreground">{vendor.name}</div>
-          <div className={cn("font-medium", compact ? "line-clamp-1 text-sm" : "text-[15px]")}>{l(offer.title)}</div>
+          <div className={cn("font-medium", compact ? "line-clamp-1 text-sm" : "text-md")}>{l(offer.title)}</div>
           <div className="mt-0.5 text-sm text-text-secondary tabular-nums">
             {date ? fmt(date, "d MMMM yyyy, EEEEEE") : t("booking.selectDate")} · {qty} × {money(offer.price)}
           </div>
@@ -51,7 +51,7 @@ export function BookingSummary({
             <dt className="text-text-secondary">{t("booking.total")}</dt>
             <dd>{money(total)}</dd>
           </div>
-          <div className="flex justify-between text-[15px]">
+          <div className="flex justify-between text-md">
             <dt className="font-medium">{t("booking.prepay", { p: prepayPercent })}</dt>
             <dd className="font-medium">{money(prepay)}</dd>
           </div>

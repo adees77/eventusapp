@@ -87,13 +87,13 @@ export default function CheckoutPage() {
           <span className="flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <Check className="size-6" strokeWidth={2} />
           </span>
-          <h1 className="mt-6 font-serif text-3xl font-medium">{t("checkout.success")}</h1>
-          <p className="mt-2 text-[15px] text-text-secondary">{t("checkout.successHint")}</p>
+          <h1 className="mt-6 font-serif text-4xl font-normal">{t("checkout.success")}</h1>
+          <p className="mt-2 text-md text-text-secondary">{t("checkout.successHint")}</p>
           <p className="mt-6 text-2xl font-medium tabular-nums">{money(booking.prepayAmount)}</p>
         </div>
       ) : (
         <>
-          <h1 className="mt-8 font-serif text-3xl font-medium tracking-tight">{t("checkout.title")}</h1>
+          <h1 className="mt-8 font-serif text-4xl font-normal">{t("checkout.title")}</h1>
           <div className="mt-6">
             <BookingSummary
               vendor={vendor}
@@ -138,7 +138,7 @@ export default function CheckoutPage() {
 
               {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
 
-              <Button className="mt-6 h-12 w-full text-[15px]" onClick={pay} disabled={phase === "processing"}>
+              <Button className="mt-6 h-12 w-full text-md" onClick={pay} disabled={phase === "processing"}>
                 {phase === "processing" ? (
                   <>
                     <Loader2 className="animate-spin" />

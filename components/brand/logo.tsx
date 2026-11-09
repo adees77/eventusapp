@@ -16,10 +16,10 @@ export function LogoMark({ className, title = brand.name }: { className?: string
 
 export function Logo({ className, compact }: { className?: string; compact?: boolean }) {
   return (
-    <span className={cn("inline-flex items-center gap-2.5", className)}>
+    <span className={cn("inline-flex items-center gap-3", className)}>
       <LogoMark className="h-5 w-auto" />
       {!compact && (
-        <span className="text-[15px] font-semibold tracking-[0.28em] text-foreground">{brand.name}</span>
+        <span className="text-sm font-medium tracking-[0.24em] text-foreground">{brand.name}</span>
       )}
     </span>
   );

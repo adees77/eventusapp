@@ -60,18 +60,18 @@ export function SettingsMenu() {
             <button
               type="button"
               aria-label={t("roles.switchTitle")}
-              className="flex items-center gap-2 rounded-full border border-border bg-card py-1 pr-2.5 pl-1 text-sm shadow-soft transition-colors hover:bg-muted"
+              className="flex h-9 items-center gap-2 rounded-lg border border-border bg-card pr-2 pl-1 text-sm transition-colors hover:bg-muted"
             />
           }
         >
-          <span className="flex size-7 items-center justify-center rounded-full bg-secondary text-[11px] font-semibold text-secondary-foreground">
+          <span className="flex size-7 items-center justify-center rounded-md bg-secondary text-2xs font-medium text-secondary-foreground">
             {initials}
           </span>
-          <span className="hidden items-center gap-1 text-muted-foreground sm:flex">
-            <RoleIcon className="size-3.5" />
+          <span className="hidden items-center gap-2 text-text-secondary sm:flex">
+            <RoleIcon className="size-4 text-muted-foreground" strokeWidth={1.5} />
             {t(`roles.${role}`)}
           </span>
-          <ChevronDown className="size-3.5 text-muted-foreground" />
+          <ChevronDown className="size-4 text-muted-foreground" strokeWidth={1.5} />
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-64 p-1.5">

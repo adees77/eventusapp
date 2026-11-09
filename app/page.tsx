@@ -7,6 +7,7 @@ import { Composer } from "@/components/chat/composer";
 import { MessageList } from "@/components/chat/message-list";
 import { ThreadList } from "@/components/chat/thread-list";
 import { CategoryIcon } from "@/components/category-icon";
+import { InvitationCard } from "@/components/event/invitation-card";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useChatStore } from "@/lib/ai/chat-store";
 import { useChat } from "@/lib/ai/use-chat";
@@ -14,6 +15,7 @@ import { useDB } from "@/lib/data/store";
 import type { CategoryId } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
+import { cn } from "@/lib/utils";
 
 const SUGGESTIONS: CategoryId[] = ["cars", "halls", "hosts", "decor", "photo"];
 
@@ -73,8 +75,8 @@ export default function AssistantPage() {
   const empty = messages.length === 0 && !busy;
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-56px-80px)] w-full max-w-6xl lg:h-[calc(100dvh-64px)]">
-      <aside className="hidden w-64 shrink-0 border-r border-border px-3 py-6 lg:block">{history}</aside>
+    <div className="mx-auto flex h-[calc(100dvh-56px-80px)] w-full max-w-7xl lg:h-[calc(100dvh-64px)] lg:pl-4 xl:pl-6">
+      <aside className="hidden w-60 shrink-0 border-r border-border py-6 pr-4 lg:block">{history}</aside>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="left" className="w-72 p-4 pt-12">
@@ -106,37 +108,45 @@ export default function AssistantPage() {
         </div>
 
         {empty ? (
-          <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-4 pb-8">
-            <div className="w-full max-w-2xl animate-rise">
-              {event && (
-                <p className="text-center text-sm text-muted-foreground tabular-nums">
-                  {t("home.eventLine", {
-                    title: event.title,
-                    date: date(event.date, "d MMMM"),
-                    guests: tn("common.guests", event.guests),
-                  })}
-                </p>
+          <div className="flex flex-1 overflow-y-auto">
+            <div
+              className={cn(
+                "m-auto grid w-full animate-rise items-center gap-16 px-4 py-8 md:px-8",
+                event ? "max-w-5xl lg:grid-cols-[minmax(0,1fr)_340px] xl:px-12" : "max-w-2xl",
               )}
-              <h1 className="mt-3 text-center font-serif text-[2.5rem] leading-[1.08] font-normal tracking-[-0.02em] md:text-6xl">
-                {event ? t("home.titleEvent") : t("home.titleEmpty")}
-              </h1>
-              <p className="mx-auto mt-4 max-w-md text-center text-[15px] leading-relaxed text-text-secondary">{t("home.subtitle")}</p>
-              <div className="mt-8">
-                <Composer value={input} onChange={setInput} onSubmit={submit} onStop={stop} busy={busy} placeholder={t("chat.placeholder")} autoFocus />
+            >
+              <div className={cn("flex min-w-0 flex-col", !event && "items-center text-center")}>
+                {event && (
+                  <p className="text-sm text-muted-foreground tabular-nums lg:hidden">
+                    {t("home.eventLine", {
+                      title: event.title,
+                      date: date(event.date, "d MMMM"),
+                      guests: tn("common.guests", event.guests),
+                    })}
+                  </p>
+                )}
+                <h1 className="mt-3 font-serif text-4xl leading-[1.05] font-normal tracking-[-0.01em] md:text-6xl lg:mt-0">
+                  {event ? t("home.titleEvent") : t("home.titleEmpty")}
+                </h1>
+                <p className="mt-4 max-w-md text-md leading-relaxed text-text-secondary">{t("home.subtitle")}</p>
+                <div className="mt-8 w-full">
+                  <Composer value={input} onChange={setInput} onSubmit={submit} onStop={stop} busy={busy} placeholder={t("chat.placeholder")} autoFocus />
+                </div>
+                <div className={cn("mt-4 flex flex-wrap gap-2", !event && "justify-center")}>
+                  {SUGGESTIONS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => submit(t(`chat.suggestionPrompts.${c}` as never))}
+                      className="flex h-8 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm text-text-secondary transition-colors hover:bg-muted hover:text-foreground"
+                    >
+                      <CategoryIcon id={c} className="size-4 text-muted-foreground" />
+                      {t(`chat.suggestions.${c}` as never)}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
-                {SUGGESTIONS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => submit(t(`chat.suggestionPrompts.${c}` as never))}
-                    className="flex h-9 items-center gap-2 rounded-full border border-border bg-card px-3.5 text-sm text-text-secondary transition-colors hover:border-primary/30 hover:text-foreground"
-                  >
-                    <CategoryIcon id={c} className="size-4 text-muted-foreground" />
-                    {t(`chat.suggestions.${c}` as never)}
-                  </button>
-                ))}
-              </div>
+              {event && <InvitationCard event={event} className="hidden lg:block" />}
             </div>
           </div>
         ) : (

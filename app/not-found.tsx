@@ -9,7 +9,7 @@ export default function NotFound() {
   return (
     <div className="mx-auto flex max-w-sm flex-1 flex-col items-center justify-center px-4 py-24 text-center">
       <LogoMark className="h-6 w-auto opacity-40" />
-      <h1 className="mt-6 font-serif text-3xl font-medium">{t("notFound.title")}</h1>
+      <h1 className="mt-6 font-serif text-4xl font-normal">{t("notFound.title")}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{t("notFound.text")}</p>
       <LinkButton href="/" className="mt-6">
         {t("notFound.home")}

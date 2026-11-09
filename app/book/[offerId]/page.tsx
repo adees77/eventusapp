@@ -93,8 +93,8 @@ function Book() {
         <ArrowLeft className="size-4" />
         {vendor.name}
       </button>
-      <h1 className="mt-4 font-serif text-3xl font-medium tracking-tight md:text-4xl">{t("booking.title")}</h1>
-      <p className="mt-1 text-[15px] text-text-secondary">{l(offer.title)}</p>
+      <h1 className="mt-4 font-serif text-4xl font-normal md:text-5xl">{t("booking.title")}</h1>
+      <p className="mt-1 text-md text-text-secondary">{l(offer.title)}</p>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px]">
         <div className="flex flex-col gap-8">
@@ -120,7 +120,7 @@ function Book() {
                   >
                     <Minus className="size-4" />
                   </button>
-                  <span className="w-10 text-center text-[15px] font-medium tabular-nums">{safeQty}</span>
+                  <span className="w-10 text-center text-md font-medium tabular-nums">{safeQty}</span>
                   <button
                     type="button"
                     onClick={() => setQty(Math.min(maxQty, safeQty + 1))}
@@ -180,7 +180,7 @@ function Book() {
               prepayPercent={vendor.prepayPercent}
             />
             {avail && avail.free === 0 && <p className="mt-3 text-sm text-destructive">{t("booking.soldOut")}</p>}
-            <Button className="mt-4 h-12 w-full text-[15px]" disabled={!canPay || submitting} onClick={submit}>
+            <Button className="mt-4 h-12 w-full text-md" disabled={!canPay || submitting} onClick={submit}>
               {t("booking.pay")} · {money(prepay)}
             </Button>
             {!isClient && <p className="mt-3 text-center text-xs text-muted-foreground">{t("vendor.onlyClients")}</p>}

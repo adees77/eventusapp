@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { LayoutGrid, Search } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { CategoryIcon } from "@/components/category-icon";
@@ -53,25 +53,29 @@ function Catalog() {
   const cityOptions = useMemo(() => Object.entries(CITIES), []);
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 pt-8 pb-16 md:px-6 md:pt-12">
+    <div className="container-app pt-8 pb-16 md:pt-12">
       <header className="flex flex-col gap-2">
-        <h1 className="font-serif text-3xl font-medium tracking-tight md:text-4xl">{t("catalog.title")}</h1>
+        <h1 className="font-serif text-4xl font-normal md:text-5xl">{t("catalog.title")}</h1>
         <p className="text-sm text-text-secondary">{t("catalog.subtitle")}</p>
       </header>
 
-      <nav className="no-scrollbar -mx-4 mt-6 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0" aria-label={t("catalog.title")}>
+      <nav
+        className="no-scrollbar -mx-4 mt-8 flex gap-1 overflow-x-auto border-b border-border px-4 md:mx-0 md:px-0"
+        aria-label={t("catalog.title")}
+      >
         <Chip active={!category} onClick={() => setParam("category", null)}>
+          <LayoutGrid className="size-5" strokeWidth={1.5} />
           {t("common.all")}
         </Chip>
         {categories.map((c) => (
           <Chip key={c.id} active={category === c.id} onClick={() => setParam("category", c.id)}>
-            <CategoryIcon id={c.id} className="size-4" />
+            <CategoryIcon id={c.id} className="size-5" />
             {l(c.name)}
           </Chip>
         ))}
       </nav>
 
-      <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-[1fr_200px_200px_200px]">
+      <div className="mt-6 grid grid-cols-2 gap-2 md:grid-cols-[1fr_200px_200px_200px]">
         <label className="relative col-span-2 md:col-span-1">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
           <input
@@ -115,7 +119,7 @@ function Catalog() {
       </div>
 
       {results.length ? (
-        <div className="mt-4 grid animate-rise gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid animate-rise gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {results.map((r, i) => (
             <VendorCard key={r.vendor.id} r={r} date={date} priority={i < 3} />
           ))}
@@ -148,13 +152,12 @@ function Chip({ active, children, onClick }: { active: boolean; children: React.
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "flex h-9 shrink-0 items-center gap-2 rounded-full border px-4 text-sm whitespace-nowrap transition-colors",
-        active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border bg-card text-text-secondary hover:bg-muted hover:text-foreground",
+        "relative flex h-16 shrink-0 flex-col items-center justify-center gap-1 px-3 text-xs whitespace-nowrap transition-colors",
+        active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
       )}
     >
       {children}
+      {active && <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-foreground" aria-hidden />}
     </button>
   );
 }

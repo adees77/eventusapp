@@ -77,7 +77,7 @@ export default function VendorPage() {
   return (
     <div className="pb-28 lg:pb-16">
       {/* Cover */}
-      <div className="relative mx-auto max-w-6xl md:px-6 md:pt-6">
+      <div className="relative mx-auto max-w-7xl md:px-6 md:pt-6 xl:px-8">
         <div className="relative aspect-[4/3] overflow-hidden bg-muted sm:aspect-[21/9] md:rounded-2xl">
           {vendor.cover && <Image src={vendor.cover} alt="" fill priority sizes="(min-width: 1152px) 1104px, 100vw" className="object-cover" />}
         </div>
@@ -91,14 +91,14 @@ export default function VendorPage() {
         </button>
       </div>
 
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 md:px-6 lg:grid-cols-[1fr_360px]">
+      <div className="container-app grid gap-12 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0">
           {/* Header */}
           <header className="mt-6 flex items-start gap-4">
             <Monogram name={vendor.name} className="size-14 text-xl" />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <h1 className="font-serif text-3xl leading-tight font-medium tracking-tight md:text-4xl">{vendor.name}</h1>
+                <h1 className="font-serif text-4xl leading-tight font-normal md:text-5xl">{vendor.name}</h1>
                 {vendor.verified && <VerifiedSeal withLabel />}
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-secondary">
@@ -132,7 +132,7 @@ export default function VendorPage() {
           {/* About */}
           <section className="mt-10">
             <h2 className="text-lg font-medium">{t("vendor.about")}</h2>
-            <p className="mt-3 max-w-prose text-[15px] leading-relaxed text-text-secondary">{l(vendor.description)}</p>
+            <p className="mt-3 max-w-prose text-md leading-relaxed text-text-secondary">{l(vendor.description)}</p>
             <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-text-secondary">
               {vendor.yearsOnMarket > 0 && <div>{tn("vendor.years", vendor.yearsOnMarket)}</div>}
               <div className="inline-flex items-center gap-1.5">
@@ -159,7 +159,7 @@ export default function VendorPage() {
                     </div>
                     <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                       <div className="flex items-start justify-between gap-3">
-                        <h3 className="text-[15px] font-medium">{l(o.title)}</h3>
+                        <h3 className="text-md font-medium">{l(o.title)}</h3>
                         {o.premium && <span className="shrink-0 text-xs text-gold-foreground">{t("vendor.premium")}</span>}
                       </div>
                       <p className="text-sm text-text-secondary">{l(o.description)}</p>
@@ -270,7 +270,7 @@ export default function VendorPage() {
               </div>
             )}
             <Button
-              className="mt-5 h-11 w-full text-[15px]"
+              className="mt-5 h-11 w-full text-md"
               onClick={() => document.getElementById("offers")?.scrollIntoView({ behavior: "smooth" })}
             >
               {t("vendor.book")}

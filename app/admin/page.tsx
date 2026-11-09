@@ -60,7 +60,7 @@ export default function AdminPage() {
   const catName = (id: CategoryId) => l(db.categories.find((c) => c.id === id)?.name);
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 pt-8 pb-16 md:px-6 md:pt-12">
+    <div className="container-app pt-8 pb-16 md:pt-12">
       <PageHeader
         title={t("admin.title")}
         subtitle={tn("admin.count", db.vendors.length)}

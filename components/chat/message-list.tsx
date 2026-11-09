@@ -78,7 +78,7 @@ export function MessageList({
       {items.map((it, idx) =>
         it.role === "user" ? (
           <div key={it.key} className="flex justify-end">
-            <div className="max-w-[85%] rounded-2xl rounded-br-md bg-secondary px-4 py-2.5 text-[15px] leading-relaxed whitespace-pre-wrap text-secondary-foreground">
+            <div className="max-w-[85%] rounded-2xl rounded-br-md bg-secondary px-4 py-2.5 text-md leading-relaxed whitespace-pre-wrap text-secondary-foreground">
               {it.text}
             </div>
           </div>
@@ -86,7 +86,7 @@ export function MessageList({
           <AssistantRow key={it.key} showAvatar>
             {it.parts.map((p, j) =>
               p.kind === "text" ? (
-                <div key={j} className="text-[15px] leading-relaxed text-foreground">
+                <div key={j} className="text-md leading-relaxed text-foreground">
                   <RichText text={p.text} />
                 </div>
               ) : (
@@ -122,7 +122,7 @@ function LiveTail({ live, status, tool }: { live: string; status: ChatStatus; to
   const { t } = useI18n();
   if (live) {
     return (
-      <div className="text-[15px] leading-relaxed">
+      <div className="text-md leading-relaxed">
         <RichText text={live} />
       </div>
     );

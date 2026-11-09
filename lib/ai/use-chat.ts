@@ -21,7 +21,7 @@ export function useChat(threadId: string | null, onThreadCreated: (id: string) =
   const [status, setStatus] = useState<ChatStatus>("idle");
   const [live, setLive] = useState("");
   const [tool, setTool] = useState<string | null>(null);
-  const [mode, setMode] = useState<"claude" | "mock" | null>(null);
+  const [mode, setMode] = useState<"claude" | "deepseek" | "mock" | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const buildContext = useCallback((): ChatContext => {
@@ -68,7 +68,8 @@ export function useChat(threadId: string | null, onThreadCreated: (id: string) =
             body: JSON.stringify({ messages: thread.messages, context: buildContext() }),
             signal: controller.signal,
           });
-          setMode(res.headers.get("X-Eventus-Mode") === "claude" ? "claude" : "mock");
+          const m = res.headers.get("X-Eventus-Mode");
+          setMode(m === "claude" || m === "deepseek" ? m : "mock");
           if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
 
           const done = await readStream(res.body, (e) => {

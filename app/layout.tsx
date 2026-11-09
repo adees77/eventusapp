@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Inter } from "next/font/google";
+import { Cormorant_Garamond, Golos_Text } from "next/font/google";
 import { cookies } from "next/headers";
 import { AppShell } from "@/components/layout/app-shell";
 import { Toaster } from "@/components/ui/sonner";
@@ -9,7 +9,7 @@ import type { Locale } from "@/lib/data/types";
 import { DEFAULT_LOCALE, I18nProvider, LOCALE_COOKIE, LOCALES } from "@/lib/i18n";
 import "./globals.css";
 
-const inter = Inter({ variable: "--font-inter", subsets: ["latin", "cyrillic"] });
+const golos = Golos_Text({ variable: "--font-golos", subsets: ["latin", "cyrillic"], weight: ["400", "500", "600"] });
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
   subsets: ["latin", "cyrillic"],
@@ -34,7 +34,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const locale = cookieLocale && LOCALES.includes(cookieLocale) ? cookieLocale : DEFAULT_LOCALE;
 
   return (
-    <html lang={locale} className={`${inter.variable} ${cormorant.variable} h-full antialiased`}>
+    <html lang={locale} className={`${golos.variable} ${cormorant.variable} h-full antialiased`}>
       <head>
         <style dangerouslySetInnerHTML={{ __html: brandCssVariables() }} />
       </head>

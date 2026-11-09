@@ -64,7 +64,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 pt-8 pb-16 md:px-6 md:pt-12">
+    <div className="container-app pt-8 pb-16 md:pt-12">
       <PageHeader
         title={t("dashboard.title")}
         action={
@@ -97,7 +97,7 @@ export default function DashboardPage() {
             <section className="rounded-2xl border border-border bg-card p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="font-serif text-2xl font-medium md:text-3xl">{event.title}</h2>
+                  <h2 className="font-serif text-3xl font-normal md:text-4xl">{event.title}</h2>
                   <p className="mt-1 text-sm text-text-secondary tabular-nums">
                     {date(event.date, "d MMMM yyyy, EEEE")} · {l(CITIES[event.city])} · {tn("common.guests", event.guests)}
                   </p>
@@ -121,7 +121,7 @@ export default function DashboardPage() {
               {event.budget > 0 && (
                 <div className="mt-5">
                   <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                    <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${share * 100}%` }} />
+                    <div className="h-full origin-left rounded-full bg-primary transition-transform duration-500" style={{ transform: `scaleX(${share})` }} />
                   </div>
                   <div className="mt-2 text-xs text-muted-foreground tabular-nums">
                     {Math.round(share * 100)}% {t("common.of")} {money(event.budget)}

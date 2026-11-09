@@ -88,7 +88,7 @@ export function Composer({
         autoFocus={autoFocus}
         placeholder={listening ? t("voice.listening") : placeholder}
         aria-label={placeholder}
-        className="block max-h-[200px] min-h-12 w-full resize-none bg-transparent px-3 pt-2.5 text-[15px] leading-relaxed outline-none placeholder:text-muted-foreground"
+        className="block max-h-[200px] min-h-12 w-full resize-none bg-transparent px-3 pt-2.5 text-md leading-relaxed outline-none placeholder:text-muted-foreground"
       />
       <div className="flex items-center justify-between gap-2 px-1 pt-1">
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -114,7 +114,7 @@ export function Composer({
                     speech.setLang(VOICE_LANGS[(i + 1) % VOICE_LANGS.length]);
                   }}
                   disabled={listening}
-                  className="h-9 rounded-full px-2.5 text-xs font-medium text-muted-foreground tabular-nums transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                  className="h-9 rounded-lg px-2 text-xs font-medium text-muted-foreground tabular-nums transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
                   aria-label={t("voice.language")}
                 />
               }

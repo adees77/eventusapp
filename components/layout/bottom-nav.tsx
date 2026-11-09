@@ -19,7 +19,7 @@ export function BottomNav() {
   const unread = useDB((db) => unreadCount(db, actor));
 
   return (
-    <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/90 pt-1.5 backdrop-blur-md lg:hidden">
+    <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background pt-2 lg:hidden">
       <ul className="mx-auto flex max-w-md items-stretch justify-around">
         {items.map(({ href, label, icon: Icon }) => {
           const active = isActive(pathname, href);
@@ -28,16 +28,14 @@ export function BottomNav() {
               <Link
                 href={href}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 py-1 text-[11px] text-muted-foreground transition-colors",
+                  "flex flex-col items-center gap-1 py-1 text-2xs text-muted-foreground transition-colors",
                   active && "text-primary",
                 )}
               >
                 <span className="relative">
-                  <Icon className="size-5" strokeWidth={active ? 2 : 1.6} />
+                  <Icon className="size-5" strokeWidth={1.5} />
                   {href === "/messages" && unread > 0 && (
-                    <span className="absolute -top-1 -right-2 min-w-4 rounded-full bg-primary px-1 text-center text-[10px] leading-4 text-primary-foreground tabular-nums">
-                      {unread}
-                    </span>
+                    <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-primary ring-2 ring-background" aria-label={String(unread)} />
                   )}
                 </span>
                 {t(label)}

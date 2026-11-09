@@ -22,6 +22,20 @@ import {
 
 const MAX_RESULTS = 4;
 
+/** Colloquial model names → how they appear in offer titles */
+const QUERY_SYNONYMS: [RegExp, string][] = [
+  [/гелик|геленд|гелендваген|gelande|g-?wagon|g-?class|джи[- ]?класс/i, "G-Class"],
+  [/эска|s-?class|эс[- ]?класс/i, "S-Class"],
+  [/ешка|e-?class|е[- ]?класс/i, "E-Class"],
+  [/лимузин|limo/i, "лимузин"],
+];
+
+function normalizeQuery(q?: string) {
+  if (!q) return undefined;
+  for (const [re, value] of QUERY_SYNONYMS) if (re.test(q)) return value;
+  return q;
+}
+
 function hit(r: VendorResult, locale: Locale): VendorHit {
   const v = r.vendor;
   const cheapest = r.offers.find((o) => o.price === r.minPrice) ?? r.offers[0];
@@ -91,20 +105,19 @@ export function executeTool(
   switch (name as ToolName) {
     case "search_vendors": {
       const i = parsed.data as import("./tool-defs").ToolInput<"search_vendors">;
-      const results = searchVendors(
-        db,
-        {
-          category: i.category,
-          city: i.city,
-          date: i.date,
-          guests: i.guests,
-          qty: i.qty,
-          budgetMax: i.budget_max,
-          query: i.query,
-          onlyAvailable: Boolean(i.date),
-        },
-        actor,
-      );
+      const filters = {
+        category: i.category,
+        city: i.city,
+        date: i.date,
+        guests: i.guests,
+        qty: i.qty,
+        budgetMax: i.budget_max,
+        query: normalizeQuery(i.query),
+        onlyAvailable: Boolean(i.date),
+      };
+      let results = searchVendors(db, filters, actor);
+      // A free-text query that matches nothing should not hide the whole category
+      if (!results.length && filters.query && filters.category) results = searchVendors(db, { ...filters, query: undefined }, actor);
       const res: SearchResult = {
         date: i.date ?? null,
         qty: i.qty ?? null,

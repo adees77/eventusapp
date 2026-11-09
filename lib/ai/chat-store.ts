@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { serverStorage } from "@/lib/utils";
+import { safeStorage } from "@/lib/utils";
 import type { ChatMessage } from "./protocol";
 
 export interface Thread {
@@ -46,7 +46,7 @@ export const useChatStore = create<ChatState>()(
     }),
     {
       name: "eventus-chats-v1",
-      storage: createJSONStorage(() => (typeof window === "undefined" ? serverStorage : localStorage)),
+      storage: createJSONStorage(() => safeStorage("localStorage")),
       partialize: (s) => ({ threads: s.threads.slice(0, 30) }),
     },
   ),

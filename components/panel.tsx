@@ -8,7 +8,7 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="font-serif text-3xl font-medium tracking-tight md:text-4xl">{title}</h1>
+        <h1 className="font-serif text-4xl font-normal md:text-5xl">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-text-secondary">{subtitle}</p>}
       </div>
       {action}
@@ -42,7 +42,7 @@ export function Stat({ label, value, note }: { label: string; value: string; not
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <div className="text-sm text-text-secondary">{label}</div>
-      <div className="mt-2 text-[28px] leading-none font-medium tabular-nums">{value}</div>
+      <div className="mt-2 text-3xl leading-none font-medium tabular-nums">{value}</div>
       {note && <div className="mt-2 text-xs text-muted-foreground">{note}</div>}
     </div>
   );

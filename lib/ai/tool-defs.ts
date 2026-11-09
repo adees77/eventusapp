@@ -68,7 +68,7 @@ export const TOOL_DEFINITIONS = [
         guests: { type: "integer", description: "Number of guests (filters halls by capacity)" },
         qty: { type: "integer", description: "Units needed of one offer, e.g. 5 cars" },
         budget_max: { type: "integer", description: "Max total price in som for qty units" },
-        query: { type: "string", description: "Free-text name search" },
+        query: { type: "string", description: "Optional vendor name or car model as written in the catalog, e.g. \"G-Class\", \"S-Class\", \"лимузин\". Omit for a general search." },
       },
       additionalProperties: false,
     },

@@ -45,7 +45,10 @@ npm run dev        # http://localhost:3000
 
 | Переменная | Нужна | Описание |
 | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | нет | С ключом ассистент работает на Claude, без ключа в демо-режиме по правилам |
+| `DEEPSEEK_API_KEY` | нет | С ключом ассистент работает на DeepSeek (используется первым, если задан) |
+| `DEEPSEEK_MODEL` | нет | По умолчанию `deepseek-chat` |
+| `ANTHROPIC_API_KEY` | нет | С ключом ассистент работает на Claude. Без ключей — демо-режим по правилам |
+| `AI_PROVIDER` | нет | Принудительно выбрать `deepseek`, `claude` или `mock` |
 | `ANTHROPIC_MODEL` | нет | По умолчанию `claude-opus-5-5`. Для удешевления можно поставить `claude-sonnet-5-5` |
 
 ## Как устроено
@@ -78,7 +81,8 @@ supabase/schema.sql       схема Postgres + RLS для переезда на
 
 ### Ассистент
 - `POST /api/chat` стримит один ход ответа (SSE).
-- Если на сервере есть `ANTHROPIC_API_KEY`, ответ идёт через Claude:
+- Если на сервере есть `DEEPSEEK_API_KEY`, ответ идёт через DeepSeek (`lib/ai/deepseek-agent.ts`, OpenAI-совместимый API с tool calling; история переводится в его формат и обратно).
+- Если есть `ANTHROPIC_API_KEY`, ответ идёт через Claude:
   - streaming, tool calling;
   - серверный fallback при отказе модели (`fallbacks: "default"`);
   - кешируемый системный промпт.
