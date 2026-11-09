@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import { LogoMark } from "@/components/brand/logo";
 import { useDataStore } from "@/lib/data/store";
@@ -15,13 +16,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const hydrated = useDataStore((s) => s.hydrated);
   // false on the server and during hydration, true afterwards → no SSR mismatch
   const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  const pathname = usePathname();
 
   if (!hydrated || !mounted) return <Splash />;
+
+  // Public invitation page: guests see the card only, without app navigation
+  if (pathname.startsWith("/i/")) return <main className="flex min-h-dvh flex-col">{children}</main>;
 
   return (
     <div className="flex min-h-dvh flex-col">
       <Header />
-      <main className="flex flex-1 flex-col pb-20 lg:pb-0">{children}</main>
+      <main className="flex flex-1 flex-col pb-20 lg:pb-0 print:pb-0">{children}</main>
       <BottomNav />
     </div>
   );

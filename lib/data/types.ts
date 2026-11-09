@@ -165,6 +165,48 @@ export interface VendorStat {
   views: number;
 }
 
+export type InvitationStyle = "classic" | "minimal" | "night" | "arch" | "ornament" | "photo";
+export type InvitationOccasion = "wedding" | "kyzUzatuu" | "birthday" | "jubilee" | "sunnot" | "corporate";
+
+/** A guest's answer, left on the public invitation page */
+export interface InvitationRsvp {
+  id: string;
+  name: string;
+  attending: boolean;
+  /** people including the guest */
+  guests: number;
+  note?: string;
+  createdAt: string;
+}
+
+export interface Invitation {
+  id: string;
+  ownerId: string;
+  eventId?: string;
+  /** template it was started from, if any */
+  templateId?: string;
+  style: InvitationStyle;
+  occasion: InvitationOccasion;
+  /** small line above the names: "Приглашаем на свадьбу" */
+  heading: string;
+  /** the largest line: "Айгерим и Тимур" */
+  names: string;
+  message: string;
+  /** yyyy-MM-dd */
+  date: string;
+  /** HH:mm */
+  time: string;
+  venue: string;
+  address: string;
+  dressCode?: string;
+  contact?: string;
+  /** cover photo for the "photo" style */
+  photo?: string;
+  rsvps: InvitationRsvp[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DB {
   version: number;
   users: User[];
@@ -179,4 +221,5 @@ export interface DB {
   reviews: Review[];
   favorites: Favorite[];
   stats: VendorStat[];
+  invitations: Invitation[];
 }

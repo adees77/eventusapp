@@ -11,7 +11,7 @@ export function DemoBadge() {
     <Tooltip>
       <TooltipTrigger
         render={
-          <span className="hidden cursor-default items-center gap-2 whitespace-nowrap text-xs text-muted-foreground sm:inline-flex" />
+          <span className="hidden cursor-default items-center gap-2 whitespace-nowrap text-xs text-muted-foreground sm:inline-flex lg:hidden xl:inline-flex" />
         }
       >
         <span className="size-1.5 rounded-full bg-gold" aria-hidden />

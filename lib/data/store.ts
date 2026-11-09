@@ -46,7 +46,7 @@ export const useDataStore = create<DataState>()(
         // Sync storage hydrates inside create(), before useDataStore is assigned → defer.
         queueMicrotask(() =>
           useDataStore.setState({
-            db: error || stale ? buildSeed() : state!.db,
+            db: error || stale ? buildSeed() : migrate(state!.db!),
             hydrated: true,
           }),
         );
@@ -54,6 +54,17 @@ export const useDataStore = create<DataState>()(
     },
   ),
 );
+
+/** Additive schema changes that don't need a full re-seed (keeps the user's demo data) */
+function migrate(db: DB): DB {
+  if (db.invitations) return db;
+  // keep the demo invitation, re-pinned to the user's (possibly edited) wedding date
+  const invitations = buildSeed().invitations.flatMap((inv) => {
+    const ev = db.events.find((e) => e.id === inv.eventId);
+    return ev ? [{ ...inv, date: ev.date }] : [];
+  });
+  return { ...db, invitations };
+}
 
 /**
  * Read derived data from the DB. Only call inside <AppShell> (db is hydrated).

@@ -261,5 +261,31 @@ export function buildSeed(now = new Date()): DB {
       { userId: DEMO_CLIENT_ID, vendorId: "v-bouquet-atelier" },
     ],
     stats,
+    invitations: [
+      {
+        id: "inv-wedding",
+        ownerId: DEMO_CLIENT_ID,
+        eventId: event.id,
+        templateId: "t-wedding-classic",
+        style: "classic",
+        occasion: "wedding",
+        heading: "Приглашение на свадьбу",
+        names: "Айгерим и Тимур",
+        message: "С радостью приглашаем вас разделить с нами самый важный день — день нашей свадьбы.",
+        date: event.date,
+        time: "17:00",
+        venue: "Ресторан «Ордо»",
+        address: "Бишкек, пр. Чуй, 219",
+        dressCode: "Вечерний, пастельные тона",
+        contact: "+996 700 000 001",
+        rsvps: [
+          { id: "r1", name: "Жибек Абдиева", attending: true, guests: 2, createdAt: subDays(now, 2).toISOString() },
+          { id: "r2", name: "Нурсултан Ибраимов", attending: true, guests: 1, note: "Буду с подарком от всего отдела", createdAt: subDays(now, 1).toISOString() },
+          { id: "r3", name: "Daniel Novak", attending: false, guests: 0, note: "К сожалению, буду в отъезде", createdAt: subDays(now, 1).toISOString() },
+        ],
+        createdAt: subDays(now, 3).toISOString(),
+        updatedAt: subDays(now, 3).toISOString(),
+      },
+    ],
   };
 }

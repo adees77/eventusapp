@@ -25,6 +25,9 @@ const isAdmin = (a: Actor) => a.role === "admin";
 const ownsVendor = (a: Actor, v: Vendor | undefined) => !!v && a.role === "vendor" && v.ownerId === a.id;
 
 export const can = {
+  /** Clients design invitations for their own events; admin can moderate */
+  manageInvitation: (a: Actor, ownerId: string) => isAdmin(a) || (a.role === "client" && a.id === ownerId),
+
   /** Public catalog: hidden vendors are visible only to owner and admin */
   viewVendor: (a: Actor | null, v: Vendor) => !v.hidden || (!!a && (isAdmin(a) || ownsVendor(a, v))),
 

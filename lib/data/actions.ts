@@ -9,7 +9,7 @@ import { demoConfig } from "@/config/demo";
 import { getAvailability } from "./availability";
 import { assert, can, type Actor } from "./policies";
 import { getDB, useDataStore } from "./store";
-import type { Booking, CategoryId, ChecklistItem, EventItem, LText, Message, Offer, Vendor } from "./types";
+import type { Booking, CategoryId, ChecklistItem, EventItem, Invitation, InvitationRsvp, LText, Message, Offer, Vendor } from "./types";
 
 const uid = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const now = () => new Date().toISOString();
@@ -328,4 +328,77 @@ export function updateEvent(actor: Actor, eventId: string, patch: Partial<EventI
 
 export function setChecklist(actor: Actor, eventId: string, checklist: ChecklistItem[]) {
   updateEvent(actor, eventId, { checklist });
+}
+
+// ── Invitations ───────────────────────────────────────────────
+
+type InvitationInput = Omit<Invitation, "id" | "ownerId" | "rsvps" | "createdAt" | "updatedAt">;
+
+export function createInvitation(actor: Actor, input: InvitationInput): Invitation {
+  assert(can.manageInvitation(actor, actor.id), "manageInvitation");
+  const inv: Invitation = { ...input, id: uid("inv"), ownerId: actor.id, rsvps: [], createdAt: now(), updatedAt: now() };
+  update((d) => ({ ...d, invitations: [...d.invitations, inv] }));
+  return inv;
+}
+
+export function updateInvitation(actor: Actor, id: string, patch: Partial<InvitationInput>) {
+  const inv = getDB().invitations.find((x) => x.id === id);
+  if (!inv) return;
+  assert(can.manageInvitation(actor, inv.ownerId), "manageInvitation");
+  update((d) => ({
+    ...d,
+    invitations: d.invitations.map((x) => (x.id === id ? { ...x, ...patch, id: x.id, ownerId: x.ownerId, rsvps: x.rsvps, updatedAt: now() } : x)),
+  }));
+}
+
+export function duplicateInvitation(actor: Actor, id: string): Invitation | undefined {
+  const inv = getDB().invitations.find((x) => x.id === id);
+  if (!inv) return;
+  assert(can.manageInvitation(actor, inv.ownerId), "manageInvitation");
+  return createInvitation(actor, {
+    eventId: inv.eventId,
+    templateId: inv.templateId,
+    style: inv.style,
+    occasion: inv.occasion,
+    heading: inv.heading,
+    names: inv.names,
+    message: inv.message,
+    date: inv.date,
+    time: inv.time,
+    venue: inv.venue,
+    address: inv.address,
+    dressCode: inv.dressCode,
+    contact: inv.contact,
+    photo: inv.photo,
+  });
+}
+
+export function deleteInvitation(actor: Actor, id: string) {
+  const inv = getDB().invitations.find((x) => x.id === id);
+  if (!inv) return;
+  assert(can.manageInvitation(actor, inv.ownerId), "manageInvitation");
+  update((d) => ({ ...d, invitations: d.invitations.filter((x) => x.id !== id) }));
+}
+
+/** Public: anyone with the link can answer. One answer per name (latest wins). */
+export function submitRsvp(invitationId: string, input: Omit<InvitationRsvp, "id" | "createdAt">) {
+  const name = input.name.trim().slice(0, 80);
+  if (!name) throw new Error("Name required");
+  const rsvp: InvitationRsvp = {
+    id: uid("r"),
+    name,
+    attending: input.attending,
+    guests: input.attending ? Math.min(10, Math.max(1, Math.floor(input.guests))) : 0,
+    note: input.note?.trim().slice(0, 300) || undefined,
+    createdAt: now(),
+  };
+  update((d) => ({
+    ...d,
+    invitations: d.invitations.map((x) =>
+      x.id === invitationId
+        ? { ...x, rsvps: [...x.rsvps.filter((r) => r.name.toLowerCase() !== name.toLowerCase()), rsvp] }
+        : x,
+    ),
+  }));
+  return rsvp;
 }

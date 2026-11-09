@@ -1,4 +1,4 @@
-import { CalendarHeart, LayoutGrid, MessageCircle, MessageSquareText, Search, Shield, Store } from "lucide-react";
+import { CalendarHeart, LayoutGrid, Mail, MessageCircle, MessageSquareText, Search, Shield, Store } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Role } from "@/lib/data/types";
 import type { MessageKey } from "@/lib/i18n";
@@ -15,6 +15,7 @@ export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { href: "/vendors", label: "nav.catalog", icon: Search },
     { href: "/messages", label: "nav.messages", icon: MessageCircle },
     { href: "/dashboard", label: "nav.dashboard", icon: CalendarHeart },
+    { href: "/invitations", label: "nav.invitations", icon: Mail },
   ],
   vendor: [
     { href: "/vendor", label: "nav.vendorPanel", icon: Store },

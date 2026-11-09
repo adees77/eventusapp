@@ -21,13 +21,13 @@ export function Header() {
   const unread = useDB((db) => unreadCount(db, actor));
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background">
+    <header className="sticky top-0 z-40 border-b border-border bg-background print:hidden">
       <div className="container-app flex h-14 items-center gap-4 md:h-16">
         <Link href={HOME_BY_ROLE[role]} className="shrink-0" aria-label="EVENTUS">
           <Logo />
         </Link>
 
-        <nav className="ml-8 hidden items-center gap-1 lg:flex">
+        <nav className="ml-4 hidden items-center gap-1 lg:flex xl:ml-8">
           {items.map((item) => (
             <Link
               key={item.href}
@@ -47,7 +47,7 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-4">
+        <div className="ml-auto flex items-center gap-3 xl:gap-4">
           <DemoBadge />
           <SettingsMenu />
         </div>
