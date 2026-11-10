@@ -1031,5 +1031,11 @@
     "finalTitle": "Start with one conversation",
     "finalText": "Tell us about your celebration — we'll show who's available on your date.",
     "footer": "© EVENTUS, Bishkek. Demo: no real payments are made."
+  },
+  "notif": {
+    "title": "Notifications",
+    "titleCount": "Notifications: {n} new",
+    "readAll": "Mark all read",
+    "empty": "All quiet. Deals, RSVPs and messages will show up here."
   }
 }
