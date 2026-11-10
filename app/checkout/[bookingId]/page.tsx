@@ -4,6 +4,7 @@ import { Check, CreditCard, Loader2, QrCode, ShieldCheck, Wallet } from "lucide-
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { BookingSummary } from "@/components/booking/booking-summary";
+import { EscrowSteps } from "@/components/booking/deal-card";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { AvailabilityError, markBookingPrepaid } from "@/lib/data/actions";
@@ -79,7 +80,7 @@ export default function CheckoutPage() {
     <div className="mx-auto w-full max-w-xl px-4 pt-8 pb-16 md:pt-12">
       <div className="flex items-center gap-2 rounded-xl border border-gold/40 bg-gold-soft px-4 py-3 text-sm text-gold-foreground">
         <ShieldCheck className="size-4 shrink-0" strokeWidth={1.75} />
-        {t("checkout.demoBanner")}
+        {t("checkout.escrowBanner")}
       </div>
 
       {phase === "success" ? (
@@ -135,6 +136,12 @@ export default function CheckoutPage() {
                   ))}
                 </div>
               </fieldset>
+
+              <div className="mt-8 rounded-2xl border border-border bg-card p-5">
+                <h2 className="text-sm font-medium">{t("escrow.title")}</h2>
+                <EscrowSteps className="mt-4" />
+                <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">{t("escrow.refundPolicy")}</p>
+              </div>
 
               {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
 

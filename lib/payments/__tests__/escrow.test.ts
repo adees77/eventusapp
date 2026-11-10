@@ -78,7 +78,7 @@ describe("escrow", () => {
   it("derives balances from the ledger", () => {
     const held = apply(base, e.hold(base, T));
     const both = e.confirm(apply(held, e.confirm(held, "client", T, 5)), "vendor", T, 5);
-    const ledger: Transaction[] = [...e.hold(base, T).ledger, ...both.ledger, { kind: "payout", amount: 8500, vendorId: "v1" }].map((x, i) => ({
+    const ledger: Transaction[] = [...e.hold(base, T).ledger, ...both.ledger, { kind: "payout" as const, amount: 8500, vendorId: "v1" }].map((x, i) => ({
       ...x,
       id: `t${i}`,
       createdAt: T,

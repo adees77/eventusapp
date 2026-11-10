@@ -196,14 +196,15 @@
     },
     "pay": "Pay {amount}",
     "processing": "Processing payment",
-    "success": "Prepayment received",
-    "successHint": "Your booking is secured. Opening the chat with the vendor",
+    "success": "Money is frozen",
+    "successHint": "Discuss the details in the chat and confirm the deal once everything is agreed",
     "toChat": "Go to chat",
     "alreadyPaid": "This booking is already paid",
     "unavailable": "These units were taken while you were checking out. Pick another date",
     "notFound": "Booking not found",
     "summary": "Your booking",
-    "paidVia": "Paid: {ref}"
+    "paidVia": "Paid: {ref}",
+    "escrowBanner": "Safe deal: the money is frozen and goes to the vendor only after you confirm"
   },
   "messages": {
     "title": "Messages",
@@ -219,7 +220,14 @@
       "booking_prepaid": "Prepayment received, booking secured",
       "booking_confirmed": "The vendor confirmed the booking",
       "booking_cancelled": "Booking cancelled",
-      "chat_started": "Chat started"
+      "chat_started": "Chat started",
+      "escrow_held": "Prepayment paid and frozen until the deal is confirmed",
+      "escrow_confirmed_client": "The client confirmed the deal",
+      "escrow_confirmed_vendor": "The vendor confirmed the deal",
+      "escrow_released": "Both sides confirmed — money transferred to the vendor",
+      "escrow_refunded": "Deal cancelled — prepayment refunded to the client",
+      "escrow_disputed": "Dispute opened — money frozen until EVENTUS decides",
+      "booking_completed": "The event took place, booking completed"
     },
     "autoReplies": [
       "Hello! Thanks for booking, it's all set. If you have wishes about time or address, write them here",
@@ -535,5 +543,57 @@
       "tagline": "About",
       "none": "Not set"
     }
+  },
+  "escrow": {
+    "title": "Safe deal",
+    "states": {
+      "none": "Not paid",
+      "held": "Money is frozen",
+      "released": "Transferred to the vendor",
+      "refunded": "Refunded to the client",
+      "disputed": "Dispute under review"
+    },
+    "explainHeld": "The prepayment of {amount} is frozen on the EVENTUS account. The vendor receives it once you both confirm the deal here in the chat.",
+    "explainReleased": "Both sides confirmed the terms, {amount} was transferred to the vendor.",
+    "explainRefunded": "The deal was cancelled, {amount} returned to the client.",
+    "explainDisputed": "The money stays frozen while the EVENTUS team reviews the dispute. This usually takes up to 2 business days.",
+    "explainPending": "The booking awaits prepayment. Once paid, the money is frozen until the deal is confirmed.",
+    "client": "Client",
+    "vendor": "Vendor",
+    "confirmed": "confirmed",
+    "waiting": "awaiting",
+    "you": "you",
+    "confirm": "Confirm the deal",
+    "confirmHint": "Confirm once you have agreed on everything: date, time, details.",
+    "unconfirm": "Withdraw confirmation",
+    "cancel": "Cancel and refund",
+    "cancelTitle": "Cancel the deal?",
+    "cancelText": "The prepayment of {amount} will be fully returned to the client. The date becomes free again.",
+    "dispute": "Open a dispute",
+    "disputeTitle": "Open a dispute",
+    "disputeText": "Describe what went wrong. The EVENTUS team will review the chat and decide whether to release the money to the vendor or refund the client.",
+    "disputeReason": "Reason",
+    "disputeSubmit": "Submit for review",
+    "disputeOpened": "Dispute opened",
+    "releasedToast": "Deal confirmed — money transferred",
+    "confirmedToast": "You confirmed the deal. Waiting for the other side.",
+    "refundedToast": "Deal cancelled, money refunded",
+    "pay": "Pay the prepayment",
+    "steps": {
+      "pay": "You pay the prepayment",
+      "payText": "The money doesn't go to the vendor right away",
+      "hold": "EVENTUS freezes the amount",
+      "holdText": "While you discuss the details in the chat",
+      "both": "Both press “Confirm”",
+      "bothText": "Only then is the money transferred"
+    },
+    "timeline": {
+      "paid": "Paid",
+      "frozen": "Frozen",
+      "agreed": "Agreed",
+      "transferred": "Transferred"
+    },
+    "fee": "A {p}% service fee is deducted from the vendor's amount",
+    "refundPolicy": "Cancel before the deal is confirmed — full refund of the prepayment."
   }
 }
