@@ -1,499 +1,133 @@
 "use client";
 
-import { format } from "date-fns";
-import { ExternalLink, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
-import Image from "next/image";
-import { useState } from "react";
-import { toast } from "sonner";
-import { AvailDots } from "@/components/avail-dots";
-import { BookingRow } from "@/components/booking/booking-row";
-import { MonthCalendar } from "@/components/month-calendar";
-import { Empty, Field, PageHeader, Section, Segmented, Stat, inputClass, textareaClass } from "@/components/panel";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { LinkButton } from "@/components/ui/link-button";
-import { NativeSelect } from "@/components/ui/native-select";
-import { Switch } from "@/components/ui/switch";
-import { deleteOffer, setBlockedUnits, setBookingStatus, updateVendor, upsertOffer } from "@/lib/data/actions";
-import { getAvailability } from "@/lib/data/availability";
-import { activeOffers, vendorBookings, vendorOfOwner } from "@/lib/data/queries";
+import { eachWeekOfInterval, endOfWeek, format, subWeeks } from "date-fns";
+import { ArrowRight, Check, Lock, MessageSquareReply, Receipt } from "lucide-react";
+import Link from "next/link";
+import { BarChart, LineChart } from "@/components/charts/charts";
+import { Kpi } from "@/components/layout/cabinet-shell";
+import { PageHeader, Section } from "@/components/panel";
+import { useMyVendor } from "@/components/vendor-panel/use-my-vendor";
+import { VendorBookingList } from "@/components/vendor-panel/vendor-booking-list";
+import { followersOf, likeCount } from "@/lib/data/feed";
+import { vendorBookings } from "@/lib/data/queries";
 import { useDB } from "@/lib/data/store";
-import type { Offer, Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
-import { useActor } from "@/lib/session";
-import { cn } from "@/lib/utils";
+import { escrowOf, vendorBalance } from "@/lib/payments/escrow";
 
-type Tab = "overview" | "offers" | "calendar" | "profile";
-
-export default function VendorPanelPage() {
-  const { t } = useI18n();
-  const actor = useActor();
-  const vendor = useDB((db) => vendorOfOwner(db, actor.id));
-  const [tab, setTab] = useState<Tab>("overview");
-
-  if (actor.role !== "vendor" || !vendor) {
-    return (
-      <div className="mx-auto flex max-w-sm flex-1 flex-col items-center justify-center gap-3 px-4 py-24 text-center text-sm text-text-secondary">
-        {t("vp.noVendor")}
-      </div>
-    );
-  }
-
-  return (
-    <div className="container-app pt-8 pb-16 md:pt-12">
-      <PageHeader
-        title={vendor.name}
-        subtitle={t("vp.title")}
-        action={
-          <LinkButton href={`/vendors/${vendor.slug}`} variant="outline" className="h-10 px-4">
-            <ExternalLink className="size-4" strokeWidth={1.5} />
-            {t("vp.viewPublic")}
-          </LinkButton>
-        }
-      />
-      {vendor.hidden && (
-        <p className="mt-4 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-text-secondary">{t("vp.hiddenNotice")}</p>
-      )}
-      <div className="mt-6">
-        <Segmented
-          value={tab}
-          onChange={setTab}
-          options={[
-            { value: "overview", label: t("vp.overview") },
-            { value: "offers", label: t("vp.offers") },
-            { value: "calendar", label: t("vp.calendar") },
-            { value: "profile", label: t("vp.profile") },
-          ]}
-        />
-      </div>
-      <div className="mt-6">
-        {tab === "overview" && <Overview vendor={vendor} />}
-        {tab === "offers" && <Offers vendor={vendor} />}
-        {tab === "calendar" && <Calendar vendor={vendor} />}
-        {tab === "profile" && <Profile key={vendor.id} vendor={vendor} />}
-      </div>
-    </div>
-  );
-}
-
-// ── Overview ──────────────────────────────────────────────────
-
-function Overview({ vendor }: { vendor: Vendor }) {
-  const { t, money, num } = useI18n();
-  const actor = useActor();
+export default function VendorOverview() {
+  const { t, num, money, date, locale } = useI18n();
+  const vendor = useMyVendor();
   const db = useDB((d) => d);
+  const today = new Date();
+  const todayIso = today.toISOString().slice(0, 10);
   const bookings = vendorBookings(db, vendor.id);
   const live = bookings.filter((b) => b.status !== "cancelled");
-  const prepaidSum = live.filter((b) => b.status !== "pending").reduce((s, b) => s + b.prepayAmount, 0);
+  const bal = vendorBalance(vendor.id, db.bookings, db.transactions);
   const views = db.stats.find((s) => s.vendorId === vendor.id)?.views ?? 0;
-  const upcoming = bookings.filter((b) => b.status !== "completed");
+  const conversion = views ? (live.length / views) * 100 : 0;
+  const posts = db.posts.filter((p) => p.vendorId === vendor.id);
+  const likes = posts.reduce((s, p) => s + likeCount(db, p), 0);
+
+  // gross bookings value per week, last 12 weeks (by creation date)
+  const weeks = eachWeekOfInterval({ start: subWeeks(today, 11), end: today }, { weekStartsOn: 1 });
+  const weekly = weeks.map((w) => {
+    const end = endOfWeek(w, { weekStartsOn: 1 });
+    const sum = live.filter((b) => new Date(b.createdAt) >= w && new Date(b.createdAt) <= end).reduce((s, b) => s + b.total, 0);
+    return {
+      label: format(w, "d.MM"),
+      value: sum,
+      hint: `${date(format(w, "yyyy-MM-dd"), "d MMM")} — ${date(format(end, "yyyy-MM-dd"), "d MMM")}`,
+    };
+  });
+  // demand by weekday of the event date
+  const weekdays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(2024, 0, 1 + i); // Monday-first
+    return {
+      label: new Intl.DateTimeFormat(locale === "ru" ? "ru-RU" : "en-US", { weekday: "short" }).format(d),
+      value: live.filter((b) => (new Date(b.date).getDay() + 6) % 7 === i).length,
+    };
+  });
+
+  const toConfirm = bookings.filter((b) => escrowOf(b).state === "held" && !b.escrow?.vendorConfirmedAt);
+  const reviews = db.reviews.filter((r) => r.vendorId === vendor.id && r.bookingId && !r.reply);
+  const todo = [
+    ...toConfirm.map((b) => ({
+      id: b.id,
+      icon: Lock,
+      text: t("vcab.todoConfirm", { client: db.users.find((u) => u.id === b.clientId)?.name ?? "", amount: money(escrowOf(b).amount) }),
+      href: `/messages/${db.conversations.find((c) => c.bookingId === b.id)?.id ?? ""}`,
+    })),
+    ...bookings
+      .filter((b) => b.status === "pending")
+      .map((b) => ({
+        id: `p-${b.id}`,
+        icon: Receipt,
+        text: t("vcab.todoPending", { client: db.users.find((u) => u.id === b.clientId)?.name ?? "" }),
+        href: "/vendor/bookings",
+      })),
+    ...reviews.map((r) => ({
+      id: r.id,
+      icon: MessageSquareReply,
+      text: t("vcab.todoReview", { author: r.author }),
+      href: "/vendor/reviews",
+    })),
+  ];
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label={t("vp.views")} value={num(views)} note={t("vp.last30")} />
-        <Stat label={t("vp.bookingsCount")} value={num(live.length)} note={t("vp.last30")} />
-        <Stat label={t("vp.prepaidSum")} value={money(prepaidSum)} note={t("vp.last30")} />
-      </div>
-      <Section title={t("vp.incoming")}>
-        {upcoming.length ? (
-          <ul className="flex flex-col divide-y divide-border">
-            {upcoming.map((b) => {
-              const conv = db.conversations.find((c) => c.bookingId === b.id);
-              return (
-                <BookingRow
-                  key={b.id}
-                  b={b}
-                  perspective="vendor"
-                  actions={
-                    <>
-                      {b.status === "prepaid" && (
-                        <>
-                          <Button
-                            className="h-9 px-4"
-                            onClick={() => {
-                              setBookingStatus(actor, b.id, "confirmed");
-                              toast.success(t("vp.confirmed"));
-                            }}
-                          >
-                            {t("vp.confirm")}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            className="h-9 px-3 text-muted-foreground"
-                            onClick={() => {
-                              setBookingStatus(actor, b.id, "cancelled");
-                              toast(t("vp.declined"));
-                            }}
-                          >
-                            {t("vp.decline")}
-                          </Button>
-                        </>
-                      )}
-                      {conv && (
-                        <LinkButton href={`/messages/${conv.id}`} variant="outline" className="h-9 px-4">
-                          {t("dashboard.chat")}
-                        </LinkButton>
-                      )}
-                    </>
-                  }
-                />
-              );
-            })}
-          </ul>
-        ) : (
-          <Empty>{t("vp.noIncoming")}</Empty>
-        )}
-      </Section>
-    </div>
-  );
-}
-
-// ── Offers ────────────────────────────────────────────────────
-
-function Offers({ vendor }: { vendor: Vendor }) {
-  const { t, l, money } = useI18n();
-  const offers = useDB((db) => db.offers.filter((o) => o.vendorId === vendor.id));
-  const [editing, setEditing] = useState<Offer | "new" | null>(null);
-
-  return (
-    <Section
-      title={t("vp.offers")}
-      action={
-        <Button className="h-9 px-4" onClick={() => setEditing("new")}>
-          <Plus />
-          {t("vp.addOffer")}
-        </Button>
-      }
-    >
-      {offers.length ? (
-        <ul className="flex flex-col divide-y divide-border">
-          {offers.map((o) => (
-            <li key={o.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-              <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-muted">
-                {o.photos[0] && <Image src={o.photos[0]} alt="" fill sizes="56px" className="object-cover" />}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className={cn("truncate text-sm font-medium", !o.active && "text-muted-foreground")}>{l(o.title)}</div>
-                <div className="text-sm text-text-secondary tabular-nums">
-                  {money(o.price)} / {l(o.unit)} · {o.totalUnits}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditing(o)}
-                className="flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label={t("common.edit")}
-              >
-                <Pencil className="size-4" strokeWidth={1.5} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <Empty>{t("vp.noOffers")}</Empty>
-      )}
-      <Dialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editing === "new" ? t("vp.addOffer") : t("vp.editOffer")}</DialogTitle>
-          </DialogHeader>
-          {editing !== null && (
-            <OfferForm key={editing === "new" ? "new" : editing.id} vendor={vendor} initial={editing === "new" ? null : editing} onDone={() => setEditing(null)} />
-          )}
-        </DialogContent>
-      </Dialog>
-    </Section>
-  );
-}
-
-function OfferForm({ vendor, initial, onDone }: { vendor: Vendor; initial: Offer | null; onDone: () => void }) {
-  const { t, locale } = useI18n();
-  const actor = useActor();
-  const [title, setTitle] = useState(initial?.title[locale] ?? "");
-  const [description, setDescription] = useState(initial?.description[locale] ?? "");
-  const [price, setPrice] = useState(String(initial?.price ?? ""));
-  const [units, setUnits] = useState(String(initial?.totalUnits ?? 1));
-  const [unit, setUnit] = useState(initial?.unit[locale] ?? "");
-  const [photo, setPhoto] = useState(initial?.photos[0] ?? vendor.portfolio[0] ?? "");
-  const [active, setActive] = useState(initial?.active ?? true);
-  const valid = title.trim() && Number(price) >= 0 && price !== "" && Number(units) >= 0 && unit.trim();
-
-  const loc = (value: string, prev?: { ru: string; en: string }) => {
-    const v = value.trim();
-    // the other language follows unless it was set separately before
-    const other = locale === "ru" ? "en" : "ru";
-    const keepOther = prev && prev[locale] === v ? prev[other] : v;
-    return { [locale]: v, [other]: keepOther } as { ru: string; en: string };
-  };
-
-  return (
-    <form
-      className="flex flex-col gap-4"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!valid) return;
-        upsertOffer(actor, {
-          id: initial?.id,
-          vendorId: vendor.id,
-          title: loc(title, initial?.title),
-          description: loc(description, initial?.description),
-          unit: loc(unit, initial?.unit),
-          price: Number(price),
-          totalUnits: Number(units),
-          capacity: initial?.capacity,
-          maxPerBooking: initial?.maxPerBooking,
-          premium: initial?.premium,
-          photos: photo ? [photo, ...(initial?.photos.filter((p) => p !== photo) ?? [])] : (initial?.photos ?? []),
-          active,
-        });
-        toast.success(t("common.saved"));
-        onDone();
-      }}
-    >
-      <Field label={t("vp.offerTitle")}>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} maxLength={100} required />
-      </Field>
-      <Field label={t("vp.description")}>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={textareaClass} maxLength={400} />
-      </Field>
-      <div className="grid grid-cols-3 gap-3">
-        <Field label={t("vp.price")}>
-          <input type="number" inputMode="numeric" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className={inputClass} required />
-        </Field>
-        <Field label={t("vp.units")}>
-          <input type="number" inputMode="numeric" min={0} value={units} onChange={(e) => setUnits(e.target.value)} className={inputClass} required />
-        </Field>
-        <Field label={t("vp.unit")}>
-          <input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder={t("vp.unitPlaceholder")} className={inputClass} maxLength={40} required />
-        </Field>
-      </div>
-      {vendor.portfolio.length > 0 && (
-        <div>
-          <span className="text-sm text-text-secondary">{t("vp.photo")}</span>
-          <div className="mt-1.5 grid grid-cols-5 gap-2">
-            {vendor.portfolio.slice(0, 10).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setPhoto(p)}
-                className={cn("relative aspect-square overflow-hidden rounded-lg bg-muted", photo === p ? "ring-2 ring-primary ring-offset-2" : "opacity-80 hover:opacity-100")}
-                aria-pressed={photo === p}
-              >
-                <Image src={p} alt="" fill sizes="80px" className="object-cover" />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-      <label className="flex items-center justify-between gap-3 text-sm">
-        {t("vp.active")}
-        <Switch checked={active} onCheckedChange={setActive} />
-      </label>
-      <DialogFooter className="sm:justify-between">
-        {initial ? (
-          <Button
-            type="button"
-            variant="ghost"
-            className="text-destructive"
-            onClick={() => {
-              deleteOffer(actor, initial.id);
-              onDone();
-            }}
-          >
-            <Trash2 />
-            {t("vp.deleteOffer")}
-          </Button>
-        ) : (
-          <span />
-        )}
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={onDone}>
-            {t("common.cancel")}
-          </Button>
-          <Button type="submit" disabled={!valid}>
-            {t("common.save")}
-          </Button>
-        </div>
-      </DialogFooter>
-    </form>
-  );
-}
-
-// ── Calendar ──────────────────────────────────────────────────
-
-function Calendar({ vendor }: { vendor: Vendor }) {
-  const { t, l, date: fmt } = useI18n();
-  const actor = useActor();
-  const db = useDB((d) => d);
-  const offers = activeOffers(db, vendor.id);
-  const [offerId, setOfferId] = useState(offers[0]?.id ?? "");
-  const [day, setDay] = useState<string>(format(new Date(), "yyyy-MM-dd"));
-  const offer = offers.find((o) => o.id === offerId) ?? offers[0];
-
-  if (!offer) return <Empty>{t("vp.noOffers")}</Empty>;
-  const a = getAvailability(db, offer, day);
-
-  return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-      <Section
-        title={t("vp.calendar")}
-        action={
-          <NativeSelect value={offer.id} onChange={(e) => setOfferId(e.target.value)} className="max-w-[60%]" aria-label={t("vp.selectOffer")}>
-            {offers.map((o) => (
-              <option key={o.id} value={o.id}>
-                {l(o.title)}
-              </option>
-            ))}
-          </NativeSelect>
-        }
-      >
-        <MonthCalendar
-          value={day}
-          onChange={setDay}
-          renderDay={(d) => {
-            if (!d.inMonth) return null;
-            const av = getAvailability(db, offer, d.iso);
-            return (
-              <>
-                <span>{format(d.date, "d")}</span>
-                {!d.past && (
-                  <span className={cn("text-2xs leading-none tabular-nums", d.selected ? "text-primary-foreground/80" : av.free ? "text-primary" : "text-muted-foreground/60")}>
-                    {av.free}/{av.total}
-                  </span>
-                )}
-              </>
-            );
-          }}
+      <PageHeader title={t("cabinet.overview")} subtitle={vendor.name} />
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <Kpi label={t("vcab.available")} value={money(bal.available)} note={t("vcab.availableNote")} />
+        <Kpi label={t("cabinet.frozen")} value={money(bal.held)} note={t("vcab.frozenNote")} tone="primary" />
+        <Kpi label={t("vp.bookingsCount")} value={num(live.length)} note={t("vcab.conversion", { p: conversion.toFixed(1) })} />
+        <Kpi
+          label={t("vp.views")}
+          value={num(views)}
+          note={t("vcab.socialNote", { f: num(followersOf(db, vendor.id)), l: num(likes) })}
+          tone="gold"
         />
-      </Section>
-      <Section title={t("vp.blockTitle", { date: fmt(day, "d MMMM") })}>
-        <div className="flex flex-col gap-4">
-          <AvailDots a={a} />
-          <div>
-            <div className="text-sm text-text-secondary">{t("vp.blockHint")}</div>
-            <div className="mt-2 flex h-11 w-fit items-center rounded-lg border border-input bg-card">
-              <button
-                type="button"
-                className="flex size-11 items-center justify-center text-text-secondary disabled:opacity-30"
-                disabled={a.blocked <= 0}
-                onClick={() => setBlockedUnits(actor, offer.id, day, a.blocked - 1)}
-                aria-label="−"
-              >
-                <Minus className="size-4" />
-              </button>
-              <span className="w-12 text-center text-md font-medium tabular-nums">{a.blocked}</span>
-              <button
-                type="button"
-                className="flex size-11 items-center justify-center text-text-secondary disabled:opacity-30"
-                disabled={a.blocked + a.booked >= a.total}
-                onClick={() => setBlockedUnits(actor, offer.id, day, a.blocked + 1)}
-                aria-label="+"
-              >
-                <Plus className="size-4" />
-              </button>
-            </div>
-          </div>
-          <dl className="flex flex-col gap-1 text-sm text-text-secondary tabular-nums">
-            <div>{t("vp.bookedHere", { n: a.booked })}</div>
-            <div>{t("vp.freeNow", { n: a.free, total: a.total })}</div>
-          </dl>
-        </div>
-      </Section>
-    </div>
-  );
-}
-
-// ── Profile ───────────────────────────────────────────────────
-
-function Profile({ vendor }: { vendor: Vendor }) {
-  const { t, locale } = useI18n();
-  const actor = useActor();
-  const [name, setName] = useState(vendor.name);
-  const [tagline, setTagline] = useState(vendor.tagline[locale]);
-  const [description, setDescription] = useState(vendor.description[locale]);
-  const [phone, setPhone] = useState(vendor.phone);
-  const [prepay, setPrepay] = useState(String(vendor.prepayPercent));
-  const [portfolio, setPortfolio] = useState(vendor.portfolio);
-  const [url, setUrl] = useState("");
-
-  function addPhoto() {
-    try {
-      const u = new URL(url.trim());
-      if (u.protocol !== "https:" || u.hostname !== "images.unsplash.com") throw new Error();
-      setPortfolio((p) => [...p, u.toString()]);
-      setUrl("");
-    } catch {
-      toast.error("https://images.unsplash.com/…");
-    }
-  }
-
-  return (
-    <form
-      className="grid gap-6 lg:grid-cols-[1fr_1fr]"
-      onSubmit={(e) => {
-        e.preventDefault();
-        updateVendor(actor, vendor.id, {
-          name: name.trim().slice(0, 80) || vendor.name,
-          tagline: { ...vendor.tagline, [locale]: tagline.trim().slice(0, 120) },
-          description: { ...vendor.description, [locale]: description.trim().slice(0, 1500) },
-          phone: phone.trim().slice(0, 30),
-          prepayPercent: Number(prepay),
-          portfolio,
-          cover: portfolio[0] ?? vendor.cover,
-        });
-        toast.success(t("common.saved"));
-      }}
-    >
-      <Section title={t("vp.profile")}>
-        <div className="flex flex-col gap-4">
-          <Field label={t("vp.name")}>
-            <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} maxLength={80} />
-          </Field>
-          <Field label={t("vp.tagline")}>
-            <input value={tagline} onChange={(e) => setTagline(e.target.value)} className={inputClass} maxLength={120} />
-          </Field>
-          <Field label={t("vp.descriptionLabel")}>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={5} className={textareaClass} maxLength={1500} />
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label={t("vp.phone")}>
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} inputMode="tel" maxLength={30} />
-            </Field>
-            <Field label={t("vp.prepayPercent")}>
-              <input type="number" min={0} max={100} value={prepay} onChange={(e) => setPrepay(e.target.value)} className={inputClass} />
-            </Field>
-          </div>
-        </div>
-      </Section>
-      <Section title={t("vendor.portfolio")}>
-        <div className="grid grid-cols-3 gap-2">
-          {portfolio.map((p) => (
-            <div key={p} className="group relative aspect-square overflow-hidden rounded-lg bg-muted">
-              <Image src={p} alt="" fill sizes="120px" className="object-cover" />
-              <button
-                type="button"
-                onClick={() => setPortfolio((list) => list.filter((x) => x !== p))}
-                className="absolute top-1.5 right-1.5 flex size-7 items-center justify-center rounded-full bg-card/90 text-foreground opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
-                aria-label={t("common.delete")}
-              >
-                <X className="size-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4 flex gap-2">
-          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder={t("vp.portfolioUrl")} className={inputClass} aria-label={t("vp.portfolioAdd")} />
-          <Button type="button" variant="outline" className="h-10 px-3" onClick={addPhoto} disabled={!url.trim()}>
-            <Plus />
-          </Button>
-        </div>
-      </Section>
-      <div className="lg:col-span-2">
-        <Button type="submit" className="h-11 px-6">
-          {t("common.save")}
-        </Button>
       </div>
-    </form>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <Section title={t("vcab.revenueChart")}>
+          <LineChart data={weekly} format={money} height={180} />
+        </Section>
+        <Section title={t("cabinet.attention")}>
+          {todo.length ? (
+            <ul className="flex flex-col gap-1">
+              {todo.slice(0, 6).map((x) => (
+                <li key={x.id}>
+                  <Link href={x.href} className="group flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm hover:bg-muted">
+                    <x.icon className="size-4 shrink-0 text-primary" strokeWidth={1.5} />
+                    <span className="flex-1">{x.text}</span>
+                    <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="flex items-center gap-2 py-4 text-sm text-text-secondary">
+              <Check className="size-4 text-success" /> {t("cabinet.allDone")}
+            </p>
+          )}
+        </Section>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <Section
+          title={t("cabinet.upcoming")}
+          action={
+            <Link href="/vendor/bookings" className="text-sm text-primary hover:underline">
+              {t("cabinet.all")}
+            </Link>
+          }
+        >
+          <VendorBookingList bookings={live.filter((b) => b.date >= todayIso).slice(0, 5)} />
+        </Section>
+        <Section title={t("vcab.weekdayChart")}>
+          <BarChart data={weekdays} height={140} />
+        </Section>
+      </div>
+    </div>
   );
 }

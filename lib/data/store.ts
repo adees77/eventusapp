@@ -16,7 +16,7 @@ import { safeStorage } from "@/lib/utils";
 import { demoConfig } from "@/config/demo";
 import { designFromLegacy } from "@/lib/invitations/design";
 import { buildSeed } from "./seed";
-import type { DB } from "./types";
+import type { DB, Transaction } from "./types";
 
 interface DataState {
   db: DB | null;
@@ -91,7 +91,14 @@ export function migrate(input: DB): DB {
               escrow:
                 b.status === "prepaid"
                   ? { state: "held", amount: b.prepayAmount, heldAt: b.createdAt }
-                  : { state: "released", amount: b.prepayAmount, heldAt: b.createdAt, releasedAt: b.createdAt, clientConfirmedAt: b.createdAt, vendorConfirmedAt: b.createdAt },
+                  : {
+                      state: "released",
+                      amount: b.prepayAmount,
+                      heldAt: b.createdAt,
+                      releasedAt: b.createdAt,
+                      clientConfirmedAt: b.createdAt,
+                      vendorConfirmedAt: b.createdAt,
+                    },
             },
       ),
       invitations: db.invitations.map((inv) => ({
@@ -101,8 +108,26 @@ export function migrate(input: DB): DB {
         views: inv.views ?? [],
       })),
     };
+    if (!input.transactions) db = { ...db, transactions: ledgerFromEscrow(db) };
   }
   return db;
+}
+
+/** Rebuilds the money ledger for bookings that were paid before the ledger existed */
+function ledgerFromEscrow(db: DB): Transaction[] {
+  const fee = db.settings.feePercent;
+  return db.bookings.flatMap((b) => {
+    const e = b.escrow;
+    if (!e) return [];
+    const base = { bookingId: b.id, vendorId: b.vendorId, clientId: b.clientId };
+    const out: Transaction[] = [{ ...base, id: `tx-${b.id}-hold`, kind: "hold", amount: e.amount, createdAt: e.heldAt ?? b.createdAt }];
+    if (e.state === "released") {
+      const f = Math.round((e.amount * fee) / 100);
+      out.push({ ...base, id: `tx-${b.id}-release`, kind: "release", amount: e.amount - f, createdAt: e.releasedAt ?? b.createdAt });
+      out.push({ ...base, id: `tx-${b.id}-fee`, kind: "fee", amount: f, createdAt: e.releasedAt ?? b.createdAt });
+    }
+    return out;
+  });
 }
 
 /**
