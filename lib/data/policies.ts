@@ -30,6 +30,10 @@ export const can = {
 
   editVendor: (a: Actor, v: Vendor) => isAdmin(a) || ownsVendor(a, v),
   createVendor: (a: Actor) => isAdmin(a),
+  /** A freshly signed-up user turns their own account into a vendor (no vendor yet) */
+  registerOwnVendor: (a: Actor, db: DB) => a.role !== "admin" && !db.vendors.some((v) => v.ownerId === a.id),
+  /** Users edit only their own profile */
+  editProfile: (a: Actor, userId: string) => isAdmin(a) || a.id === userId,
   setVendorHidden: (a: Actor) => isAdmin(a),
   setVendorVerified: (a: Actor) => isAdmin(a),
 

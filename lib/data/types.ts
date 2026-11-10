@@ -28,7 +28,15 @@ export interface User {
   name: string;
   phone?: string;
   avatar?: string;
+  email?: string;
+  authProvider?: AuthProvider;
+  city?: string;
+  /** Set for accounts created through sign-up; cleared when the chat onboarding is done */
+  needsOnboarding?: boolean;
+  onboardedAt?: string;
 }
+
+export type AuthProvider = "google" | "email" | "demo";
 
 export interface Category {
   id: CategoryId;
