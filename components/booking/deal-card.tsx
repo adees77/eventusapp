@@ -48,19 +48,19 @@ export function EscrowTimeline({ booking }: { booking: Booking }) {
   ] as const;
   if (e.state === "refunded" || e.state === "disputed") return null;
   return (
-    <ol className="flex items-center gap-2 text-2xs text-muted-foreground" aria-label={t("escrow.title")}>
+    <ol className="grid grid-cols-4 text-2xs text-muted-foreground" aria-label={t("escrow.title")}>
       {steps.map((s, i) => (
-        <li key={s.key} className="flex min-w-0 flex-1 items-center gap-2">
+        <li key={s.key} className="relative flex min-w-0 flex-col items-center gap-1.5 text-center">
+          {i > 0 && <span className={cn("absolute top-2 right-1/2 h-px w-full", s.done ? "bg-primary/40" : "bg-border")} aria-hidden />}
           <span
             className={cn(
-              "flex size-4 shrink-0 items-center justify-center rounded-full border",
+              "relative flex size-4 shrink-0 items-center justify-center rounded-full border",
               s.done ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card",
             )}
           >
             {s.done && <Check className="size-2.5" strokeWidth={3} />}
           </span>
-          <span className={cn("truncate", s.done && "text-foreground")}>{t(`escrow.timeline.${s.key}`)}</span>
-          {i < steps.length - 1 && <span className={cn("h-px flex-1", s.done ? "bg-primary/40" : "bg-border")} aria-hidden />}
+          <span className={cn("max-w-full truncate px-0.5", s.done && "text-foreground")}>{t(`escrow.timeline.${s.key}`)}</span>
         </li>
       ))}
     </ol>
@@ -81,7 +81,6 @@ export function DealCard({ booking, className }: { booking: Booking; className?:
   const e = escrowOf(booking);
   const party = actor.id === booking.clientId ? "client" : actor.id === vendorOwner ? "vendor" : null;
   const mine = party === "client" ? e.clientConfirmedAt : party === "vendor" ? e.vendorConfirmedAt : undefined;
-  const other = party === "client" ? e.vendorConfirmedAt : e.clientConfirmedAt;
 
   function run(fn: () => void, ok?: string) {
     try {
