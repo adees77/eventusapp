@@ -14,6 +14,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { safeStorage } from "@/lib/utils";
 import { demoConfig } from "@/config/demo";
+import { designFromLegacy } from "@/lib/invitations/design";
 import { buildSeed } from "./seed";
 import type { DB } from "./types";
 
@@ -42,7 +43,9 @@ export const useDataStore = create<DataState>()(
       storage: createJSONStorage(() => safeStorage("localStorage")),
       partialize: (s) => ({ db: s.db }),
       onRehydrateStorage: () => (state, error) => {
-        const stale = !state?.db || state.db.version !== demoConfig.seedVersion;
+        // v2 → v3 is additive: upgrade in place so sign-ups and edits survive
+        const v = state?.db?.version;
+        const stale = !state?.db || (v !== demoConfig.seedVersion && v !== 2);
         // Sync storage hydrates inside create(), before useDataStore is assigned → defer.
         queueMicrotask(() =>
           useDataStore.setState({
@@ -56,14 +59,50 @@ export const useDataStore = create<DataState>()(
 );
 
 /** Additive schema changes that don't need a full re-seed (keeps the user's demo data) */
-function migrate(db: DB): DB {
-  if (db.invitations) return db;
-  // keep the demo invitation, re-pinned to the user's (possibly edited) wedding date
-  const invitations = buildSeed().invitations.flatMap((inv) => {
-    const ev = db.events.find((e) => e.id === inv.eventId);
-    return ev ? [{ ...inv, date: ev.date }] : [];
-  });
-  return { ...db, invitations };
+export function migrate(input: DB): DB {
+  let db = input;
+  let cached: DB | undefined;
+  const seed = () => (cached ??= buildSeed());
+  if (!db.invitations) {
+    // keep the demo invitation, re-pinned to the user's (possibly edited) wedding date
+    const invitations = seed().invitations.flatMap((inv) => {
+      const ev = db.events.find((e) => e.id === inv.eventId);
+      return ev ? [{ ...inv, date: ev.date }] : [];
+    });
+    db = { ...db, invitations };
+  }
+  if (db.version === 2 || !db.posts) {
+    const s = seed();
+    db = {
+      ...db,
+      version: demoConfig.seedVersion,
+      posts: db.posts ?? s.posts.filter((p) => db.vendors.some((v) => v.id === p.vendorId)),
+      likes: db.likes ?? [],
+      saved: db.saved ?? [],
+      follows: db.follows ?? s.follows,
+      notifications: db.notifications ?? [],
+      settings: db.settings ?? s.settings,
+      transactions: db.transactions ?? [],
+      bookings: db.bookings.map((b) =>
+        b.escrow || b.status === "pending" || b.status === "cancelled"
+          ? b
+          : {
+              ...b,
+              escrow:
+                b.status === "prepaid"
+                  ? { state: "held", amount: b.prepayAmount, heldAt: b.createdAt }
+                  : { state: "released", amount: b.prepayAmount, heldAt: b.createdAt, releasedAt: b.createdAt, clientConfirmedAt: b.createdAt, vendorConfirmedAt: b.createdAt },
+            },
+      ),
+      invitations: db.invitations.map((inv) => ({
+        ...inv,
+        design: inv.design ?? designFromLegacy(inv),
+        guests: inv.guests ?? [],
+        views: inv.views ?? [],
+      })),
+    };
+  }
+  return db;
 }
 
 /**

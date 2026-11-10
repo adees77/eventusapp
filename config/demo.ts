@@ -14,5 +14,5 @@ export const demoConfig = {
   /** localStorage key for the mock database; bump suffix to force re-seed */
   storageKey: "eventus-db-v1",
   /** Seed schema version — bump when seed shape changes */
-  seedVersion: 2,
+  seedVersion: 3,
 } as const;

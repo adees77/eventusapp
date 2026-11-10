@@ -56,7 +56,7 @@ export const can = {
   setBookingStatus: (a: Actor, db: DB, b: Booking, next: Booking["status"]) => {
     if (isAdmin(a)) return true;
     if (ownsVendor(a, db.vendors.find((v) => v.id === b.vendorId))) return next !== "pending";
-    if (a.id === b.clientId) return next === "cancelled" && b.status === "pending";
+    if (a.id === b.clientId) return next === "cancelled" && (b.status === "pending" || b.escrow?.state === "held");
     return false;
   },
 

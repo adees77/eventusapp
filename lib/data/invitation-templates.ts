@@ -3,6 +3,7 @@
  * Picking a template copies the texts into a new Invitation in the current
  * locale — after that the invitation is the user's own and edits freely.
  */
+import { designFromLegacy } from "@/lib/invitations/design";
 import { PHOTOS, unsplash } from "./seed/photos";
 import type { Invitation, InvitationOccasion, InvitationStyle, LText } from "./types";
 
@@ -168,9 +169,9 @@ export function draftFromTemplate(
   tpl: InvitationTemplate | undefined,
   locale: "ru" | "en",
   event?: { id: string; date: string },
-): Omit<Invitation, "id" | "ownerId" | "rsvps" | "createdAt" | "updatedAt"> {
+): Omit<Invitation, "id" | "ownerId" | "rsvps" | "guests" | "views" | "createdAt" | "updatedAt"> {
   const pick = (x: LText | undefined) => (x ? x[locale] : "");
-  return {
+  const fields = {
     eventId: event?.id,
     templateId: tpl?.id,
     style: tpl?.style ?? "classic",
@@ -185,6 +186,7 @@ export function draftFromTemplate(
     address: "",
     photo: tpl?.photo ?? (tpl?.style === "photo" ? INVITATION_PHOTOS[0] : undefined),
   };
+  return { ...fields, design: designFromLegacy({ ...fields, contact: undefined }) };
 }
 
 /** Photos offered for the "photo" style */
