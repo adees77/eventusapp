@@ -18,6 +18,8 @@ export interface LogEntry {
 export interface Draft {
   answers: Answers;
   log: LogEntry[];
+  /** the free-form story told on the voice-first start screen */
+  story?: { text: string; filled: StepId[] };
 }
 
 interface DraftState {

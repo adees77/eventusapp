@@ -232,6 +232,44 @@ function parseOwn(step: StepId, text: string, now: Date): Partial<Answers> | nul
   }
 }
 
+/**
+ * The voice-first start: the user tells everything in one go
+ * («Меня зовут Айгерим, у нас свадьба 14 июня в Бишкеке, человек 150, бюджет 1,5 млн»).
+ * Picks every detail it recognises; the chat then asks only for what's missing.
+ */
+export function parseStory(text: string, now = new Date()): Partial<Answers> {
+  const out: Partial<Answers> = {};
+  const nameMatch = text.match(/(?:меня зовут|зовут меня|my name is|call me|i'm|i am|я\s+[—–-])\s+(\p{Lu}\p{Ll}+(?:\s+\p{Lu}\p{Ll}+)?)/iu);
+  const name = nameMatch && parseName(nameMatch[1]);
+  if (name) out.name = name;
+
+  const eventType = parseEventType(text);
+  const date = parseDate(text, now);
+  const city = parseCity(text);
+  const guests = parseGuests(text, true);
+  const budget = parseBudget(text, true);
+  // "я фотограф", "у меня своя студия", "снимаю свадьбы" — someone offering services
+  const vendorCue =
+    /(я\s+(фотограф|видеограф|ведущ|тамад|флорист|декоратор|визажист|кондитер|диджей|dj|музыкант)|у меня (сво[йяё]|есть)\s+(студи|компани|салон|зал|парк|машин)|снима(ю|ем)|оформля(ю|ем)|предоставля|i'm a (photographer|host|florist|dj)|i run)/i;
+  const role = vendorCue.test(text) ? "vendor" : (parseRole(text) ?? (eventType || date || guests ? "client" : null));
+  if (!role) return out;
+  out.role = role;
+  if (city) out.city = city;
+
+  if (role === "vendor") {
+    const category = parseCategory(text);
+    if (category) out.category = category;
+    return out;
+  }
+  if (eventType) out.eventType = eventType;
+  if (date) out.date = date;
+  if (guests) out.guests = guests;
+  if (budget) out.budget = budget;
+  const priorities = parseCategories(text).filter((c) => c !== "halls" || /зал|ресторан|hall|venue/i.test(text));
+  if (priorities.length) out.priorities = priorities;
+  return out;
+}
+
 /** A chip tap → answer */
 export function choiceAnswer(step: StepId, value: string): Partial<Answers> {
   switch (step) {

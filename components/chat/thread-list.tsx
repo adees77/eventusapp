@@ -41,7 +41,9 @@ export function ThreadList({
                 onClick={() => onSelect(th.id)}
                 className={cn(
                   "flex h-9 w-full items-center rounded-lg pr-9 pl-2.5 text-left text-sm transition-colors",
-                  th.id === activeId ? "bg-card text-foreground shadow-[inset_0_0_0_1px_var(--border)]" : "text-text-secondary hover:bg-muted",
+                  th.id === activeId
+                    ? "bg-card text-foreground shadow-[inset_0_0_0_1px_var(--border)]"
+                    : "text-text-secondary hover:bg-muted",
                 )}
                 title={`${th.title} · ${date(th.updatedAt.slice(0, 10), "d MMM")}`}
               >

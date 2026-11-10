@@ -109,7 +109,9 @@
       "ru-RU": "Русский",
       "ky-KG": "Кыргызча",
       "en-US": "English"
-    }
+    },
+    "tapToTalk": "Tap and tell it in your own words",
+    "orTry": "Or start with an example"
   },
   "catalog": {
     "title": "Catalog",
@@ -486,7 +488,9 @@
       "name": "Nice to meet you, {name}.",
       "client": "Great, let's start with the event.",
       "vendor": "Glad to have you as a vendor. Let's build your profile in a minute.",
-      "noted": "Noted: {list}."
+      "noted": "Noted: {list}.",
+      "storyMore": "Just a couple of details left.",
+      "storyNone": "Let's go step by step, it'll be quicker."
     },
     "retry": {
       "default": "I didn't quite get that. Pick an option below or try rephrasing.",
@@ -556,6 +560,19 @@
       "tagline": "About",
       "none": "Not set",
       "offer": "First service"
+    },
+    "intro": {
+      "title": "Tell me about your celebration",
+      "titleName": "{name}, tell me about your celebration",
+      "subtitle": "What, when, where and how many guests — all at once, by voice or text. I'll sort it out and ask only what's missing.",
+      "examples": [
+        "A wedding on June 14 in Bishkek, about 150 guests, budget 1.5M som",
+        "Mom's anniversary in August, 60 people, need a restaurant and a host",
+        "I'm a photographer from Osh, I shoot weddings and tois"
+      ],
+      "stepByStep": "Answer step by step instead",
+      "placeholder": "Or type here…",
+      "bubble": "Tell me about your celebration — what, when, where and how many guests."
     }
   },
   "escrow": {

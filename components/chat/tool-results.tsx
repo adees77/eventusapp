@@ -13,15 +13,7 @@ import { usePlanner } from "@/lib/planner";
 import { useActor } from "@/lib/session";
 
 /** Renders a tool_result as UI. Data comes only from our tools. */
-export function ToolResultView({
-  name,
-  data,
-  onQuickReply,
-}: {
-  name: string;
-  data: unknown;
-  onQuickReply: (text: string) => void;
-}) {
+export function ToolResultView({ name, data, onQuickReply }: { name: string; data: unknown; onQuickReply: (text: string) => void }) {
   if (!data || typeof data !== "object" || "error" in data) return null;
   if (name === "search_vendors") {
     const r = data as SearchResult;

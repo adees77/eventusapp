@@ -7,6 +7,7 @@ import {
   filledSteps,
   mergeAnswers,
   parseAnswer,
+  parseStory,
   progress,
   sanitizeAiFields,
   skipAnswer,
@@ -123,5 +124,33 @@ describe("sanitizeAiFields", () => {
     expect(out).toEqual({ date: "2027-08-15", guests: 180, city: "bishkek", priorities: ["halls"] });
     expect(sanitizeAiFields({ date: "2020-01-01" }, NOW)).toEqual({});
     expect(sanitizeAiFields(null)).toEqual({});
+  });
+});
+
+describe("parseStory", () => {
+  it("picks everything from one message", () => {
+    const a = parseStory("Меня зовут Айгерим, у нас свадьба 14 июня в Бишкеке, человек 150, бюджет 1,5 млн, нужен ведущий и фотограф", NOW);
+    expect(a.name).toBe("Айгерим");
+    expect(a.role).toBe("client");
+    expect(a.eventType).toBe("wedding");
+    expect(a.city).toBe("bishkek");
+    expect(a.guests).toBe(150);
+    expect(a.budget).toBe(1_500_000);
+    expect(a.date).toMatch(/-06-14$/);
+    expect(a.priorities).toEqual(expect.arrayContaining(["hosts", "photo"]));
+    // the chat continues with only what's missing
+    expect(currentStep(mergeAnswers({}, a))).toBe("summary");
+  });
+
+  it("recognises a vendor", () => {
+    const a = parseStory("Я фотограф, снимаю свадьбы в Оше, у меня своя студия", NOW);
+    expect(a.role).toBe("vendor");
+    expect(a.city).toBe("osh");
+    expect(a.category).toBe("photo");
+    expect(currentStep(mergeAnswers({}, a))).toBe("name");
+  });
+
+  it("returns little for small talk", () => {
+    expect(parseStory("привет", NOW)).toEqual({});
   });
 });

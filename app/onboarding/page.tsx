@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Logo, LogoMark } from "@/components/brand/logo";
 import { CategoryIcon } from "@/components/category-icon";
 import { Composer } from "@/components/chat/composer";
+import { VoiceHero } from "@/components/chat/voice-hero";
 import { MonthCalendar } from "@/components/month-calendar";
 import { SummaryCard } from "@/components/onboarding/summary-card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -28,6 +29,7 @@ import {
   filledSteps,
   mergeAnswers,
   parseAnswer,
+  parseStory,
   progress,
   sanitizeAiFields,
   skipAnswer,
@@ -52,7 +54,7 @@ const RETRY_KEYS: Partial<Record<StepId, MessageKey>> = {
 };
 
 export default function OnboardingPage() {
-  const { t, tn, l, date, money, locale } = useI18n();
+  const { t, tn, l, date, money, locale, list } = useI18n();
   const router = useRouter();
   const actor = useActor();
   const user = useDB((db) => db.users.find((u) => u.id === actor.id));
@@ -62,7 +64,10 @@ export default function OnboardingPage() {
   const clearDraft = useOnboardingDraft((s) => s.clear);
 
   const draft: Draft = stored ?? { answers: user?.name ? { name: user.name } : {}, log: [] };
-  const { answers, log } = draft;
+  const { answers, log, story } = draft;
+  // voice-first start: until the user tells their story (or chooses step-by-step)
+  const [stepMode, setStepMode] = useState(false);
+  const intro = !story && log.length === 0 && !stepMode;
   const step = currentStep(answers);
   const def = STEPS[step];
 
@@ -114,10 +119,26 @@ export default function OnboardingPage() {
     let pendingAck: string[] = [];
     // answers as they were after each reply, to phrase acks
     let running: Answers = user?.name ? { name: user.name } : {};
-    const firstStep: StepId = running.name ? "role" : "name";
-    const hello = running.name ? t("onboarding.q.helloName", { name: running.name.split(" ")[0] }) : t("onboarding.q.hello");
-    out.push({ from: "bot", lines: [hello, question(firstStep)], key: "hello" });
-    asked = firstStep;
+    if (story) {
+      out.push({ from: "bot", lines: [t("onboarding.intro.bubble")], key: "hello" });
+      out.push({ from: "user", text: story.text, key: "story" });
+      running = replay(running, { step: "name", text: story.text, filled: story.filled }, answers);
+      const lines: string[] = [];
+      if (story.filled.includes("name") && running.name) lines.push(t("onboarding.ack.name", { name: running.name.split(" ")[0] }));
+      if (story.filled.includes("role") && running.role === "vendor") lines.push(t("onboarding.ack.vendor"));
+      const extra = describe(story.filled, running);
+      if (extra) lines.push(t("onboarding.ack.noted", { list: extra }));
+      pendingAck = lines.length
+        ? step === "summary"
+          ? lines
+          : [...lines, t("onboarding.ack.storyMore")]
+        : [t("onboarding.ack.storyNone")];
+    } else {
+      const firstStep: StepId = running.name ? "role" : "name";
+      const hello = running.name ? t("onboarding.q.helloName", { name: running.name.split(" ")[0] }) : t("onboarding.q.hello");
+      out.push({ from: "bot", lines: [hello, question(firstStep)], key: "hello" });
+      asked = firstStep;
+    }
 
     log.forEach((e, i) => {
       if (e.step !== asked) {
@@ -146,7 +167,7 @@ export default function OnboardingPage() {
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [log, answers, step, thinking, locale]);
+  }, [log, answers, step, thinking, locale, story]);
 
   // typing indicator: reveal each new assistant message after a short pause
   const botCount = bubbles.filter((b) => b.from === "bot").length;
@@ -173,12 +194,39 @@ export default function OnboardingPage() {
   function commit(entry: Omit<LogEntry, "filled">, patch: Partial<Answers> | null) {
     const next = patch ? mergeAnswers(answers, patch) : answers;
     const filled = patch ? filledSteps(answers, next) : [];
-    saveDraft(actor.id, { answers: next, log: [...log, { ...entry, filled }] });
+    saveDraft(actor.id, { ...draft, answers: next, log: [...log, { ...entry, filled }] });
     setMulti([]);
+  }
+
+  async function submitStory(raw: string) {
+    const text = raw.trim();
+    if (!text || thinking) return;
+    setInput("");
+    setThinking(text);
+    const local = parseStory(text);
+    let ai: Partial<Answers> = {};
+    // the local parser is strict; let the model fill the rest when it's configured
+    if (Object.keys(local).length < 5) {
+      try {
+        const res = await fetch("/api/onboarding", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ step: "story", text, today: format(new Date(), "yyyy-MM-dd") }),
+        });
+        if (res.ok) ai = sanitizeAiFields((await res.json()).fields);
+      } catch {
+        /* offline: keep what we parsed */
+      }
+    }
+    setThinking(null);
+    const base: Answers = user?.name ? { name: user.name } : {};
+    const next = mergeAnswers(base, { ...ai, ...local, role: local.role ?? ai.role });
+    saveDraft(actor.id, { answers: next, log: [], story: { text, filled: filledSteps(base, next) } });
   }
 
   async function submitText(raw: string) {
     const text = raw.trim();
+    if (intro) return submitStory(text);
     if (!text || !ready || step === "summary") return;
     setInput("");
     const local = parseAnswer(step, text, answers);
@@ -202,6 +250,13 @@ export default function OnboardingPage() {
   }
 
   function back() {
+    if (!log.length && story && ready) {
+      // undo the story → back to the voice start
+      clearDraft(actor.id);
+      setStepMode(false);
+      return;
+    }
+    if (!log.length && stepMode) return setStepMode(false);
     if (!log.length || !ready) return;
     const last = log[log.length - 1];
     const a: Answers = { ...answers };
@@ -210,12 +265,12 @@ export default function OnboardingPage() {
       if (f) delete a[f];
       if (st === "eventType") delete a.eventTitle;
     }
-    saveDraft(actor.id, { answers: a, log: log.slice(0, -1) });
+    saveDraft(actor.id, { ...draft, answers: a, log: log.slice(0, -1) });
     setMulti([]);
   }
 
   function edit(s: StepId) {
-    saveDraft(actor.id, { answers: clearStep(answers, s), log });
+    saveDraft(actor.id, { ...draft, answers: clearStep(answers, s), log });
   }
 
   function finish() {
@@ -283,7 +338,7 @@ export default function OnboardingPage() {
           <button
             type="button"
             onClick={back}
-            disabled={!log.length || !ready || finishing}
+            disabled={(!log.length && !story && !stepMode) || !ready || finishing}
             aria-label={t("onboarding.back")}
             className="-ml-2 flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-0"
           >
@@ -306,48 +361,82 @@ export default function OnboardingPage() {
         </div>
       </header>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pt-8 pb-6">
-          {visible.map((b) =>
-            b.from === "user" ? (
-              <div key={b.key} className="flex animate-rise justify-end">
-                <div className="max-w-[85%] rounded-2xl rounded-br-md bg-secondary px-4 py-2.5 text-md leading-relaxed whitespace-pre-wrap text-secondary-foreground">
-                  {b.text}
-                </div>
-              </div>
-            ) : (
-              <BotRow key={b.key}>
-                {b.lines.map((line, i) => (
-                  <p key={i} className="text-md leading-relaxed">
-                    {line}
-                  </p>
-                ))}
-              </BotRow>
-            ),
-          )}
-          {typing && (
-            <BotRow>
-              <span className="flex items-center gap-2 pt-1 text-sm text-muted-foreground" aria-live="polite">
+      {intro ? (
+        <div className="flex flex-1 flex-col overflow-y-auto">
+          <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 py-8">
+            <VoiceHero
+              title={user?.name ? t("onboarding.intro.titleName", { name: user.name.split(" ")[0] }) : t("onboarding.intro.title")}
+              subtitle={t("onboarding.intro.subtitle")}
+              examples={list("onboarding.intro.examples")}
+              onSend={(text) => void submitStory(text)}
+              disabled={!!thinking}
+            />
+            {thinking ? (
+              <p className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground" aria-live="polite">
                 <span className="flex gap-1" aria-hidden>
                   {[0, 1, 2].map((i) => (
                     <span key={i} className="size-1.5 rounded-full bg-primary" style={{ animation: `dots 1.2s ${i * 0.16}s infinite` }} />
                   ))}
                 </span>
-                {thinking ? t("onboarding.thinking") : null}
-              </span>
-            </BotRow>
-          )}
-          {ready && step === "summary" && (
-            <div className="pl-11">
-              <SummaryCard answers={answers} onEdit={edit} onConfirm={finish} busy={finishing} />
-            </div>
-          )}
+                {t("onboarding.thinking")}
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setStepMode(true)}
+                className="mx-auto mt-6 text-sm text-text-secondary underline-offset-4 transition-colors hover:text-foreground hover:underline"
+              >
+                {t("onboarding.intro.stepByStep")}
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div ref={scrollRef} className="flex-1 overflow-y-auto">
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pt-8 pb-6">
+            {visible.map((b) =>
+              b.from === "user" ? (
+                <div key={b.key} className="flex animate-rise justify-end">
+                  <div className="max-w-[85%] rounded-2xl rounded-br-md bg-secondary px-4 py-2.5 text-md leading-relaxed whitespace-pre-wrap text-secondary-foreground">
+                    {b.text}
+                  </div>
+                </div>
+              ) : (
+                <BotRow key={b.key}>
+                  {b.lines.map((line, i) => (
+                    <p key={i} className="text-md leading-relaxed">
+                      {line}
+                    </p>
+                  ))}
+                </BotRow>
+              ),
+            )}
+            {typing && (
+              <BotRow>
+                <span className="flex items-center gap-2 pt-1 text-sm text-muted-foreground" aria-live="polite">
+                  <span className="flex gap-1" aria-hidden>
+                    {[0, 1, 2].map((i) => (
+                      <span key={i} className="size-1.5 rounded-full bg-primary" style={{ animation: `dots 1.2s ${i * 0.16}s infinite` }} />
+                    ))}
+                  </span>
+                  {thinking ? t("onboarding.thinking") : null}
+                </span>
+              </BotRow>
+            )}
+            {ready && step === "summary" && (
+              <div className="pl-11">
+                <SummaryCard answers={answers} onEdit={edit} onConfirm={finish} busy={finishing} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
-      {step !== "summary" && (
+      {(intro || step !== "summary") && (
         <div className="mx-auto w-full max-w-3xl shrink-0 px-4 pb-[max(12px,env(safe-area-inset-bottom))]">
-          <div className={cn("transition-opacity duration-200", ready ? "opacity-100" : "pointer-events-none opacity-0")}>
+          <div
+            className={cn("transition-opacity duration-200", intro && "hidden", ready ? "opacity-100" : "pointer-events-none opacity-0")}
+          >
             {def.options && def.kind !== "multi" && (
               <div className="flex flex-wrap gap-2 pb-3">
                 {def.options.map((v) =>
@@ -425,8 +514,8 @@ export default function OnboardingPage() {
             onSubmit={(v) => void submitText(v)}
             onStop={() => {}}
             busy={!!thinking}
-            placeholder={t("onboarding.placeholder")}
-            autoFocus
+            placeholder={intro ? t("onboarding.intro.placeholder") : t("onboarding.placeholder")}
+            autoFocus={!intro}
           />
         </div>
       )}
