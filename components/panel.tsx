@@ -8,7 +8,7 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="font-serif text-4xl font-normal md:text-5xl">{title}</h1>
+        <h1 className="font-serif text-[32px] leading-tight font-normal md:text-5xl">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-text-secondary">{subtitle}</p>}
       </div>
       {action}
@@ -28,7 +28,7 @@ export function Section({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-2xl border border-border bg-card p-5", className)}>
+    <section className={cn("rounded-2xl border border-border bg-card p-4 md:p-5", className)}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="text-base font-medium">{title}</h2>
         {action}

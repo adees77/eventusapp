@@ -178,3 +178,19 @@ export const PHOTOS = {
 } as const;
 
 export type PhotoSet = keyof typeof PHOTOS;
+
+/** A representative photo set per category: covers for new vendors, first posts */
+export const CATEGORY_PHOTOS: Record<import("../types").CategoryId, PhotoSet> = {
+  cars: "cars_g",
+  halls: "halls",
+  furniture: "chairs",
+  hosts: "hosts",
+  photo: "photo",
+  decor: "decor",
+  music: "music",
+  cakes: "cakes",
+  beauty: "beauty",
+  attire: "dresses",
+  traditional: "traditional",
+  shows: "fireworks",
+};

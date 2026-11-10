@@ -1,27 +1,80 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useSyncExternalStore } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useSyncExternalStore } from "react";
 import { LogoMark } from "@/components/brand/logo";
+import { ensureSessionBound, useAuth } from "@/lib/auth/store";
 import { useDataStore } from "@/lib/data/store";
 import { useT } from "@/lib/i18n";
+import { useSession } from "@/lib/session";
 import { BottomNav } from "./bottom-nav";
 import { Header } from "./header";
+import { HOME_BY_ROLE } from "./nav-items";
+
+/** Pages that render without the app chrome */
+const BARE = ["/welcome", "/onboarding"];
+/** Pages open without an account (guest invitation links) */
+const PUBLIC = ["/welcome", "/i/"];
+
+const matches = (pathname: string, list: string[]) =>
+  list.some((p) => pathname === p || pathname.startsWith(p.endsWith("/") ? p : `${p}/`));
 
 /**
  * Client-only shell: the mock DB lives in localStorage, so we render the app
- * after hydration and show a calm branded splash before that.
+ * after hydration and show a calm branded splash before that. It also routes
+ * by auth state: no account → landing (/) or /welcome, account not onboarded →
+ * /onboarding, signed-in user on the landing → their home.
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const hydrated = useDataStore((s) => s.hydrated);
   // false on the server and during hydration, true afterwards → no SSR mismatch
-  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  const mounted = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
   const pathname = usePathname();
+  const router = useRouter();
+  const userId = useAuth((s) => s.userId);
+  const role = useSession((s) => s.role);
+  const bound = useSession((s) => s.bound);
+  const user = useDataStore((s) => s.db?.users.find((u) => u.id === userId));
 
-  if (!hydrated || !mounted) return <Splash />;
+  // a new tab has an empty sessionStorage: wait until it is attached to the account
+  const ready = hydrated && mounted && (!userId || bound);
+  const isLanding = pathname === "/";
+  const isPublic = isLanding || matches(pathname, PUBLIC);
+  const needsOnboarding = !!userId && !!user?.needsOnboarding;
+  const target = !ready
+    ? null
+    : !userId
+      ? isPublic
+        ? null
+        : "/welcome"
+      : needsOnboarding
+        ? pathname === "/onboarding"
+          ? null
+          : "/onboarding"
+        : isLanding || pathname === "/welcome" || pathname === "/onboarding"
+          ? HOME_BY_ROLE[role]
+          : null;
 
-  // Public invitation page: guests see the card only, without app navigation
-  if (pathname.startsWith("/i/")) return <main className="flex min-h-dvh flex-col">{children}</main>;
+  useEffect(() => {
+    if (hydrated && mounted) ensureSessionBound();
+  }, [hydrated, mounted, userId]);
+
+  // the account disappeared (demo reset wipes sign-ups) → back to /welcome
+  const orphan = hydrated && !!userId && !user;
+  useEffect(() => {
+    if (orphan) useAuth.getState().signOut();
+  }, [orphan]);
+
+  useEffect(() => {
+    if (target) router.replace(target);
+  }, [target, router]);
+
+  if (!ready || target) return <Splash />;
+  if (isLanding || matches(pathname, BARE) || pathname.startsWith("/i/")) return <>{children}</>;
 
   return (
     <div className="flex min-h-dvh flex-col">

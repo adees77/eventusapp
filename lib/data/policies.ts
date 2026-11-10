@@ -33,6 +33,10 @@ export const can = {
 
   editVendor: (a: Actor, v: Vendor) => isAdmin(a) || ownsVendor(a, v),
   createVendor: (a: Actor) => isAdmin(a),
+  /** A freshly signed-up user turns their own account into a vendor (no vendor yet) */
+  registerOwnVendor: (a: Actor, db: DB) => a.role !== "admin" && !db.vendors.some((v) => v.ownerId === a.id),
+  /** Users edit only their own profile */
+  editProfile: (a: Actor, userId: string) => isAdmin(a) || a.id === userId,
   setVendorHidden: (a: Actor) => isAdmin(a),
   setVendorVerified: (a: Actor) => isAdmin(a),
 
@@ -52,7 +56,7 @@ export const can = {
   setBookingStatus: (a: Actor, db: DB, b: Booking, next: Booking["status"]) => {
     if (isAdmin(a)) return true;
     if (ownsVendor(a, db.vendors.find((v) => v.id === b.vendorId))) return next !== "pending";
-    if (a.id === b.clientId) return next === "cancelled" && b.status === "pending";
+    if (a.id === b.clientId) return next === "cancelled" && (b.status === "pending" || b.escrow?.state === "held");
     return false;
   },
 

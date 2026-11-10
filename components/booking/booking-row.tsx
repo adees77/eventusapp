@@ -6,18 +6,11 @@ import { offerById, userName, vendorById } from "@/lib/data/queries";
 import { useDB } from "@/lib/data/store";
 import type { Booking } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
+import { EscrowBadge } from "./deal-card";
 import { StatusBadge } from "./status-badge";
 
 /** One booking line for dashboards. `perspective` decides whose name is shown. */
-export function BookingRow({
-  b,
-  perspective,
-  actions,
-}: {
-  b: Booking;
-  perspective: "client" | "vendor";
-  actions?: React.ReactNode;
-}) {
+export function BookingRow({ b, perspective, actions }: { b: Booking; perspective: "client" | "vendor"; actions?: React.ReactNode }) {
   const { l, money, date } = useI18n();
   const db = useDB((d) => d);
   const offer = offerById(db, b.offerId);
@@ -48,6 +41,7 @@ export function BookingRow({
             <span>{date(b.date, "d MMMM yyyy")}</span>
             <span>{money(b.total)}</span>
             <StatusBadge status={b.status} />
+            {b.escrow && b.escrow.state !== "none" && <EscrowBadge booking={b} />}
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { CalendarHeart, LayoutGrid, Mail, MessageCircle, MessageSquareText, Search, Shield, Store } from "lucide-react";
+import { CalendarHeart, LayoutGrid, Mail, MessageCircle, MessageSquareText, Shield, Store } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Role } from "@/lib/data/types";
 import type { MessageKey } from "@/lib/i18n";
@@ -11,25 +11,26 @@ export interface NavItem {
 
 export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   client: [
-    { href: "/", label: "nav.assistant", icon: MessageSquareText },
-    { href: "/vendors", label: "nav.catalog", icon: Search },
+    { href: "/vendors", label: "nav.feed", icon: LayoutGrid },
+    { href: "/assistant", label: "nav.assistant", icon: MessageSquareText },
     { href: "/messages", label: "nav.messages", icon: MessageCircle },
-    { href: "/dashboard", label: "nav.dashboard", icon: CalendarHeart },
     { href: "/invitations", label: "nav.invitations", icon: Mail },
+    { href: "/dashboard", label: "nav.cabinet", icon: CalendarHeart },
   ],
   vendor: [
-    { href: "/vendor", label: "nav.vendorPanel", icon: Store },
+    { href: "/vendor", label: "nav.cabinet", icon: Store },
     { href: "/messages", label: "nav.messages", icon: MessageCircle },
-    { href: "/vendors", label: "nav.catalog", icon: LayoutGrid },
+    { href: "/vendors", label: "nav.feed", icon: LayoutGrid },
   ],
   admin: [
     { href: "/admin", label: "nav.admin", icon: Shield },
-    { href: "/vendors", label: "nav.catalog", icon: LayoutGrid },
+    { href: "/messages", label: "nav.messages", icon: MessageCircle },
+    { href: "/vendors", label: "nav.feed", icon: LayoutGrid },
   ],
 };
 
 export const HOME_BY_ROLE: Record<Role, string> = {
-  client: "/",
+  client: "/assistant",
   vendor: "/vendor",
   admin: "/admin",
 };

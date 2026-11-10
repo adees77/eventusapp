@@ -1,15 +1,12 @@
 "use client";
 
-import { LayoutGrid, Search } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useMemo, useState } from "react";
-import { CategoryIcon } from "@/components/category-icon";
-import { DatePicker } from "@/components/date-picker";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FeedSearch, type SearchState } from "@/components/feed/feed-search";
+import { Masonry, PostCard } from "@/components/feed/post-card";
+import { PostDialog } from "@/components/feed/post-dialog";
 import { Button } from "@/components/ui/button";
-import { NativeSelect } from "@/components/ui/native-select";
-import { VendorCard } from "@/components/vendor/vendor-card";
-import { searchVendors, type VendorFilters } from "@/lib/data/queries";
-import { CITIES } from "@/lib/data/seed/catalog";
+import { searchPosts } from "@/lib/data/feed";
 import { useDB } from "@/lib/data/store";
 import type { CategoryId } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
@@ -17,147 +14,163 @@ import { usePlanner } from "@/lib/planner";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
-export default function CatalogPage() {
+const PAGE = 30;
+
+export default function FeedPage() {
   return (
     <Suspense>
-      <Catalog />
+      <Feed />
     </Suspense>
   );
 }
 
-function Catalog() {
-  const { t, tn, l } = useI18n();
+function Feed() {
+  const { t, date: fmt } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const actor = useActor();
   const planner = usePlanner();
 
-  const category = (params.get("category") as CategoryId | null) ?? null;
-  const city = params.get("city");
-  const sort = (params.get("sort") as VendorFilters["sort"]) ?? "rating";
-  const date = planner.date;
-  const [query, setQuery] = useState("");
+  const tab = params.get("tab") === "following" ? "following" : "foryou";
+  const state: SearchState = {
+    query: params.get("q") ?? "",
+    category: (params.get("category") as CategoryId | null) ?? null,
+    city: params.get("city"),
+    date: planner.date,
+    budgetMax: params.get("budget") ? Number(params.get("budget")) : null,
+    sort: (params.get("sort") as SearchState["sort"]) ?? "rating",
+  };
+  const postId = params.get("post");
 
-  const categories = useDB((db) => [...db.categories].sort((a, b) => a.order - b.order));
-  const results = useDB((db) => searchVendors(db, { category, city, date, sort, query }, actor));
-
-  function setParam(key: string, value: string | null) {
-    const next = new URLSearchParams(params);
-    if (value) next.set(key, value);
-    else next.delete(key);
-    router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
-  }
-
-  const hasFilters = Boolean(category || city || date || query);
-  const cityOptions = useMemo(() => Object.entries(CITIES), []);
-
-  return (
-    <div className="container-app pt-8 pb-16 md:pt-12">
-      <header className="flex flex-col gap-2">
-        <h1 className="font-serif text-4xl font-normal md:text-5xl">{t("catalog.title")}</h1>
-        <p className="text-sm text-text-secondary">{t("catalog.subtitle")}</p>
-      </header>
-
-      <nav
-        className="no-scrollbar -mx-4 mt-8 flex gap-1 overflow-x-auto border-b border-border px-4 md:mx-0 md:px-0"
-        aria-label={t("catalog.title")}
-      >
-        <Chip active={!category} onClick={() => setParam("category", null)}>
-          <LayoutGrid className="size-5" strokeWidth={1.5} />
-          {t("common.all")}
-        </Chip>
-        {categories.map((c) => (
-          <Chip key={c.id} active={category === c.id} onClick={() => setParam("category", c.id)}>
-            <CategoryIcon id={c.id} className="size-5" />
-            {l(c.name)}
-          </Chip>
-        ))}
-      </nav>
-
-      <div className="mt-6 grid grid-cols-2 gap-2 md:grid-cols-[1fr_200px_200px_200px]">
-        <label className="relative col-span-2 md:col-span-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("catalog.search")}
-            className="h-10 w-full rounded-lg border border-input bg-card pr-3 pl-9 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-          />
-        </label>
-        <DatePicker value={date} onChange={(d) => planner.set({ date: d })} className="col-span-2 md:col-span-1" />
-        <NativeSelect value={city ?? ""} onChange={(e) => setParam("city", e.target.value || null)} aria-label={t("catalog.city")}>
-          <option value="">{t("catalog.anyCity")}</option>
-          {cityOptions.map(([id, name]) => (
-            <option key={id} value={id}>
-              {l(name)}
-            </option>
-          ))}
-        </NativeSelect>
-        <NativeSelect value={sort} onChange={(e) => setParam("sort", e.target.value)} aria-label={t("catalog.sort")}>
-          <option value="rating">{t("catalog.sortRating")}</option>
-          <option value="priceAsc">{t("catalog.sortPriceAsc")}</option>
-          <option value="priceDesc">{t("catalog.sortPriceDesc")}</option>
-        </NativeSelect>
-      </div>
-
-      <div className="mt-6 flex h-8 items-center justify-between text-sm text-muted-foreground">
-        <span className="tabular-nums">{tn("catalog.count", results.length)}</span>
-        {hasFilters && (
-          <button
-            type="button"
-            onClick={() => {
-              setQuery("");
-              planner.set({ date: null });
-              router.replace(pathname, { scroll: false });
-            }}
-            className="text-sm text-primary hover:underline"
-          >
-            {t("catalog.resetFilters")}
-          </button>
-        )}
-      </div>
-
-      {results.length ? (
-        <div className="mt-4 grid animate-rise gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-          {results.map((r, i) => (
-            <VendorCard key={r.vendor.id} r={r} date={date} priority={i < 3} />
-          ))}
-        </div>
-      ) : (
-        <div className="mt-16 flex flex-col items-center gap-2 text-center">
-          <p className="font-serif text-2xl">{t("catalog.empty")}</p>
-          <p className="text-sm text-text-secondary">{t("catalog.emptyHint")}</p>
-          <Button
-            variant="outline"
-            className="mt-4"
-            onClick={() => {
-              setQuery("");
-              planner.set({ date: null });
-              router.replace(pathname);
-            }}
-          >
-            {t("catalog.resetFilters")}
-          </Button>
-        </div>
-      )}
-    </div>
+  const items = useDB((db) =>
+    searchPosts(
+      db,
+      {
+        tab,
+        query: state.query,
+        category: state.category,
+        city: state.city,
+        date: state.date,
+        budgetMax: state.budgetMax,
+        sort: state.sort,
+      },
+      actor,
+    ),
   );
-}
 
-function Chip({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) {
+  const setParams = useCallback(
+    (patch: Record<string, string | null>, push = false) => {
+      // read the live URL: several patches can land before the router re-renders
+      const next = new URLSearchParams(window.location.search);
+      for (const [k, v] of Object.entries(patch)) {
+        if (v) next.set(k, v);
+        else next.delete(k);
+      }
+      const url = `${pathname}${next.size ? `?${next}` : ""}`;
+      if (push) router.push(url, { scroll: false });
+      else router.replace(url, { scroll: false });
+    },
+    [pathname, router],
+  );
+
+  const onChange = useCallback(
+    (patch: Partial<SearchState>) => {
+      if ("date" in patch) planner.set({ date: patch.date ?? null });
+      const p: Record<string, string | null> = {};
+      if ("query" in patch) p.q = patch.query || null;
+      if ("category" in patch) p.category = patch.category ?? null;
+      if ("city" in patch) p.city = patch.city ?? null;
+      if ("budgetMax" in patch) p.budget = patch.budgetMax ? String(patch.budgetMax) : null;
+      if ("sort" in patch) p.sort = patch.sort === "rating" ? null : (patch.sort ?? null);
+      if (Object.keys(p).length) setParams(p);
+    },
+    [planner, setParams],
+  );
+
+  const reset = useCallback(() => {
+    planner.set({ date: null });
+    setParams({ q: null, category: null, city: null, budget: null, sort: null });
+  }, [planner, setParams]);
+
+  // progressive rendering: a page of posts, more when the sentinel scrolls into view
+  const key = `${tab}|${state.query}|${state.category}|${state.city}|${state.date}|${state.budgetMax}|${state.sort}`;
+  const [limit, setLimit] = useState({ key, n: PAGE });
+  const n = limit.key === key ? limit.n : PAGE;
+  const sentinel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el) return;
+    const io = new IntersectionObserver((e) => e[0].isIntersecting && setLimit((l) => ({ key, n: (l.key === key ? l.n : PAGE) + PAGE })), {
+      rootMargin: "800px",
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [key]);
+
+  const shown = useMemo(() => items.slice(0, n), [items, n]);
+  const filtered = Boolean(state.query || state.category || state.city || state.date || state.budgetMax);
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "relative flex h-16 shrink-0 flex-col items-center justify-center gap-1 px-3 text-xs whitespace-nowrap transition-colors",
-        active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+    <div className="container-app pt-4 pb-16 md:pt-6">
+      <div className="sticky top-14 z-30 -mx-4 bg-background/95 px-4 pt-2 pb-3 backdrop-blur md:top-16 md:mx-0 md:px-0">
+        <div className="mx-auto max-w-3xl">
+          <FeedSearch value={state} onChange={onChange} onReset={reset} count={items.length} />
+        </div>
+        <nav className="mx-auto mt-3 flex max-w-3xl items-center justify-center gap-6 text-sm" aria-label={t("nav.feed")}>
+          {(["foryou", "following"] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setParams({ tab: k === "following" ? "following" : null })}
+              aria-pressed={tab === k}
+              className={cn(
+                "relative pb-1.5 transition-colors",
+                tab === k ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {k === "foryou" ? t("feed.forYou") : t("feed.following")}
+              {tab === k && <span className="absolute inset-x-0 -bottom-px h-px bg-foreground" aria-hidden />}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {filtered && (
+        <p className="mt-2 mb-4 text-center text-sm text-muted-foreground tabular-nums">
+          {state.date ? `${t("feed.availableOn", { date: fmt(state.date, "d MMMM") })} · ` : ""}
+          {items.length}
+        </p>
       )}
-    >
-      {children}
-      {active && <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-foreground" aria-hidden />}
-    </button>
+
+      {shown.length ? (
+        <Masonry className="mt-4 animate-rise">
+          {shown.map((item, i) => (
+            <PostCard key={item.post.id} item={item} onOpen={(id) => setParams({ post: id }, true)} priority={i < 6} />
+          ))}
+        </Masonry>
+      ) : (
+        <div className="mx-auto mt-20 flex max-w-sm flex-col items-center gap-2 text-center">
+          <p className="font-serif text-2xl">{tab === "following" && !filtered ? t("feed.emptyFollowing") : t("feed.empty")}</p>
+          <p className="text-sm text-text-secondary">
+            {tab === "following" && !filtered ? t("feed.emptyFollowingHint") : t("feed.emptyHint")}
+          </p>
+          {filtered ? (
+            <Button variant="outline" className="mt-4" onClick={reset}>
+              {t("feed.reset")}
+            </Button>
+          ) : (
+            tab === "following" && (
+              <Button variant="outline" className="mt-4" onClick={() => setParams({ tab: null })}>
+                {t("feed.forYou")}
+              </Button>
+            )
+          )}
+        </div>
+      )}
+      {n < items.length && <div ref={sentinel} className="h-px" aria-hidden />}
+
+      <PostDialog postId={postId} onOpenChange={(o) => !o && setParams({ post: null })} onOpen={(id) => setParams({ post: id })} />
+    </div>
   );
 }

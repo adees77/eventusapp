@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Golos_Text } from "next/font/google";
+import { Cormorant_Garamond, Golos_Text, Marck_Script } from "next/font/google";
 import { cookies } from "next/headers";
 import { AppShell } from "@/components/layout/app-shell";
 import { Toaster } from "@/components/ui/sonner";
@@ -15,6 +15,9 @@ const cormorant = Cormorant_Garamond({
   subsets: ["latin", "cyrillic"],
   weight: ["400", "500", "600"],
 });
+
+/** Handwritten display face, used only inside invitation pages */
+const script = Marck_Script({ variable: "--font-script", subsets: ["latin", "cyrillic"], weight: "400" });
 
 export const metadata: Metadata = {
   title: { default: brand.name, template: `%s · ${brand.name}` },
@@ -34,7 +37,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const locale = cookieLocale && LOCALES.includes(cookieLocale) ? cookieLocale : DEFAULT_LOCALE;
 
   return (
-    <html lang={locale} className={`${golos.variable} ${cormorant.variable} h-full antialiased`}>
+    <html lang={locale} className={`${golos.variable} ${cormorant.variable} ${script.variable} h-full antialiased`}>
       <head>
         <style dangerouslySetInnerHTML={{ __html: brandCssVariables() }} />
       </head>

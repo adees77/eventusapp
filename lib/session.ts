@@ -19,6 +19,8 @@ export const DEFAULT_USER_BY_ROLE: Record<Role, string> = {
 };
 
 interface SessionState extends Actor {
+  /** true once this tab's session was attached to the signed-in account */
+  bound: boolean;
   setRole: (role: Role, userId?: string) => void;
 }
 
@@ -27,12 +29,13 @@ export const useSession = create<SessionState>()(
     (set) => ({
       id: DEMO_CLIENT_ID,
       role: "client",
-      setRole: (role, userId) => set({ role, id: userId ?? DEFAULT_USER_BY_ROLE[role] }),
+      bound: false,
+      setRole: (role, userId) => set({ role, id: userId ?? DEFAULT_USER_BY_ROLE[role], bound: true }),
     }),
     {
       name: "eventus-session",
       storage: createJSONStorage(() => safeStorage("sessionStorage")),
-      partialize: (s) => ({ id: s.id, role: s.role }),
+      partialize: (s) => ({ id: s.id, role: s.role, bound: s.bound }),
     },
   ),
 );

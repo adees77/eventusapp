@@ -4,6 +4,7 @@ import { Check, CreditCard, Loader2, QrCode, ShieldCheck, Wallet } from "lucide-
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { BookingSummary } from "@/components/booking/booking-summary";
+import { EscrowSteps } from "@/components/booking/deal-card";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { AvailabilityError, markBookingPrepaid } from "@/lib/data/actions";
@@ -79,7 +80,7 @@ export default function CheckoutPage() {
     <div className="mx-auto w-full max-w-xl px-4 pt-8 pb-16 md:pt-12">
       <div className="flex items-center gap-2 rounded-xl border border-gold/40 bg-gold-soft px-4 py-3 text-sm text-gold-foreground">
         <ShieldCheck className="size-4 shrink-0" strokeWidth={1.75} />
-        {t("checkout.demoBanner")}
+        {t("checkout.escrowBanner")}
       </div>
 
       {phase === "success" ? (
@@ -87,13 +88,13 @@ export default function CheckoutPage() {
           <span className="flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <Check className="size-6" strokeWidth={2} />
           </span>
-          <h1 className="mt-6 font-serif text-4xl font-normal">{t("checkout.success")}</h1>
+          <h1 className="mt-6 font-serif text-[32px] leading-tight font-normal md:text-4xl">{t("checkout.success")}</h1>
           <p className="mt-2 text-md text-text-secondary">{t("checkout.successHint")}</p>
           <p className="mt-6 text-2xl font-medium tabular-nums">{money(booking.prepayAmount)}</p>
         </div>
       ) : (
         <>
-          <h1 className="mt-8 font-serif text-4xl font-normal">{t("checkout.title")}</h1>
+          <h1 className="mt-8 font-serif text-[32px] leading-tight font-normal md:text-4xl">{t("checkout.title")}</h1>
           <div className="mt-6">
             <BookingSummary
               vendor={vendor}
@@ -128,13 +129,26 @@ export default function CheckoutPage() {
                         method === id ? "border-primary ring-3 ring-primary/15" : "border-border hover:bg-muted/50",
                       )}
                     >
-                      <input type="radio" name="method" value={id} checked={method === id} onChange={() => setMethod(id)} className="sr-only" />
+                      <input
+                        type="radio"
+                        name="method"
+                        value={id}
+                        checked={method === id}
+                        onChange={() => setMethod(id)}
+                        className="sr-only"
+                      />
                       <Icon className="size-[18px] text-text-secondary" strokeWidth={1.5} />
                       {t(`checkout.methods.${id}`)}
                     </label>
                   ))}
                 </div>
               </fieldset>
+
+              <div className="mt-8 rounded-2xl border border-border bg-card p-5">
+                <h2 className="text-sm font-medium">{t("escrow.title")}</h2>
+                <EscrowSteps className="mt-4" />
+                <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">{t("escrow.refundPolicy")}</p>
+              </div>
 
               {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
 

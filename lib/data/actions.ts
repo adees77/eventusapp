@@ -9,7 +9,26 @@ import { demoConfig } from "@/config/demo";
 import { getAvailability } from "./availability";
 import { assert, can, type Actor } from "./policies";
 import { getDB, useDataStore } from "./store";
-import type { Booking, CategoryId, ChecklistItem, EventItem, Invitation, InvitationRsvp, LText, Message, Offer, Vendor } from "./types";
+import * as escrow from "@/lib/payments/escrow";
+import { CATEGORY_PHOTOS, PHOTOS, unsplash } from "./seed/photos";
+import type {
+  AppNotification,
+  Booking,
+  CategoryId,
+  ChecklistItem,
+  EventItem,
+  Invitation,
+  InvitationGuest,
+  InvitationRsvp,
+  LText,
+  Message,
+  NotificationKind,
+  Offer,
+  PlatformSettings,
+  Post,
+  Transaction,
+  Vendor,
+} from "./types";
 
 const uid = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const now = () => new Date().toISOString();
@@ -91,12 +110,16 @@ export function markBookingPrepaid(actor: Actor, bookingId: string, paymentRef: 
   if (free < b.qty) throw new AvailabilityError(free);
 
   const conversationId = ensureConversation(actor, b.vendorId, b.id);
+  const t = escrow.hold(b, now());
   update((d) => ({
     ...d,
-    bookings: d.bookings.map((x) => (x.id === b.id ? { ...x, status: "prepaid", paymentRef } : x)),
+    bookings: d.bookings.map((x) => (x.id === b.id ? { ...x, status: t.status, escrow: t.escrow, paymentRef } : x)),
+    transactions: [...d.transactions, ...ledger(t.ledger)],
     events: d.events.map((e) => (e.id === b.eventId ? checkCategory(e, d.vendors.find((v) => v.id === b.vendorId)?.category) : e)),
   }));
-  addSystemMessage(conversationId, "booking_prepaid");
+  addSystemMessage(conversationId, "escrow_held");
+  const vendor = db.vendors.find((v) => v.id === b.vendorId);
+  if (vendor) notify(vendor.ownerId, "booking_new", { ru: "Новая бронь: предоплата заморожена до подтверждения сделки", en: "New booking: prepayment is frozen until the deal is confirmed" }, `/messages/${conversationId}`);
   return conversationId;
 }
 
@@ -110,11 +133,138 @@ export function setBookingStatus(actor: Actor, bookingId: string, status: Bookin
   const b = db.bookings.find((x) => x.id === bookingId);
   if (!b) throw new Error("Booking not found");
   assert(can.setBookingStatus(actor, db, b, status), "setBookingStatus");
+  // cancelling a booking with frozen money always refunds the client
+  if (status === "cancelled" && b.escrow?.state === "held") return cancelDeal(actor, bookingId);
   update((d) => ({ ...d, bookings: d.bookings.map((x) => (x.id === bookingId ? { ...x, status } : x)) }));
   const conv = db.conversations.find((c) => c.bookingId === bookingId);
-  if (conv && (status === "confirmed" || status === "cancelled")) {
-    addSystemMessage(conv.id, status === "confirmed" ? "booking_confirmed" : "booking_cancelled");
+  if (conv && (status === "confirmed" || status === "cancelled" || status === "completed")) {
+    addSystemMessage(conv.id, `booking_${status}`);
   }
+  notify(b.clientId, "booking_status", { ru: "Статус брони обновлён", en: "Booking status updated" }, conv ? `/messages/${conv.id}` : "/dashboard/bookings");
+}
+
+// ── P2P escrow ────────────────────────────────────────────────
+
+function ledger(entries: Omit<Transaction, "id" | "createdAt">[]): Transaction[] {
+  const ts = now();
+  return entries.map((e) => ({ ...e, id: uid("tx"), createdAt: ts }));
+}
+
+function partyOf(actor: Actor, b: Booking): escrow.Party {
+  if (actor.id === b.clientId) return "client";
+  const v = getDB().vendors.find((x) => x.id === b.vendorId);
+  if (v && v.ownerId === actor.id) return "vendor";
+  throw new escrow.EscrowError("party");
+}
+
+function applyTransition(bookingId: string, t: escrow.Transition) {
+  update((d) => ({
+    ...d,
+    bookings: d.bookings.map((x) => (x.id === bookingId ? { ...x, escrow: t.escrow, status: t.status } : x)),
+    transactions: t.ledger.length ? [...d.transactions, ...ledger(t.ledger)] : d.transactions,
+  }));
+}
+
+function dealParties(b: Booking) {
+  const db = getDB();
+  const v = db.vendors.find((x) => x.id === b.vendorId);
+  const conv = db.conversations.find((c) => c.bookingId === b.id);
+  return { vendorOwner: v?.ownerId, href: conv ? `/messages/${conv.id}` : undefined, convId: conv?.id };
+}
+
+/** «Подтвердить сделку». Releases the money when both sides have confirmed. */
+export function confirmDeal(actor: Actor, bookingId: string) {
+  const db = getDB();
+  const b = db.bookings.find((x) => x.id === bookingId);
+  if (!b) throw new Error("Booking not found");
+  const party = partyOf(actor, b);
+  const t = escrow.confirm(b, party, now(), db.settings.feePercent);
+  applyTransition(b.id, t);
+  const { vendorOwner, href, convId } = dealParties(b);
+  const other = party === "client" ? vendorOwner : b.clientId;
+  if (t.escrow.state === "released") {
+    if (convId) addSystemMessage(convId, "escrow_released");
+    for (const u of [b.clientId, vendorOwner]) {
+      if (u) notify(u, "escrow_released", { ru: "Сделка подтверждена обеими сторонами, деньги переведены исполнителю", en: "Both sides confirmed: money was transferred to the vendor" }, href);
+    }
+  } else {
+    if (convId) addSystemMessage(convId, `escrow_confirmed_${party}`);
+    if (other) notify(other, "escrow_confirm", { ru: "Вторая сторона подтвердила сделку — осталось ваше подтверждение", en: "The other side confirmed the deal — your confirmation is next" }, href);
+  }
+  return t.escrow;
+}
+
+export function unconfirmDeal(actor: Actor, bookingId: string) {
+  const b = getDB().bookings.find((x) => x.id === bookingId);
+  if (!b) throw new Error("Booking not found");
+  applyTransition(b.id, escrow.unconfirm(b, partyOf(actor, b)));
+}
+
+/** Cancel before both confirmed → full refund of the frozen prepayment */
+export function cancelDeal(actor: Actor, bookingId: string) {
+  const b = getDB().bookings.find((x) => x.id === bookingId);
+  if (!b) throw new Error("Booking not found");
+  if (actor.role !== "admin") partyOf(actor, b);
+  applyTransition(b.id, escrow.refund(b, now()));
+  const { vendorOwner, href, convId } = dealParties(b);
+  if (convId) addSystemMessage(convId, "escrow_refunded");
+  for (const u of [b.clientId, vendorOwner]) {
+    if (u) notify(u, "escrow_refunded", { ru: "Бронь отменена, предоплата возвращена клиенту", en: "Booking cancelled, the prepayment was returned to the client" }, href);
+  }
+}
+
+export function openDispute(actor: Actor, bookingId: string, reason: string) {
+  const b = getDB().bookings.find((x) => x.id === bookingId);
+  if (!b) throw new Error("Booking not found");
+  partyOf(actor, b);
+  applyTransition(b.id, escrow.openDispute(b, actor.id, reason, now()));
+  const { vendorOwner, href, convId } = dealParties(b);
+  if (convId) addSystemMessage(convId, "escrow_disputed");
+  const text = { ru: "Открыт спор по сделке — деньги заморожены до решения EVENTUS", en: "A dispute was opened — money stays frozen until EVENTUS decides" };
+  for (const u of [b.clientId, vendorOwner, ...getDB().users.filter((x) => x.role === "admin").map((x) => x.id)]) {
+    if (u) notify(u, "escrow_disputed", text, u.startsWith("u-admin") ? "/admin/disputes" : href);
+  }
+}
+
+export function resolveDispute(actor: Actor, bookingId: string, resolution: "release" | "refund") {
+  assert(actor.role === "admin", "resolveDispute");
+  const db = getDB();
+  const b = db.bookings.find((x) => x.id === bookingId);
+  if (!b) throw new Error("Booking not found");
+  applyTransition(b.id, escrow.resolveDispute(b, resolution, now(), db.settings.feePercent));
+  const { vendorOwner, href, convId } = dealParties(b);
+  if (convId) addSystemMessage(convId, resolution === "release" ? "escrow_released" : "escrow_refunded");
+  const text =
+    resolution === "release"
+      ? { ru: "Спор решён: деньги переведены исполнителю", en: "Dispute resolved: money released to the vendor" }
+      : { ru: "Спор решён: предоплата возвращена клиенту", en: "Dispute resolved: prepayment refunded to the client" };
+  for (const u of [b.clientId, vendorOwner]) if (u) notify(u, resolution === "release" ? "escrow_released" : "escrow_refunded", text, href);
+}
+
+/** DEMO: payout of the available balance to the vendor's card/account */
+export function requestPayout(actor: Actor, vendorId: string, amount: number) {
+  const db = getDB();
+  const v = db.vendors.find((x) => x.id === vendorId);
+  assert(!!v && can.editVendor(actor, v), "payout");
+  const bal = escrow.vendorBalance(vendorId, db.bookings, db.transactions);
+  const sum = Math.min(Math.floor(amount), bal.available);
+  if (sum <= 0) throw new escrow.EscrowError("state");
+  update((d) => ({ ...d, transactions: [...d.transactions, ...ledger([{ kind: "payout", amount: sum, vendorId }])] }));
+  return sum;
+}
+
+// ── Notifications ─────────────────────────────────────────────
+
+export function notify(userId: string, kind: NotificationKind, text: LText, href?: string) {
+  const n: AppNotification = { id: uid("n"), userId, kind, text, href, read: false, createdAt: now() };
+  update((d) => ({ ...d, notifications: [n, ...d.notifications].slice(0, 300) }));
+}
+
+export function markNotificationsRead(actor: Actor, ids?: string[]) {
+  update((d) => ({
+    ...d,
+    notifications: d.notifications.map((n) => (n.userId === actor.id && (!ids || ids.includes(n.id)) ? { ...n, read: true } : n)),
+  }));
 }
 
 // ── Messaging ─────────────────────────────────────────────────
@@ -280,7 +430,7 @@ export function createVendor(
     reviewsCount: 0,
     verified: false,
     hidden: false,
-    prepayPercent: demoConfig.defaultPrepayPercent,
+    prepayPercent: getDB().settings?.defaultPrepayPercent ?? demoConfig.defaultPrepayPercent,
     cover: input.cover ?? "",
     portfolio: input.cover ? [input.cover] : [],
     phone: "",
@@ -332,11 +482,11 @@ export function setChecklist(actor: Actor, eventId: string, checklist: Checklist
 
 // ── Invitations ───────────────────────────────────────────────
 
-type InvitationInput = Omit<Invitation, "id" | "ownerId" | "rsvps" | "createdAt" | "updatedAt">;
+type InvitationInput = Omit<Invitation, "id" | "ownerId" | "rsvps" | "guests" | "views" | "createdAt" | "updatedAt">;
 
 export function createInvitation(actor: Actor, input: InvitationInput): Invitation {
   assert(can.manageInvitation(actor, actor.id), "manageInvitation");
-  const inv: Invitation = { ...input, id: uid("inv"), ownerId: actor.id, rsvps: [], createdAt: now(), updatedAt: now() };
+  const inv: Invitation = { ...input, id: uid("inv"), ownerId: actor.id, rsvps: [], guests: [], views: [], createdAt: now(), updatedAt: now() };
   update((d) => ({ ...d, invitations: [...d.invitations, inv] }));
   return inv;
 }
@@ -347,7 +497,7 @@ export function updateInvitation(actor: Actor, id: string, patch: Partial<Invita
   assert(can.manageInvitation(actor, inv.ownerId), "manageInvitation");
   update((d) => ({
     ...d,
-    invitations: d.invitations.map((x) => (x.id === id ? { ...x, ...patch, id: x.id, ownerId: x.ownerId, rsvps: x.rsvps, updatedAt: now() } : x)),
+    invitations: d.invitations.map((x) => (x.id === id ? { ...x, ...patch, id: x.id, ownerId: x.ownerId, rsvps: x.rsvps, guests: x.guests, views: x.views, updatedAt: now() } : x)),
   }));
 }
 
@@ -370,6 +520,7 @@ export function duplicateInvitation(actor: Actor, id: string): Invitation | unde
     dressCode: inv.dressCode,
     contact: inv.contact,
     photo: inv.photo,
+    design: structuredClone(inv.design),
   });
 }
 
@@ -384,8 +535,11 @@ export function deleteInvitation(actor: Actor, id: string) {
 export function submitRsvp(invitationId: string, input: Omit<InvitationRsvp, "id" | "createdAt">) {
   const name = input.name.trim().slice(0, 80);
   if (!name) throw new Error("Name required");
+  const inv = getDB().invitations.find((x) => x.id === invitationId);
+  const guestId = inv?.guests.some((g) => g.id === input.guestId) ? input.guestId : undefined;
   const rsvp: InvitationRsvp = {
     id: uid("r"),
+    guestId,
     name,
     attending: input.attending,
     guests: input.attending ? Math.min(10, Math.max(1, Math.floor(input.guests))) : 0,
@@ -396,9 +550,312 @@ export function submitRsvp(invitationId: string, input: Omit<InvitationRsvp, "id
     ...d,
     invitations: d.invitations.map((x) =>
       x.id === invitationId
-        ? { ...x, rsvps: [...x.rsvps.filter((r) => r.name.toLowerCase() !== name.toLowerCase()), rsvp] }
+        ? {
+            ...x,
+            rsvps: [
+              ...x.rsvps.filter((r) => (guestId ? r.guestId !== guestId : r.guestId || r.name.toLowerCase() !== name.toLowerCase())),
+              rsvp,
+            ],
+          }
         : x,
     ),
   }));
+  if (inv) {
+    notify(
+      inv.ownerId,
+      "rsvp",
+      rsvp.attending
+        ? { ru: `${name} придёт${rsvp.guests > 1 ? ` (+${rsvp.guests - 1})` : ""}`, en: `${name} is coming${rsvp.guests > 1 ? ` (+${rsvp.guests - 1})` : ""}` }
+        : { ru: `${name} не сможет прийти`, en: `${name} can't come` },
+      `/invitations/${inv.id}?tab=stats`,
+    );
+  }
   return rsvp;
+}
+
+/** Public: a guest opened the page (personal link → marks the guest as opened) */
+export function recordInvitationView(invitationId: string, guestId?: string) {
+  const ts = now();
+  update((d) => ({
+    ...d,
+    invitations: d.invitations.map((x) =>
+      x.id === invitationId
+        ? {
+            ...x,
+            views: [...x.views, { at: ts, guestId: x.guests.some((g) => g.id === guestId) ? guestId : undefined }].slice(-2000),
+            guests: x.guests.map((g) => (g.id === guestId && !g.openedAt ? { ...g, openedAt: ts } : g)),
+          }
+        : x,
+    ),
+  }));
+}
+
+function editGuests(actor: Actor, invitationId: string, fn: (g: InvitationGuest[]) => InvitationGuest[]) {
+  const inv = getDB().invitations.find((x) => x.id === invitationId);
+  if (!inv) return;
+  assert(can.manageInvitation(actor, inv.ownerId), "manageInvitation");
+  update((d) => ({ ...d, invitations: d.invitations.map((x) => (x.id === invitationId ? { ...x, guests: fn(x.guests) } : x)) }));
+}
+
+export function addGuests(actor: Actor, invitationId: string, list: Omit<InvitationGuest, "id">[]) {
+  const clean = list
+    .map((g) => ({ ...g, name: g.name.trim().slice(0, 80), phone: g.phone?.trim().slice(0, 32) || undefined, seats: Math.min(10, Math.max(1, Math.floor(g.seats || 1))) }))
+    .filter((g) => g.name);
+  editGuests(actor, invitationId, (gs) => [...gs, ...clean.map((g) => ({ ...g, id: uid("g") }))]);
+  return clean.length;
+}
+
+export function updateGuest(actor: Actor, invitationId: string, guestId: string, patch: Partial<Omit<InvitationGuest, "id">>) {
+  editGuests(actor, invitationId, (gs) => gs.map((g) => (g.id === guestId ? { ...g, ...patch } : g)));
+}
+
+export function removeGuest(actor: Actor, invitationId: string, guestId: string) {
+  editGuests(actor, invitationId, (gs) => gs.filter((g) => g.id !== guestId));
+}
+
+export function markGuestsSent(actor: Actor, invitationId: string, guestIds: string[]) {
+  const ts = now();
+  editGuests(actor, invitationId, (gs) => gs.map((g) => (guestIds.includes(g.id) ? { ...g, sentAt: g.sentAt ?? ts } : g)));
+}
+
+// ── Feed: posts, likes, saves, follows ────────────────────────
+
+function toggleIn<T extends { userId: string }>(list: T[], match: (x: T) => boolean, item: T): T[] {
+  return list.some(match) ? list.filter((x) => !match(x)) : [...list, item];
+}
+
+export function toggleLike(actor: Actor, postId: string) {
+  update((d) => ({ ...d, likes: toggleIn(d.likes, (l) => l.userId === actor.id && l.postId === postId, { userId: actor.id, postId }) }));
+}
+
+export function toggleSave(actor: Actor, postId: string) {
+  update((d) => ({ ...d, saved: toggleIn(d.saved, (l) => l.userId === actor.id && l.postId === postId, { userId: actor.id, postId }) }));
+}
+
+export function toggleFollow(actor: Actor, vendorId: string) {
+  const db = getDB();
+  const was = db.follows.some((f) => f.userId === actor.id && f.vendorId === vendorId);
+  update((d) => ({ ...d, follows: toggleIn(d.follows, (f) => f.userId === actor.id && f.vendorId === vendorId, { userId: actor.id, vendorId }) }));
+  const v = db.vendors.find((x) => x.id === vendorId);
+  if (!was && v && v.ownerId !== actor.id) {
+    const who = db.users.find((u) => u.id === actor.id)?.name || "Клиент";
+    notify(v.ownerId, "follow", { ru: `${who} подписался на вас`, en: `${who} followed you` }, "/vendor");
+  }
+}
+
+export function createPost(actor: Actor, input: { vendorId: string; photos: string[]; caption: string; offerId?: string; ratio?: number }): Post {
+  const db = getDB();
+  const v = db.vendors.find((x) => x.id === input.vendorId);
+  assert(!!v && can.editVendor(actor, v), "createPost");
+  const caption = input.caption.trim().slice(0, 600);
+  const post: Post = {
+    id: uid("p"),
+    vendorId: v.id,
+    photos: input.photos.slice(0, 10),
+    caption: { ru: caption, en: caption },
+    category: v.category,
+    offerId: input.offerId,
+    baseLikes: 0,
+    ratio: input.ratio ?? 1.25,
+    createdAt: now(),
+  };
+  update((d) => ({ ...d, posts: [post, ...d.posts] }));
+  for (const f of db.follows.filter((x) => x.vendorId === v.id)) {
+    notify(f.userId, "system", { ru: `${v.name}: новая публикация`, en: `${v.name}: new post` }, `/vendors?post=${post.id}`);
+  }
+  return post;
+}
+
+export function deletePost(actor: Actor, postId: string) {
+  const db = getDB();
+  const p = db.posts.find((x) => x.id === postId);
+  const v = p && db.vendors.find((x) => x.id === p.vendorId);
+  if (!p || !v) return;
+  assert(can.editVendor(actor, v), "deletePost");
+  update((d) => ({ ...d, posts: d.posts.filter((x) => x.id !== postId), likes: d.likes.filter((l) => l.postId !== postId), saved: d.saved.filter((l) => l.postId !== postId) }));
+}
+
+export function setPostHidden(actor: Actor, postId: string, hidden: boolean) {
+  assert(actor.role === "admin", "moderatePost");
+  update((d) => ({ ...d, posts: d.posts.map((p) => (p.id === postId ? { ...p, hidden } : p)) }));
+}
+
+// ── Reviews ───────────────────────────────────────────────────
+
+/** Client leaves a review once the booking is completed (one per booking) */
+export function leaveReview(actor: Actor, bookingId: string, rating: number, text: string) {
+  const db = getDB();
+  const b = db.bookings.find((x) => x.id === bookingId);
+  assert(!!b && b.clientId === actor.id && (b.status === "completed" || b.escrow?.state === "released"), "leaveReview");
+  if (db.reviews.some((r) => r.bookingId === bookingId)) return;
+  const clean = text.trim().slice(0, 1000);
+  const r = Math.min(5, Math.max(1, Math.round(rating)));
+  const author = db.users.find((u) => u.id === actor.id)?.name || "Клиент";
+  update((d) => {
+    const vendor = d.vendors.find((v) => v.id === b.vendorId)!;
+    const count = vendor.reviewsCount + 1;
+    const avg = Math.round(((vendor.rating * vendor.reviewsCount + r) / count) * 10) / 10;
+    return {
+      ...d,
+      reviews: [{ id: uid("r"), vendorId: b.vendorId, bookingId, authorId: actor.id, author, rating: r, text: { ru: clean, en: clean }, date: now().slice(0, 10) }, ...d.reviews],
+      vendors: d.vendors.map((v) => (v.id === b.vendorId ? { ...v, rating: avg, reviewsCount: count } : v)),
+    };
+  });
+  const v = db.vendors.find((x) => x.id === b.vendorId);
+  if (v) notify(v.ownerId, "review", { ru: `Новый отзыв: ${r} из 5`, en: `New review: ${r} of 5` }, "/vendor/reviews");
+}
+
+export function replyToReview(actor: Actor, reviewId: string, text: string) {
+  const db = getDB();
+  const r = db.reviews.find((x) => x.id === reviewId);
+  const v = r && db.vendors.find((x) => x.id === r.vendorId);
+  assert(!!v && can.editVendor(actor, v), "replyReview");
+  const clean = text.trim().slice(0, 1000);
+  update((d) => ({ ...d, reviews: d.reviews.map((x) => (x.id === reviewId ? { ...x, reply: clean ? { text: clean, date: now().slice(0, 10) } : undefined } : x)) }));
+}
+
+export function setReviewHidden(actor: Actor, reviewId: string, hidden: boolean) {
+  assert(actor.role === "admin", "moderateReview");
+  update((d) => ({ ...d, reviews: d.reviews.map((x) => (x.id === reviewId ? { ...x, hidden } : x)) }));
+}
+
+// ── Platform settings & users (admin) ─────────────────────────
+
+export function updateSettings(actor: Actor, patch: Partial<PlatformSettings>) {
+  assert(actor.role === "admin", "settings");
+  const clamp = (n: number | undefined, max: number) => (n === undefined ? undefined : Math.min(max, Math.max(0, Math.round(n))));
+  update((d) => ({
+    ...d,
+    settings: {
+      ...d.settings,
+      ...(patch.feePercent !== undefined && { feePercent: clamp(patch.feePercent, 30)! }),
+      ...(patch.defaultPrepayPercent !== undefined && { defaultPrepayPercent: clamp(patch.defaultPrepayPercent, 100)! }),
+      ...(patch.autoReleaseDays !== undefined && { autoReleaseDays: clamp(patch.autoReleaseDays, 60)! }),
+    },
+  }));
+}
+
+export function setUserBlocked(actor: Actor, userId: string, blocked: boolean) {
+  assert(actor.role === "admin" && userId !== actor.id, "blockUser");
+  update((d) => ({ ...d, users: d.users.map((u) => (u.id === userId ? { ...u, blocked } : u)) }));
+}
+
+// ── Sign-up & onboarding ──────────────────────────────────────
+
+const CHECKLIST_TITLES: Record<CategoryId, string> = {
+  halls: "Банкетный зал",
+  cars: "Кортеж",
+  hosts: "Ведущий",
+  photo: "Фото и видео",
+  decor: "Декор",
+  music: "Музыка",
+  furniture: "Мебель",
+  cakes: "Торт",
+  beauty: "Образ и визаж",
+  attire: "Платье и костюм",
+  traditional: "Той-атрибутика",
+  shows: "Шоу-программа",
+};
+
+/** Finds a user by email or creates a fresh one that still has to go through onboarding */
+export function upsertAuthUser(input: { email: string; name?: string; provider: "google" | "email" }) {
+  const email = input.email.trim().toLowerCase();
+  const existing = getDB().users.find((u) => u.email?.toLowerCase() === email);
+  if (existing) return existing;
+  const user = {
+    id: uid("u"),
+    role: "client" as const,
+    name: (input.name ?? "").trim().slice(0, 80),
+    email,
+    authProvider: input.provider,
+    needsOnboarding: true,
+  };
+  update((d) => ({ ...d, users: [...d.users, user] }));
+  return user;
+}
+
+export function updateProfile(actor: Actor, patch: { name?: string; city?: string; phone?: string }) {
+  assert(can.editProfile(actor, actor.id), "editProfile");
+  update((d) => ({
+    ...d,
+    users: d.users.map((u) =>
+      u.id === actor.id
+        ? {
+            ...u,
+            ...(patch.name !== undefined && { name: patch.name.trim().slice(0, 80) }),
+            ...(patch.city !== undefined && { city: patch.city }),
+            ...(patch.phone !== undefined && { phone: patch.phone.trim().slice(0, 32) }),
+          }
+        : u,
+    ),
+  }));
+}
+
+function finishOnboarding(userId: string, role: "client" | "vendor") {
+  update((d) => ({
+    ...d,
+    users: d.users.map((u) => (u.id === userId ? { ...u, role, needsOnboarding: false, onboardedAt: now() } : u)),
+  }));
+}
+
+/** Client branch: creates the first event with a checklist ordered by what matters most */
+export function completeClientOnboarding(
+  actor: Actor,
+  input: {
+    name: string;
+    city: string;
+    event: { title: string; date: string; guests: number; budget: number };
+    priorities: CategoryId[];
+  },
+): EventItem {
+  const client: Actor = { id: actor.id, role: "client" };
+  updateProfile(client, { name: input.name, city: input.city });
+  const e = createEvent(client, { ...input.event, city: input.city });
+  const order: CategoryId[] = [...input.priorities, ...e.checklist.flatMap((c) => (c.category ? [c.category] : []))];
+  const seen = new Set<CategoryId>();
+  const checklist: ChecklistItem[] = order
+    .filter((c) => !seen.has(c) && seen.add(c))
+    .map((c, i) => ({ id: `c${i}`, title: CHECKLIST_TITLES[c], done: false, category: c }));
+  setChecklist(client, e.id, checklist);
+  finishOnboarding(actor.id, "client");
+  return { ...e, checklist };
+}
+
+/** Vendor branch: the signed-up user becomes the owner of a new (unverified) vendor profile */
+export function registerOwnVendor(
+  actor: Actor,
+  input: { ownerName: string; name: string; category: CategoryId; city: string; phone?: string; tagline: string },
+): Vendor {
+  assert(can.registerOwnVendor(actor, getDB()), "registerOwnVendor");
+  updateProfile(actor, { name: input.ownerName, city: input.city, phone: input.phone });
+  const slugBase =
+    input.name
+      .toLowerCase()
+      .replace(/[^a-z0-9а-яё]+/gi, "-")
+      .replace(/^-|-$/g, "") || "vendor";
+  const tagline = input.tagline.trim().slice(0, 160);
+  const vendor: Vendor = {
+    id: uid("v"),
+    ownerId: actor.id,
+    slug: `${slugBase}-${Math.random().toString(36).slice(2, 6)}`,
+    name: input.name.trim().slice(0, 80),
+    category: input.category,
+    city: input.city,
+    tagline: { ru: tagline, en: tagline },
+    description: { ru: "", en: "" },
+    rating: 0,
+    reviewsCount: 0,
+    verified: false,
+    hidden: false,
+    prepayPercent: getDB().settings?.defaultPrepayPercent ?? demoConfig.defaultPrepayPercent,
+    cover: unsplash(PHOTOS[CATEGORY_PHOTOS[input.category]][0], 1600, 900),
+    portfolio: PHOTOS[CATEGORY_PHOTOS[input.category]].slice(0, 6).map((id) => unsplash(id, 1200)),
+    phone: input.phone?.trim() ?? "",
+    yearsOnMarket: 0,
+    responseMinutes: 30,
+    createdAt: now(),
+  };
+  update((d) => ({ ...d, vendors: [...d.vendors, vendor], stats: [...d.stats, { vendorId: vendor.id, views: 0 }] }));
+  finishOnboarding(actor.id, "vendor");
+  return vendor;
 }

@@ -14,8 +14,9 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { safeStorage } from "@/lib/utils";
 import { demoConfig } from "@/config/demo";
+import { designFromLegacy } from "@/lib/invitations/design";
 import { buildSeed } from "./seed";
-import type { DB } from "./types";
+import type { DB, Transaction } from "./types";
 
 interface DataState {
   db: DB | null;
@@ -42,7 +43,9 @@ export const useDataStore = create<DataState>()(
       storage: createJSONStorage(() => safeStorage("localStorage")),
       partialize: (s) => ({ db: s.db }),
       onRehydrateStorage: () => (state, error) => {
-        const stale = !state?.db || state.db.version !== demoConfig.seedVersion;
+        // v2 → v3 is additive: upgrade in place so sign-ups and edits survive
+        const v = state?.db?.version;
+        const stale = !state?.db || (v !== demoConfig.seedVersion && v !== 2);
         // Sync storage hydrates inside create(), before useDataStore is assigned → defer.
         queueMicrotask(() =>
           useDataStore.setState({
@@ -56,14 +59,75 @@ export const useDataStore = create<DataState>()(
 );
 
 /** Additive schema changes that don't need a full re-seed (keeps the user's demo data) */
-function migrate(db: DB): DB {
-  if (db.invitations) return db;
-  // keep the demo invitation, re-pinned to the user's (possibly edited) wedding date
-  const invitations = buildSeed().invitations.flatMap((inv) => {
-    const ev = db.events.find((e) => e.id === inv.eventId);
-    return ev ? [{ ...inv, date: ev.date }] : [];
+export function migrate(input: DB): DB {
+  let db = input;
+  let cached: DB | undefined;
+  const seed = () => (cached ??= buildSeed());
+  if (!db.invitations) {
+    // keep the demo invitation, re-pinned to the user's (possibly edited) wedding date
+    const invitations = seed().invitations.flatMap((inv) => {
+      const ev = db.events.find((e) => e.id === inv.eventId);
+      return ev ? [{ ...inv, date: ev.date }] : [];
+    });
+    db = { ...db, invitations };
+  }
+  if (db.version === 2 || !db.posts) {
+    const s = seed();
+    db = {
+      ...db,
+      version: demoConfig.seedVersion,
+      posts: db.posts ?? s.posts.filter((p) => db.vendors.some((v) => v.id === p.vendorId)),
+      likes: db.likes ?? [],
+      saved: db.saved ?? [],
+      follows: db.follows ?? s.follows,
+      notifications: db.notifications ?? [],
+      settings: db.settings ?? s.settings,
+      transactions: db.transactions ?? [],
+      bookings: db.bookings.map((b) =>
+        b.escrow || b.status === "pending" || b.status === "cancelled"
+          ? b
+          : {
+              ...b,
+              escrow:
+                b.status === "prepaid"
+                  ? { state: "held", amount: b.prepayAmount, heldAt: b.createdAt }
+                  : {
+                      state: "released",
+                      amount: b.prepayAmount,
+                      heldAt: b.createdAt,
+                      releasedAt: b.createdAt,
+                      clientConfirmedAt: b.createdAt,
+                      vendorConfirmedAt: b.createdAt,
+                    },
+            },
+      ),
+      invitations: db.invitations.map((inv) => ({
+        ...inv,
+        design: inv.design ?? designFromLegacy(inv),
+        guests: inv.guests ?? [],
+        views: inv.views ?? [],
+      })),
+    };
+    if (!input.transactions) db = { ...db, transactions: ledgerFromEscrow(db) };
+  }
+  return db;
+}
+
+/** Rebuilds the money ledger for bookings that were paid before the ledger existed */
+function ledgerFromEscrow(db: DB): Transaction[] {
+  const fee = db.settings.feePercent;
+  return db.bookings.flatMap((b) => {
+    const e = b.escrow;
+    if (!e) return [];
+    const base = { bookingId: b.id, vendorId: b.vendorId, clientId: b.clientId };
+    const out: Transaction[] = [{ ...base, id: `tx-${b.id}-hold`, kind: "hold", amount: e.amount, createdAt: e.heldAt ?? b.createdAt }];
+    if (e.state === "released") {
+      const f = Math.round((e.amount * fee) / 100);
+      out.push({ ...base, id: `tx-${b.id}-release`, kind: "release", amount: e.amount - f, createdAt: e.releasedAt ?? b.createdAt });
+      out.push({ ...base, id: `tx-${b.id}-fee`, kind: "fee", amount: f, createdAt: e.releasedAt ?? b.createdAt });
+    }
+    return out;
   });
-  return { ...db, invitations };
 }
 
 /**

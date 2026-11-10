@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, RotateCcw, Shield, Store, User } from "lucide-react";
+import { Check, ChevronDown, LogOut, RotateCcw, Shield, Store, Undo2, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -22,10 +22,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { demoConfig } from "@/config/demo";
+import { useAuth } from "@/lib/auth/store";
 import { useDataStore, useDB } from "@/lib/data/store";
 import type { Role } from "@/lib/data/types";
 import { LOCALES, useI18n } from "@/lib/i18n";
-import { useSession } from "@/lib/session";
+import { DEFAULT_USER_BY_ROLE, useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { HOME_BY_ROLE } from "./nav-items";
 
@@ -38,6 +40,11 @@ export function SettingsMenu() {
   const { role, id, setRole } = useSession();
   const user = useDB((db) => db.users.find((u) => u.id === id));
   const resetDemo = useDataStore((s) => s.resetDemo);
+  const accountId = useAuth((s) => s.userId);
+  const isDemoAccount = useAuth((s) => s.demo);
+  const signOut = useAuth((s) => s.signOut);
+  const account = useDB((db) => db.users.find((u) => u.id === accountId));
+  const actingAsOther = !!account && !isDemoAccount && account.id !== id;
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const RoleIcon = ROLE_ICONS[role];
@@ -77,22 +84,38 @@ export function SettingsMenu() {
         <DropdownMenuContent align="end" className="w-64 p-1.5">
           <div className="px-2 pt-1.5 pb-2">
             <div className="truncate text-sm font-medium">{user?.name}</div>
-            <div className="text-xs text-muted-foreground">{t("roles.switchHint")}</div>
+            <div className="truncate text-xs text-muted-foreground">
+              {user?.email ?? (isDemoAccount ? t("common.demoMode") : t(`roles.${role}`))}
+            </div>
           </div>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>{t("roles.switchTitle")}</DropdownMenuLabel>
-            {(["client", "vendor", "admin"] as Role[]).map((r) => {
-              const Icon = ROLE_ICONS[r];
-              return (
-                <DropdownMenuItem key={r} onClick={() => switchRole(r)} className="py-1.5">
-                  <Icon className="text-muted-foreground" />
-                  {t(`roles.${r}`)}
-                  {r === role && <Check className="ml-auto text-primary" />}
-                </DropdownMenuItem>
-              );
-            })}
-          </DropdownMenuGroup>
+          {actingAsOther && (
+            <DropdownMenuItem
+              onClick={() => {
+                setRole(account.role, account.id);
+                router.push(HOME_BY_ROLE[account.role]);
+              }}
+              className="py-1.5"
+            >
+              <Undo2 className="text-muted-foreground" />
+              {t("auth.backToAccount")}
+            </DropdownMenuItem>
+          )}
+          {demoConfig.enabled && <DropdownMenuSeparator />}
+          {demoConfig.enabled && (
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>{t("auth.demoSwitch")}</DropdownMenuLabel>
+              {(["client", "vendor", "admin"] as Role[]).map((r) => {
+                const Icon = ROLE_ICONS[r];
+                return (
+                  <DropdownMenuItem key={r} onClick={() => switchRole(r)} className="py-1.5">
+                    <Icon className="text-muted-foreground" />
+                    {t(`roles.${r}`)}
+                    {r === role && id === DEFAULT_USER_BY_ROLE[r] && <Check className="ml-auto text-primary" />}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuGroup>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuLabel>{t("lang.label")}</DropdownMenuLabel>
@@ -113,9 +136,21 @@ export function SettingsMenu() {
             </div>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setConfirmOpen(true)} className="py-1.5 text-muted-foreground">
-            <RotateCcw />
-            {t("demo.reset")}
+          {demoConfig.enabled && (
+            <DropdownMenuItem onClick={() => setConfirmOpen(true)} className="py-1.5 text-muted-foreground">
+              <RotateCcw />
+              {t("demo.reset")}
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem
+            onClick={() => {
+              signOut();
+              router.replace("/welcome");
+            }}
+            className="py-1.5"
+          >
+            <LogOut className="text-muted-foreground" />
+            {t("auth.signOut")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

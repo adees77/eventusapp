@@ -66,13 +66,54 @@ export function Composer({
   const listening = speech.state === "listening";
   const langShort = speech.lang.slice(0, 2).toUpperCase();
 
+  const micButton = (cls?: string) => (
+    <button
+      type="button"
+      onClick={toggleMic}
+      aria-pressed={listening}
+      aria-label={listening ? t("voice.stop") : t("voice.start")}
+      className={cn(
+        "flex size-10 shrink-0 items-center justify-center rounded-full transition-colors active:scale-[0.97]",
+        listening
+          ? "bg-primary text-primary-foreground"
+          : "text-text-secondary hover:bg-muted hover:text-foreground md:border md:border-border",
+        !speech.supported && "opacity-50",
+        cls,
+      )}
+    >
+      {listening ? <Square className="size-3.5 fill-current" /> : <Mic className="size-[18px]" strokeWidth={1.75} />}
+    </button>
+  );
+  const sendButton = busy ? (
+    <button
+      type="button"
+      onClick={onStop}
+      aria-label={t("chat.stop")}
+      className="flex size-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-colors active:scale-[0.97]"
+    >
+      <Square className="size-3.5 fill-current" />
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={submit}
+      disabled={!value.trim()}
+      aria-label={t("chat.send")}
+      className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[background-color,opacity] hover:bg-primary-hover active:scale-[0.97] disabled:opacity-30"
+    >
+      <ArrowUp className="size-[18px]" strokeWidth={2} />
+    </button>
+  );
+
   return (
     <div
       className={cn(
-        "rounded-2xl border bg-card p-2 shadow-lift transition-colors",
+        // phone: one slim row (mic · text · send); desktop: a box with controls under the text
+        "flex items-end gap-1 rounded-[26px] border bg-card p-1.5 shadow-soft transition-colors md:block md:rounded-2xl md:p-2 md:shadow-lift",
         listening ? "border-primary/50" : "border-border focus-within:border-primary/40",
       )}
     >
+      {micButton("md:hidden")}
       <textarea
         ref={ref}
         value={value}
@@ -88,9 +129,10 @@ export function Composer({
         autoFocus={autoFocus}
         placeholder={listening ? t("voice.listening") : placeholder}
         aria-label={placeholder}
-        className="block max-h-[200px] min-h-12 w-full resize-none bg-transparent px-3 pt-2.5 text-md leading-relaxed outline-none placeholder:text-muted-foreground"
+        className="block max-h-[200px] min-h-10 min-w-0 flex-1 resize-none bg-transparent px-2 py-2 text-[16px] leading-6 outline-none placeholder:truncate placeholder:text-muted-foreground md:min-h-12 md:w-full md:px-3 md:pt-2.5 md:pb-0 md:text-md md:leading-relaxed"
       />
-      <div className="flex items-center justify-between gap-2 px-1 pt-1">
+      <div className="md:hidden">{sendButton}</div>
+      <div className="hidden items-center justify-between gap-2 px-1 pt-1 md:flex">
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           {listening && (
             <span className="flex items-center gap-2 pl-2 text-primary" aria-live="polite">
@@ -125,41 +167,8 @@ export function Composer({
               {t("voice.language")}: {t(`voice.langs.${speech.lang}`)}
             </TooltipContent>
           </Tooltip>
-          <button
-            type="button"
-            onClick={toggleMic}
-            aria-pressed={listening}
-            aria-label={listening ? t("voice.stop") : t("voice.start")}
-            className={cn(
-              "flex size-10 items-center justify-center rounded-full transition-colors active:scale-[0.97]",
-              listening
-                ? "bg-primary text-primary-foreground"
-                : "border border-border text-text-secondary hover:bg-muted hover:text-foreground",
-              !speech.supported && "opacity-50",
-            )}
-          >
-            {listening ? <Square className="size-3.5 fill-current" /> : <Mic className="size-[18px]" strokeWidth={1.75} />}
-          </button>
-          {busy ? (
-            <button
-              type="button"
-              onClick={onStop}
-              aria-label={t("chat.stop")}
-              className="flex size-10 items-center justify-center rounded-full bg-foreground text-background transition-colors active:scale-[0.97]"
-            >
-              <Square className="size-3.5 fill-current" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={submit}
-              disabled={!value.trim()}
-              aria-label={t("chat.send")}
-              className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[background-color,opacity] hover:bg-primary-hover active:scale-[0.97] disabled:opacity-30"
-            >
-              <ArrowUp className="size-[18px]" strokeWidth={2} />
-            </button>
-          )}
+          {micButton()}
+          {sendButton}
         </div>
       </div>
     </div>

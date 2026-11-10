@@ -9,6 +9,7 @@ import { useDB } from "@/lib/data/store";
 import { useActor, useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { DemoBadge } from "./demo-badge";
+import { NotificationsBell } from "./notifications-bell";
 import { HOME_BY_ROLE, NAV_BY_ROLE, isActive } from "./nav-items";
 import { SettingsMenu } from "./settings-menu";
 
@@ -49,6 +50,7 @@ export function Header() {
 
         <div className="ml-auto flex items-center gap-3 xl:gap-4">
           <DemoBadge />
+          <NotificationsBell />
           <SettingsMenu />
         </div>
       </div>
