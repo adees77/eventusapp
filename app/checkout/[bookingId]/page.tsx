@@ -88,13 +88,13 @@ export default function CheckoutPage() {
           <span className="flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <Check className="size-6" strokeWidth={2} />
           </span>
-          <h1 className="mt-6 font-serif text-4xl font-normal">{t("checkout.success")}</h1>
+          <h1 className="mt-6 font-serif text-[32px] leading-tight font-normal md:text-4xl">{t("checkout.success")}</h1>
           <p className="mt-2 text-md text-text-secondary">{t("checkout.successHint")}</p>
           <p className="mt-6 text-2xl font-medium tabular-nums">{money(booking.prepayAmount)}</p>
         </div>
       ) : (
         <>
-          <h1 className="mt-8 font-serif text-4xl font-normal">{t("checkout.title")}</h1>
+          <h1 className="mt-8 font-serif text-[32px] leading-tight font-normal md:text-4xl">{t("checkout.title")}</h1>
           <div className="mt-6">
             <BookingSummary
               vendor={vendor}
@@ -129,7 +129,14 @@ export default function CheckoutPage() {
                         method === id ? "border-primary ring-3 ring-primary/15" : "border-border hover:bg-muted/50",
                       )}
                     >
-                      <input type="radio" name="method" value={id} checked={method === id} onChange={() => setMethod(id)} className="sr-only" />
+                      <input
+                        type="radio"
+                        name="method"
+                        value={id}
+                        checked={method === id}
+                        onChange={() => setMethod(id)}
+                        className="sr-only"
+                      />
                       <Icon className="size-[18px] text-text-secondary" strokeWidth={1.5} />
                       {t(`checkout.methods.${id}`)}
                     </label>

@@ -9,7 +9,7 @@ export default function MessagesPage() {
   return (
     <>
       <div className="flex-1 overflow-y-auto lg:hidden">
-        <h1 className="px-4 pt-6 pb-2 font-serif text-4xl font-normal">{t("messages.title")}</h1>
+        <h1 className="px-4 pt-6 pb-2 font-serif text-[32px] leading-tight font-normal md:text-4xl">{t("messages.title")}</h1>
         <ConversationList />
       </div>
       <div className="hidden flex-1 flex-col items-center justify-center gap-3 text-sm text-muted-foreground lg:flex">

@@ -51,7 +51,7 @@ export default function WelcomePage() {
         <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-12">
           {!pending && (
             <div className="animate-rise">
-              <h1 className="font-serif text-4xl leading-[1.05] tracking-[-0.01em] [text-wrap:balance] md:text-5xl">
+              <h1 className="font-serif text-[34px] leading-[1.05] tracking-[-0.01em] [text-wrap:balance] md:text-5xl">
                 {t("auth.title")}
               </h1>
               <p className="mt-4 text-md leading-relaxed text-text-secondary">{t("auth.subtitle")}</p>
@@ -97,14 +97,7 @@ export default function WelcomePage() {
 
       <div className="relative hidden p-3 lg:block">
         <div className="relative h-full overflow-hidden rounded-2xl">
-          <Image
-            src={unsplash(PHOTOS.halls[0], 1400, 1600)}
-            alt=""
-            fill
-            priority
-            sizes="55vw"
-            className="object-cover"
-          />
+          <Image src={unsplash(PHOTOS.halls[0], 1400, 1600)} alt="" fill priority sizes="55vw" className="object-cover" />
           <div className="absolute inset-4 rounded-xl border border-white/40" aria-hidden />
         </div>
       </div>

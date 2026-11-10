@@ -220,7 +220,7 @@ export default function ThreadPage() {
                 maxLength={4000}
                 placeholder={t("messages.placeholder")}
                 aria-label={t("messages.placeholder")}
-                className="max-h-32 min-h-11 flex-1 resize-none rounded-xl border border-input bg-background px-3.5 py-2.5 text-md outline-none placeholder:text-muted-foreground focus-visible:border-ring"
+                className="max-h-32 min-h-11 flex-1 resize-none rounded-[22px] border border-input bg-background px-4 py-2.5 text-[16px] outline-none md:text-md placeholder:text-muted-foreground focus-visible:border-ring"
               />
               <button
                 type="submit"

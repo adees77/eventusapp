@@ -108,7 +108,7 @@ export function CabinetShell({
         })}
       </nav>
 
-      <div className="min-w-0 flex-1 px-4 pt-6 pb-16 md:px-8 md:pt-8 xl:px-10">{children}</div>
+      <div className="min-w-0 flex-1 px-4 pt-5 pb-16 md:px-8 md:pt-8 xl:px-10">{children}</div>
     </div>
   );
 }
@@ -128,13 +128,13 @@ export function Kpi({
   tone?: "gold" | "primary";
 }) {
   return (
-    <div className="flex flex-col rounded-2xl border border-border bg-card p-5">
+    <div className="flex flex-col rounded-2xl border border-border bg-card p-4 md:p-5">
       <div className="flex items-center gap-1.5 text-sm text-text-secondary">
         {tone && <span className={cn("size-1.5 rounded-full", tone === "gold" ? "bg-gold" : "bg-primary")} aria-hidden />}
         {label}
       </div>
       <div className="mt-2 flex items-end justify-between gap-3">
-        <div className="text-2xl leading-none font-medium tabular-nums md:text-[28px]">{value}</div>
+        <div className="text-xl leading-none font-medium tabular-nums md:text-[28px]">{value}</div>
         {trend}
       </div>
       {note && <div className="mt-2 text-xs text-muted-foreground">{note}</div>}

@@ -7,8 +7,8 @@ export const brand = {
   name: "EVENTUS",
   shortName: "Eventus",
   tagline: {
-    ru: "Всё для вашего события — в одном разговоре",
-    en: "Everything for your event — in one conversation",
+    ru: "ИИ-организатор праздников: расскажите о событии — ассистент всё организует",
+    en: "AI event planner: tell it about your event and it organises everything",
   },
   logo: {
     /** Mark only (waves) */

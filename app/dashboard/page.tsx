@@ -64,7 +64,7 @@ export default function ClientOverview() {
     <div className="flex flex-col gap-6">
       <header>
         <p className="text-sm text-text-secondary">{t("cabinet.hello", { name: user?.name?.split(" ")[0] || t("roles.client") })}</p>
-        <h1 className="mt-1 font-serif text-4xl font-normal md:text-5xl">{event ? event.title : t("cabinet.overview")}</h1>
+        <h1 className="mt-1 font-serif text-[32px] leading-tight font-normal md:text-5xl">{event ? event.title : t("cabinet.overview")}</h1>
         {event && (
           <p className="mt-2 text-sm text-text-secondary tabular-nums">
             {date(event.date, "d MMMM yyyy")} · {l(CITIES[event.city])} · {tn("common.guests", event.guests)}

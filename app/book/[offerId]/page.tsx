@@ -41,7 +41,9 @@ function Book() {
 
   const [date, setDateState] = useState<string | null>(params.get("date") ?? planner.date);
   const [qty, setQty] = useState(Math.max(1, Number(params.get("qty")) || 1));
-  const [eventId, setEventId] = useState<string>(() => events.find((e) => e.date === (params.get("date") ?? planner.date))?.id ?? events[0]?.id ?? "");
+  const [eventId, setEventId] = useState<string>(
+    () => events.find((e) => e.date === (params.get("date") ?? planner.date))?.id ?? events[0]?.id ?? "",
+  );
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -93,7 +95,7 @@ function Book() {
         <ArrowLeft className="size-4" />
         {vendor.name}
       </button>
-      <h1 className="mt-4 font-serif text-4xl font-normal md:text-5xl">{t("booking.title")}</h1>
+      <h1 className="mt-4 font-serif text-[32px] leading-tight font-normal md:text-5xl">{t("booking.title")}</h1>
       <p className="mt-1 text-md text-text-secondary">{l(offer.title)}</p>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px]">
@@ -134,7 +136,11 @@ function Book() {
                 <span className="text-sm text-muted-foreground">{l(offer.unit)}</span>
               </div>
               <div className="mt-3 min-h-5">
-                {avail ? <AvailDots a={avail} size="sm" /> : <span className="text-xs text-muted-foreground">{t("booking.selectDate")}</span>}
+                {avail ? (
+                  <AvailDots a={avail} size="sm" />
+                ) : (
+                  <span className="text-xs text-muted-foreground">{t("booking.selectDate")}</span>
+                )}
               </div>
             </div>
             {events.length > 0 && (
