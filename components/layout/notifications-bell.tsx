@@ -55,7 +55,11 @@ export function NotificationsBell() {
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <span className="text-sm font-medium">{t("notif.title")}</span>
           {unread > 0 && (
-            <button type="button" onClick={() => markNotificationsRead(actor)} className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+            <button
+              type="button"
+              onClick={() => markNotificationsRead(actor)}
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+            >
               <CheckCheck className="size-3.5" />
               {t("notif.readAll")}
             </button>
@@ -74,7 +78,12 @@ export function NotificationsBell() {
                   }}
                   className="mx-1 flex items-start gap-3 rounded-lg px-3 py-2.5"
                 >
-                  <span className={cn("mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full", n.read ? "bg-muted text-muted-foreground" : "bg-secondary text-primary")}>
+                  <span
+                    className={cn(
+                      "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full",
+                      n.read ? "bg-muted text-muted-foreground" : "bg-secondary text-primary",
+                    )}
+                  >
                     <Icon className="size-3.5" strokeWidth={1.75} />
                   </span>
                   <span className="min-w-0 flex-1">

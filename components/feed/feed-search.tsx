@@ -2,6 +2,7 @@
 
 import { ArrowLeft, Clock, Search, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CategoryIcon } from "@/components/category-icon";
 import { DatePicker } from "@/components/date-picker";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ export function FeedSearch({
   const [draft, setDraft] = useState(value.query);
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
 
   // keep the field in sync when the query changes from outside (reset, back button)
   const [seen, setSeen] = useState(value.query);
@@ -67,7 +69,12 @@ export function FeedSearch({
     const onDown = (e: PointerEvent) => {
       // the date picker renders in a portal: ignore clicks inside popovers
       const target = e.target as HTMLElement;
-      if (rootRef.current?.contains(target) || target.closest("[data-slot=popover-content],[role=dialog],[data-base-ui-portal]")) return;
+      if (
+        rootRef.current?.contains(target) ||
+        sheetRef.current?.contains(target) ||
+        target.closest("[data-slot=popover-content],[role=dialog],[data-base-ui-portal]")
+      )
+        return;
       setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
@@ -318,11 +325,14 @@ export function FeedSearch({
           <div className="absolute inset-x-0 top-[calc(100%+8px)] z-50 hidden animate-rise rounded-2xl border border-border bg-card p-5 shadow-lift md:block">
             {panel}
           </div>
-          {/* mobile: full-screen sheet */}
-          <div className="fixed inset-0 z-[60] flex flex-col bg-background md:hidden">
-            <div className="border-b border-border p-3">{field(true)}</div>
-            <div className="flex-1 overflow-y-auto p-4 pb-10">{panel}</div>
-          </div>
+          {/* mobile: full-screen sheet, portalled — the sticky bar's backdrop-filter would trap a fixed child */}
+          {createPortal(
+            <div ref={sheetRef} className="fixed inset-0 z-[60] flex flex-col bg-background md:hidden">
+              <div className="border-b border-border p-3">{field(true)}</div>
+              <div className="flex-1 overflow-y-auto p-4 pb-10">{panel}</div>
+            </div>,
+            document.body,
+          )}
         </>
       )}
     </div>
