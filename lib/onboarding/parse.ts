@@ -34,8 +34,7 @@ export function parseRole(text: string): "client" | "vendor" | null {
   const t = lower(text);
   if (/(подряд|поставщ|исполнител|бизнес|компан|предоставля|оказыва|мои услуги|vendor|supplier|my business|i provide|i offer)/.test(t))
     return "vendor";
-  if (/(планир|организ|событ|свадьб|той|юбил|праздн|ищу|клиент|plan|event|wedding|party|client|looking)/.test(t))
-    return "client";
+  if (/(планир|организ|событ|свадьб|той|юбил|праздн|ищу|клиент|plan|event|wedding|party|client|looking)/.test(t)) return "client";
   return null;
 }
 
@@ -196,8 +195,11 @@ export function parseGuests(text: string, strict = false): number | null {
   const t = lower(text);
   const guestWord = /(гост|человек|(?<![а-яa-z])чел(?![а-яa-z])|персон|people|guests|persons|pax)/;
   if (strict && !guestWord.test(t)) return null;
-  const near = strict ? t.match(/(\d[\d\s]{0,5})\s*(?:-|–|до)?\s*(\d{0,5})\s*(?:гост|человек|чел|персон|people|guests|persons|pax)/) ?? t.match(/(?:гост\S*|человек|people|guests)\D{0,12}(\d{1,5})/) : null;
-  const nums = (near ? near.slice(1) : t.match(/\d[\d\s]*/g) ?? []).map((n) => Number(String(n).replace(/\s/g, ""))).filter((n) => n > 0);
+  const near = strict
+    ? (t.match(/(\d[\d\s]{0,5})\s*(?:-|–|до)?\s*(\d{0,5})\s*(?:гост|человек|чел|персон|people|guests|persons|pax)/) ??
+      t.match(/(?:гост\S*|человек|people|guests)\D{0,12}(\d{1,5})/))
+    : null;
+  const nums = (near ? near.slice(1) : (t.match(/\d[\d\s]*/g) ?? [])).map((n) => Number(String(n).replace(/\s/g, ""))).filter((n) => n > 0);
   let n = nums.length ? Math.max(...nums) : null;
   if (n === null) for (const [re, v] of WORD_NUMBERS) if (re.test(t)) n = v;
   if (n === null || n < 1 || n > 5000) return null;
@@ -258,8 +260,7 @@ export function parseCategory(text: string): CategoryId | null {
 export function parsePhone(text: string): string | null {
   const digits = text.replace(/\D/g, "");
   if (digits.length === 9) return `+996 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
-  if (digits.length === 12 && digits.startsWith("996"))
-    return `+996 ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}`;
+  if (digits.length === 12 && digits.startsWith("996")) return `+996 ${digits.slice(3, 6)} ${digits.slice(6, 9)} ${digits.slice(9)}`;
   if (digits.length === 10 && digits.startsWith("0")) return parsePhone(digits.slice(1));
   if (digits.length >= 10 && digits.length <= 15) return `+${digits}`;
   return null;

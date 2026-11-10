@@ -18,28 +18,13 @@ import {
 import { NativeSelect } from "@/components/ui/native-select";
 import { Monogram, VerifiedSeal } from "@/components/vendor/badges";
 import { createVendor, updateVendor } from "@/lib/data/actions";
-import { PHOTOS, unsplash, type PhotoSet } from "@/lib/data/seed/photos";
+import { CATEGORY_PHOTOS, PHOTOS, unsplash } from "@/lib/data/seed/photos";
 import { CITIES } from "@/lib/data/seed/catalog";
 import { useDB } from "@/lib/data/store";
 import type { CategoryId, Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { useActor, useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
-
-const COVER_BY_CATEGORY: Record<CategoryId, PhotoSet> = {
-  cars: "cars_g",
-  halls: "halls",
-  furniture: "chairs",
-  hosts: "hosts",
-  photo: "photo",
-  decor: "decor",
-  music: "music",
-  cakes: "cakes",
-  beauty: "beauty",
-  attire: "dresses",
-  traditional: "traditional",
-  shows: "fireworks",
-};
 
 export default function AdminVendors() {
   const { t, tn, l } = useI18n();
@@ -216,7 +201,7 @@ function VendorForm({ initial, onDone }: { initial: Vendor | null; onDone: () =>
             category,
             city,
             tagline: tl,
-            cover: unsplash(PHOTOS[COVER_BY_CATEGORY[category]][0], 1600, 900),
+            cover: unsplash(PHOTOS[CATEGORY_PHOTOS[category]][0], 1600, 900),
           });
           toast.success(t("admin.created"));
         }

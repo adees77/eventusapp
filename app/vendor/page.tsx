@@ -73,9 +73,48 @@ export default function VendorOverview() {
     })),
   ];
 
+  const offersCount = db.offers.filter((o) => o.vendorId === vendor.id && o.active).length;
+  const setup = [
+    { done: offersCount > 0, text: t("vcab.setupOffer"), href: "/vendor/services" },
+    { done: posts.length >= 3, text: t("vcab.setupPosts", { n: posts.length }), href: "/vendor/posts" },
+    { done: !!vendor.description.ru || !!vendor.description.en, text: t("vcab.setupAbout"), href: "/vendor/profile" },
+    {
+      done: db.blocks.some((b) => db.offers.find((o) => o.id === b.offerId)?.vendorId === vendor.id),
+      text: t("vcab.setupCalendar"),
+      href: "/vendor/calendar",
+    },
+    { done: vendor.verified, text: t("vcab.setupVerify"), href: "/vendor/profile" },
+  ];
+  const setupLeft = setup.filter((x) => !x.done).length;
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={t("cabinet.overview")} subtitle={vendor.name} />
+      {setupLeft > 0 && live.length === 0 && (
+        <Section title={t("vcab.setupTitle", { done: setup.length - setupLeft, total: setup.length })}>
+          <div className="mb-4 h-1 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary" style={{ width: `${((setup.length - setupLeft) / setup.length) * 100}%` }} />
+          </div>
+          <ul className="grid gap-1 sm:grid-cols-2">
+            {setup.map((x) => (
+              <li key={x.text}>
+                <Link href={x.href} className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm hover:bg-muted">
+                  <span
+                    className={
+                      x.done
+                        ? "flex size-5 items-center justify-center rounded-full bg-success text-white"
+                        : "size-5 rounded-full border border-border"
+                    }
+                  >
+                    {x.done && <Check className="size-3" strokeWidth={3} />}
+                  </span>
+                  <span className={x.done ? "text-muted-foreground line-through decoration-foreground/20" : ""}>{x.text}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <Kpi label={t("vcab.available")} value={money(bal.available)} note={t("vcab.availableNote")} />
         <Kpi label={t("cabinet.frozen")} value={money(bal.held)} note={t("vcab.frozenNote")} tone="primary" />

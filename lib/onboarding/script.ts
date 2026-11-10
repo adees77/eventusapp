@@ -39,6 +39,9 @@ export interface Answers {
   /** null = skipped */
   phone?: string | null;
   tagline?: string;
+  /** vendor's first service: what and how much (KGS) */
+  offerTitle?: string;
+  offerPrice?: number;
 }
 
 export type StepId =
@@ -54,6 +57,8 @@ export type StepId =
   | "category"
   | "phone"
   | "tagline"
+  | "offerTitle"
+  | "offerPrice"
   | "summary";
 
 export type StepKind = "text" | "choice" | "multi" | "date" | "summary";
@@ -69,7 +74,18 @@ export interface StepDef {
 }
 
 export const CATEGORY_OPTIONS: CategoryId[] = [
-  "halls", "cars", "hosts", "photo", "decor", "music", "cakes", "beauty", "attire", "furniture", "traditional", "shows",
+  "halls",
+  "cars",
+  "hosts",
+  "photo",
+  "decor",
+  "music",
+  "cakes",
+  "beauty",
+  "attire",
+  "furniture",
+  "traditional",
+  "shows",
 ];
 
 export const STEPS: Record<StepId, StepDef> = {
@@ -95,11 +111,13 @@ export const STEPS: Record<StepId, StepDef> = {
   category: { id: "category", kind: "choice", field: "category", options: CATEGORY_OPTIONS },
   phone: { id: "phone", kind: "text", field: "phone", optional: true },
   tagline: { id: "tagline", kind: "text", field: "tagline" },
+  offerTitle: { id: "offerTitle", kind: "text", field: "offerTitle" },
+  offerPrice: { id: "offerPrice", kind: "choice", field: "offerPrice", options: ["10000", "25000", "50000", "100000", "250000"] },
   summary: { id: "summary", kind: "summary" },
 };
 
 export const CLIENT_STEPS: StepId[] = ["eventType", "date", "city", "guests", "budget", "priorities", "summary"];
-export const VENDOR_STEPS: StepId[] = ["bizName", "category", "city", "phone", "tagline", "summary"];
+export const VENDOR_STEPS: StepId[] = ["bizName", "category", "city", "phone", "tagline", "offerTitle", "offerPrice", "summary"];
 
 export function stepsFor(a: Answers): StepId[] {
   const tail = a.role === "vendor" ? VENDOR_STEPS : a.role === "client" ? CLIENT_STEPS : [];
@@ -197,6 +215,18 @@ function parseOwn(step: StepId, text: string, now: Date): Partial<Answers> | nul
       const v = parseText(text, 8, 160);
       return v ? { tagline: v } : null;
     }
+    case "offerTitle": {
+      const v = parseText(text, 3, 80);
+      if (!v) return null;
+      // "Кортеж из 5 машин — 40 000 сом" answers both steps at once
+      const price = parseBudget(text, true);
+      const title = v.replace(/[—–-]?\s*(от\s*)?\d[\d\s.,]*\s*(сом|som|kgs|тыс\S*|к|k)?\s*$/i, "").trim() || v;
+      return price ? { offerTitle: title, offerPrice: price } : { offerTitle: v };
+    }
+    case "offerPrice": {
+      const v = parseBudget(text);
+      return v && v >= 100 ? { offerPrice: v } : null;
+    }
     default:
       return null;
   }
@@ -213,6 +243,7 @@ export function choiceAnswer(step: StepId, value: string): Partial<Answers> {
       return { city: value };
     case "guests":
     case "budget":
+    case "offerPrice":
       return { [step]: Number(value) } as Partial<Answers>;
     case "category":
       return { category: value as CategoryId };
@@ -257,6 +288,9 @@ export function sanitizeAiFields(raw: unknown, now = new Date()): Partial<Answer
   if (phone) out.phone = phone;
   const tagline = str(r.tagline);
   if (tagline && tagline.length >= 8) out.tagline = tagline.slice(0, 160);
+  const offer = str(r.offerTitle);
+  if (offer) out.offerTitle = offer.slice(0, 80);
+  if (typeof r.offerPrice === "number" && r.offerPrice >= 100 && r.offerPrice <= 1e8) out.offerPrice = Math.round(r.offerPrice);
   return out;
 }
 

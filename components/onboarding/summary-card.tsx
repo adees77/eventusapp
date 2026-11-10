@@ -32,6 +32,11 @@ export function SummaryCard({
           { step: "city", label: t("onboarding.summary.city"), value: l(CITIES[answers.city ?? ""]) },
           { step: "phone", label: t("onboarding.summary.phone"), value: answers.phone || none },
           { step: "tagline", label: t("onboarding.summary.tagline"), value: answers.tagline },
+          {
+            step: "offerTitle",
+            label: t("onboarding.summary.offer"),
+            value: answers.offerTitle ? `${answers.offerTitle}${answers.offerPrice ? ` · ${money(answers.offerPrice)}` : ""}` : none,
+          },
         ]
       : [
           { step: "date", label: t("onboarding.summary.date"), value: answers.date ? date(answers.date, "d MMMM yyyy, EEEE") : none },

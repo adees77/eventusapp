@@ -59,7 +59,14 @@ describe("client path", () => {
 
   it("edit from the summary re-asks just that step", () => {
     const a: Answers = {
-      name: "A", role: "client", eventType: "wedding", date: "2027-01-10", city: "osh", guests: 100, budget: 0, priorities: [],
+      name: "A",
+      role: "client",
+      eventType: "wedding",
+      date: "2027-01-10",
+      city: "osh",
+      guests: 100,
+      budget: 0,
+      priorities: [],
     };
     expect(currentStep(a)).toBe("summary");
     expect(currentStep(clearStep(a, "city"))).toBe("city");
@@ -77,7 +84,27 @@ describe("vendor path", () => {
     expect(currentStep(a)).toBe("phone");
     a = mergeAnswers(a, skipAnswer("phone"));
     a = answer(a, "Кортежи премиум-класса с водителями в костюмах");
+    expect(currentStep(a)).toBe("offerTitle");
+    a = answer(a, "Кортеж G-Class на 4 часа — 12 000 сом");
+    expect(a.offerTitle).toBe("Кортеж G-Class на 4 часа");
+    expect(a.offerPrice).toBe(12000);
     expect(currentStep(a)).toBe("summary");
+  });
+
+  it("asks the price separately when it wasn't mentioned", () => {
+    let a: Answers = {
+      name: "B",
+      role: "vendor",
+      bizName: "X",
+      category: "cars",
+      city: "bishkek",
+      phone: null,
+      tagline: "Лучшие машины города",
+    };
+    a = answer(a, "Свадебный кортеж");
+    expect(currentStep(a)).toBe("offerPrice");
+    a = answer(a, "15 тыс");
+    expect(a.offerPrice).toBe(15000);
   });
 
   it("ignores client fields on the vendor path", () => {

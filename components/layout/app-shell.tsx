@@ -16,17 +16,23 @@ const BARE = ["/welcome", "/onboarding"];
 /** Pages open without an account (guest invitation links) */
 const PUBLIC = ["/welcome", "/i/"];
 
-const matches = (pathname: string, list: string[]) => list.some((p) => pathname === p || pathname.startsWith(p.endsWith("/") ? p : `${p}/`));
+const matches = (pathname: string, list: string[]) =>
+  list.some((p) => pathname === p || pathname.startsWith(p.endsWith("/") ? p : `${p}/`));
 
 /**
  * Client-only shell: the mock DB lives in localStorage, so we render the app
  * after hydration and show a calm branded splash before that. It also routes
- * by auth state: no account → /welcome, account not onboarded → /onboarding.
+ * by auth state: no account → landing (/) or /welcome, account not onboarded →
+ * /onboarding, signed-in user on the landing → their home.
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const hydrated = useDataStore((s) => s.hydrated);
   // false on the server and during hydration, true afterwards → no SSR mismatch
-  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  const mounted = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
   const pathname = usePathname();
   const router = useRouter();
   const userId = useAuth((s) => s.userId);
@@ -36,7 +42,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // a new tab has an empty sessionStorage: wait until it is attached to the account
   const ready = hydrated && mounted && (!userId || bound);
-  const isPublic = matches(pathname, PUBLIC);
+  const isLanding = pathname === "/";
+  const isPublic = isLanding || matches(pathname, PUBLIC);
   const needsOnboarding = !!userId && !!user?.needsOnboarding;
   const target = !ready
     ? null
@@ -48,7 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         ? pathname === "/onboarding"
           ? null
           : "/onboarding"
-        : pathname === "/welcome" || pathname === "/onboarding"
+        : isLanding || pathname === "/welcome" || pathname === "/onboarding"
           ? HOME_BY_ROLE[role]
           : null;
 
@@ -67,7 +74,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [target, router]);
 
   if (!ready || target) return <Splash />;
-  if (matches(pathname, BARE) || pathname.startsWith("/i/")) return <>{children}</>;
+  if (isLanding || matches(pathname, BARE) || pathname.startsWith("/i/")) return <>{children}</>;
 
   return (
     <div className="flex min-h-dvh flex-col">

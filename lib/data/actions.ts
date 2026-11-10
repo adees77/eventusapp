@@ -10,6 +10,7 @@ import { getAvailability } from "./availability";
 import { assert, can, type Actor } from "./policies";
 import { getDB, useDataStore } from "./store";
 import * as escrow from "@/lib/payments/escrow";
+import { CATEGORY_PHOTOS, PHOTOS, unsplash } from "./seed/photos";
 import type {
   AppNotification,
   Booking,
@@ -847,8 +848,8 @@ export function registerOwnVendor(
     verified: false,
     hidden: false,
     prepayPercent: getDB().settings?.defaultPrepayPercent ?? demoConfig.defaultPrepayPercent,
-    cover: "",
-    portfolio: [],
+    cover: unsplash(PHOTOS[CATEGORY_PHOTOS[input.category]][0], 1600, 900),
+    portfolio: PHOTOS[CATEGORY_PHOTOS[input.category]].slice(0, 6).map((id) => unsplash(id, 1200)),
     phone: input.phone?.trim() ?? "",
     yearsOnMarket: 0,
     responseMinutes: 30,

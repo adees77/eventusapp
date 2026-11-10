@@ -11,7 +11,7 @@ import { Composer } from "@/components/chat/composer";
 import { MonthCalendar } from "@/components/month-calendar";
 import { SummaryCard } from "@/components/onboarding/summary-card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { completeClientOnboarding, registerOwnVendor } from "@/lib/data/actions";
+import { completeClientOnboarding, createPost, registerOwnVendor, upsertOffer } from "@/lib/data/actions";
 import { CITIES } from "@/lib/data/seed/catalog";
 import { useDB } from "@/lib/data/store";
 import type { CategoryId } from "@/lib/data/types";
@@ -47,6 +47,8 @@ const RETRY_KEYS: Partial<Record<StepId, MessageKey>> = {
   budget: "onboarding.retry.budget",
   phone: "onboarding.retry.phone",
   tagline: "onboarding.retry.tagline",
+  offerTitle: "onboarding.retry.offerTitle",
+  offerPrice: "onboarding.retry.offerPrice",
 };
 
 export default function OnboardingPage() {
@@ -80,7 +82,10 @@ export default function OnboardingPage() {
   function ackLines(e: LogEntry, a: Answers): string[] {
     if (e.filled.includes("name") && a.name) return [t("onboarding.ack.name", { name: a.name.split(" ")[0] })];
     if (e.filled.includes("role") && a.role) {
-      const extra = describe(e.filled.filter((f) => f !== "role"), a);
+      const extra = describe(
+        e.filled.filter((f) => f !== "role"),
+        a,
+      );
       return [t(`onboarding.ack.${a.role}`), ...(extra ? [t("onboarding.ack.noted", { list: extra })] : [])];
     }
     const extra = describe(e.filled.slice(1), a);
@@ -110,9 +115,7 @@ export default function OnboardingPage() {
     // answers as they were after each reply, to phrase acks
     let running: Answers = user?.name ? { name: user.name } : {};
     const firstStep: StepId = running.name ? "role" : "name";
-    const hello = running.name
-      ? t("onboarding.q.helloName", { name: running.name.split(" ")[0] })
-      : t("onboarding.q.hello");
+    const hello = running.name ? t("onboarding.q.helloName", { name: running.name.split(" ")[0] }) : t("onboarding.q.hello");
     out.push({ from: "bot", lines: [hello, question(firstStep)], key: "hello" });
     asked = firstStep;
 
@@ -220,7 +223,7 @@ export default function OnboardingPage() {
     setFinishing(true);
     try {
       if (answers.role === "vendor") {
-        registerOwnVendor(actor, {
+        const vendor = registerOwnVendor(actor, {
           ownerName: answers.name ?? user?.name ?? "",
           name: answers.bizName!,
           category: answers.category!,
@@ -228,6 +231,19 @@ export default function OnboardingPage() {
           phone: answers.phone ?? undefined,
           tagline: answers.tagline!,
         });
+        const owner = { id: actor.id, role: "vendor" as const };
+        // first service and first post, so the profile and the feed are not empty from day one
+        const offerId = upsertOffer(owner, {
+          vendorId: vendor.id,
+          title: { ru: answers.offerTitle!, en: answers.offerTitle! },
+          description: { ru: answers.tagline!, en: answers.tagline! },
+          price: answers.offerPrice!,
+          unit: { ru: "услуга", en: "service" },
+          totalUnits: 1,
+          photos: vendor.portfolio.slice(0, 2),
+          active: true,
+        });
+        createPost(owner, { vendorId: vendor.id, photos: vendor.portfolio.slice(0, 3), caption: answers.tagline!, offerId });
         useSession.getState().setRole("vendor", actor.id);
         toast.success(t("onboarding.doneVendor"));
         clearDraft(actor.id);
@@ -242,7 +258,7 @@ export default function OnboardingPage() {
         useSession.getState().setRole("client", actor.id);
         toast.success(t("onboarding.doneClient"));
         clearDraft(actor.id);
-        router.replace("/");
+        router.replace("/dashboard");
       }
     } catch (err) {
       console.error(err);
@@ -258,7 +274,7 @@ export default function OnboardingPage() {
     return t(`onboarding.options.${s}.${v}` as MessageKey);
   };
 
-  const pct = Math.round(progress(answers) * 100);
+  const pct = step === "summary" ? 100 : Math.round(progress(answers) * 100);
 
   return (
     <div className="flex h-dvh flex-col">
@@ -274,9 +290,18 @@ export default function OnboardingPage() {
             <ArrowLeft className="size-[18px]" strokeWidth={1.5} />
           </button>
           <Logo className="mx-auto" />
-          <span className="size-9" aria-hidden />
+          <span className="w-9 text-right text-xs text-muted-foreground tabular-nums" aria-label={t("onboarding.title")}>
+            {pct}%
+          </span>
         </div>
-        <div className="h-px bg-border" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={t("onboarding.title")}>
+        <div
+          className="h-px bg-border"
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={t("onboarding.title")}
+        >
           <div className="h-px bg-primary transition-[width] duration-500 ease-out" style={{ width: `${pct}%` }} />
         </div>
       </header>
@@ -332,7 +357,7 @@ export default function OnboardingPage() {
                     </Chip>
                   ) : (
                     <Chip key={v} onClick={() => commit({ step, text: chipLabel(step, v) }, choiceAnswer(step, v))}>
-                      {(step === "category") && <CategoryIcon id={v as CategoryId} className="size-4 text-muted-foreground" />}
+                      {step === "category" && <CategoryIcon id={v as CategoryId} className="size-4 text-muted-foreground" />}
                       {chipLabel(step, v)}
                     </Chip>
                   ),
@@ -362,12 +387,12 @@ export default function OnboardingPage() {
                   {def.options.map((v) => {
                     const on = multi.includes(v as CategoryId);
                     return (
-                      <Chip
-                        key={v}
-                        pressed={on}
-                        onClick={() => setMulti((m) => (on ? m.filter((x) => x !== v) : [...m, v as CategoryId]))}
-                      >
-                        {on ? <Check className="size-4 text-primary" /> : <CategoryIcon id={v as CategoryId} className="size-4 text-muted-foreground" />}
+                      <Chip key={v} pressed={on} onClick={() => setMulti((m) => (on ? m.filter((x) => x !== v) : [...m, v as CategoryId]))}>
+                        {on ? (
+                          <Check className="size-4 text-primary" />
+                        ) : (
+                          <CategoryIcon id={v as CategoryId} className="size-4 text-muted-foreground" />
+                        )}
                         {chipLabel(step, v)}
                       </Chip>
                     );
@@ -431,12 +456,7 @@ function BotRow({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Chip({
-  children,
-  onClick,
-  pressed,
-  ...rest
-}: React.ComponentProps<"button"> & { pressed?: boolean }) {
+function Chip({ children, onClick, pressed, ...rest }: React.ComponentProps<"button"> & { pressed?: boolean }) {
   return (
     <button
       type="button"

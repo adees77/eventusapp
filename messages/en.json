@@ -460,8 +460,8 @@
     "confirm": "Looks right",
     "edit": "Edit",
     "creating": "Creating your plan",
-    "doneClient": "Done. Your event is created and the checklist is waiting on the home screen.",
-    "doneVendor": "Profile created. Add services and photos so clients find you faster.",
+    "doneClient": "Done! Your event is ready — here's your dashboard with a checklist and ideas.",
+    "doneVendor": "Your profile, first service and first post are live. Add more photos so clients find you faster.",
     "q": {
       "hello": "Hello! I'm the EVENTUS assistant. I'll help you plan your event and find vendors. It takes a couple of minutes.",
       "helloName": "Hello, {name}! I'm the EVENTUS assistant. I'll help you plan your event and find vendors. It takes a couple of minutes.",
@@ -478,7 +478,9 @@
       "phone": "Phone for clients. They see it only after booking. You can add it later.",
       "tagline": "Describe in one sentence what you're great at. For example: “Premium motorcades with drivers in suits”.",
       "summaryClient": "Here's what we have. Does it look right?",
-      "summaryVendor": "Check your profile. Clients will see it; after review it gets a “Verified” badge."
+      "summaryVendor": "Check your profile. Clients will see it; after review it gets a “Verified” badge.",
+      "offerTitle": "What's your main service? You can add the price right away, e.g. “5-car motorcade for 4 hours — 40,000 som”.",
+      "offerPrice": "How much does it cost? You can change the price later in your dashboard."
     },
     "ack": {
       "name": "Nice to meet you, {name}.",
@@ -494,7 +496,9 @@
       "guests": "Type the number of guests, e.g. “150”.",
       "budget": "Type an amount, e.g. “1.5 million” or “800k”.",
       "phone": "The number seems to be missing digits. For example: 0700 123 456.",
-      "tagline": "A bit more detail, at least a few words."
+      "tagline": "A bit more detail, at least a few words.",
+      "offerTitle": "Name the service in a few words.",
+      "offerPrice": "Type the price, e.g. “25,000” or “25k”."
     },
     "options": {
       "role": {
@@ -529,6 +533,13 @@
         "2000000": "1–2M",
         "4000000": "2–4M",
         "0": "Not sure yet"
+      },
+      "offerPrice": {
+        "10000": "10k",
+        "25000": "25k",
+        "50000": "50k",
+        "100000": "100k",
+        "250000": "250k"
       }
     },
     "summary": {
@@ -543,7 +554,8 @@
       "category": "Services",
       "phone": "Phone",
       "tagline": "About",
-      "none": "Not set"
+      "none": "Not set",
+      "offer": "First service"
     }
   },
   "escrow": {
@@ -755,7 +767,13 @@
     "colDate": "Date",
     "colOp": "Operation",
     "colClient": "Client",
-    "colAmount": "Amount"
+    "colAmount": "Amount",
+    "setupTitle": "Getting started · {done} of {total}",
+    "setupOffer": "Add a service with a price",
+    "setupPosts": "Publish 3 posts to the feed ({n} so far)",
+    "setupAbout": "Write about yourself in the profile",
+    "setupCalendar": "Mark busy dates in the calendar",
+    "setupVerify": "Get verified by EVENTUS"
   },
   "acab": {
     "console": "Control panel",
@@ -948,5 +966,70 @@
     "shareGeneric": "You're invited to celebrate. Details and RSVP at the link:",
     "listHint": "Build an invitation page from blocks, send guests personal links and track their answers",
     "cardStats": "sent {sent} · coming {coming} · waiting {waiting}"
+  },
+  "landing": {
+    "navHow": "How it works",
+    "navDeal": "Safe deal",
+    "navInvitations": "Invitations",
+    "navVendors": "For vendors",
+    "signIn": "Sign in",
+    "start": "Get started",
+    "kicker": "Weddings, tois and anniversaries in Kyrgyzstan",
+    "title": "Plan your celebration without endless calls or blind prepayments",
+    "subtitle": "Browse halls, motorcades, hosts and photographers in one feed, book available dates and pay through a safe deal.",
+    "ctaClient": "Start planning",
+    "ctaVendor": "I'm a vendor",
+    "point1": "Available dates at a glance",
+    "point2": "Protected prepayment",
+    "point3": "Invitations with RSVPs",
+    "freeOnDate": "available on your date",
+    "sVendors": "vendors",
+    "sVerified": "verified by the team",
+    "sCategories": "service categories",
+    "sClientFee": "fee for clients",
+    "howKicker": "How it works",
+    "howTitle": "Three steps from an idea to a booked date",
+    "how1": "Tell the assistant about your event",
+    "how1Text": "Date, city, guests and budget — the assistant builds a checklist and finds available vendors.",
+    "how2": "Pick from the feed",
+    "how2Text": "Real work from vendors, like a social feed: save what you like, follow, message directly.",
+    "how3": "Book safely",
+    "how3Text": "The prepayment is frozen and goes to the vendor only after you both confirm the deal.",
+    "dealKicker": "Safe deal",
+    "dealTitle": "Money moves only when you've agreed",
+    "dealText": "Like P2P: the prepayment stays on the EVENTUS account while the client and vendor agree the details in the chat. Both press “Confirm” — only then the vendor gets paid. If something goes wrong, the money is refunded or our team resolves the dispute.",
+    "invKicker": "Invitations",
+    "invTitle": "An invitation as a beautiful page, not a picture in a messenger",
+    "invText": "Build a page from blocks: cover, schedule, countdown, map, dress code. Send each guest a personal link and see who opened it and who's coming.",
+    "inv1": "Editor with themes, fonts and undo",
+    "inv2": "Personal links greeting guests by name",
+    "inv3": "Stats: sent, opened, coming",
+    "inv4": "Guest list with Excel export",
+    "invMock": "of 134 invited",
+    "venKicker": "For vendors",
+    "venTitle": "Clients, calendar and money in one dashboard",
+    "ven1": "A feed instead of classifieds",
+    "ven1Text": "Post your work — clients find you through photos and follow you.",
+    "ven2": "Availability calendar",
+    "ven2Text": "Mark offline orders so nobody books you on a taken date.",
+    "ven3": "Guaranteed payment",
+    "ven3Text": "The client prepays before the deal — once confirmed, the money is yours.",
+    "venMock": "+86 this month",
+    "faqTitle": "Frequently asked questions",
+    "faq": [
+      "How much does EVENTUS cost for clients?",
+      "Nothing. The service is free for clients: you only pay vendors their prices.",
+      "What if a vendor doesn't show up?",
+      "The prepayment is frozen until the deal is confirmed. Open a dispute in the chat — the EVENTUS team reviews it and refunds you.",
+      "How does deal confirmation work?",
+      "After payment a deal card appears in the chat. Once everything is agreed, you and the vendor press “Confirm” — the money goes to the vendor.",
+      "Can I cancel a booking?",
+      "Yes. Until both sides confirm the deal, the prepayment is refunded in full.",
+      "How do I become a vendor?",
+      "Press “I'm a vendor” and answer a few questions — your profile, first service and first post go live right away."
+    ],
+    "finalTitle": "Start with one conversation",
+    "finalText": "Tell us about your celebration — we'll show who's available on your date.",
+    "footer": "© EVENTUS, Bishkek. Demo: no real payments are made."
   }
 }
