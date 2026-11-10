@@ -402,3 +402,123 @@ export function submitRsvp(invitationId: string, input: Omit<InvitationRsvp, "id
   }));
   return rsvp;
 }
+
+// ── Sign-up & onboarding ──────────────────────────────────────
+
+const CHECKLIST_TITLES: Record<CategoryId, string> = {
+  halls: "Банкетный зал",
+  cars: "Кортеж",
+  hosts: "Ведущий",
+  photo: "Фото и видео",
+  decor: "Декор",
+  music: "Музыка",
+  furniture: "Мебель",
+  cakes: "Торт",
+  beauty: "Образ и визаж",
+  attire: "Платье и костюм",
+  traditional: "Той-атрибутика",
+  shows: "Шоу-программа",
+};
+
+/** Finds a user by email or creates a fresh one that still has to go through onboarding */
+export function upsertAuthUser(input: { email: string; name?: string; provider: "google" | "email" }) {
+  const email = input.email.trim().toLowerCase();
+  const existing = getDB().users.find((u) => u.email?.toLowerCase() === email);
+  if (existing) return existing;
+  const user = {
+    id: uid("u"),
+    role: "client" as const,
+    name: (input.name ?? "").trim().slice(0, 80),
+    email,
+    authProvider: input.provider,
+    needsOnboarding: true,
+  };
+  update((d) => ({ ...d, users: [...d.users, user] }));
+  return user;
+}
+
+export function updateProfile(actor: Actor, patch: { name?: string; city?: string; phone?: string }) {
+  assert(can.editProfile(actor, actor.id), "editProfile");
+  update((d) => ({
+    ...d,
+    users: d.users.map((u) =>
+      u.id === actor.id
+        ? {
+            ...u,
+            ...(patch.name !== undefined && { name: patch.name.trim().slice(0, 80) }),
+            ...(patch.city !== undefined && { city: patch.city }),
+            ...(patch.phone !== undefined && { phone: patch.phone.trim().slice(0, 32) }),
+          }
+        : u,
+    ),
+  }));
+}
+
+function finishOnboarding(userId: string, role: "client" | "vendor") {
+  update((d) => ({
+    ...d,
+    users: d.users.map((u) => (u.id === userId ? { ...u, role, needsOnboarding: false, onboardedAt: now() } : u)),
+  }));
+}
+
+/** Client branch: creates the first event with a checklist ordered by what matters most */
+export function completeClientOnboarding(
+  actor: Actor,
+  input: {
+    name: string;
+    city: string;
+    event: { title: string; date: string; guests: number; budget: number };
+    priorities: CategoryId[];
+  },
+): EventItem {
+  const client: Actor = { id: actor.id, role: "client" };
+  updateProfile(client, { name: input.name, city: input.city });
+  const e = createEvent(client, { ...input.event, city: input.city });
+  const order: CategoryId[] = [...input.priorities, ...e.checklist.flatMap((c) => (c.category ? [c.category] : []))];
+  const seen = new Set<CategoryId>();
+  const checklist: ChecklistItem[] = order
+    .filter((c) => !seen.has(c) && seen.add(c))
+    .map((c, i) => ({ id: `c${i}`, title: CHECKLIST_TITLES[c], done: false, category: c }));
+  setChecklist(client, e.id, checklist);
+  finishOnboarding(actor.id, "client");
+  return { ...e, checklist };
+}
+
+/** Vendor branch: the signed-up user becomes the owner of a new (unverified) vendor profile */
+export function registerOwnVendor(
+  actor: Actor,
+  input: { ownerName: string; name: string; category: CategoryId; city: string; phone?: string; tagline: string },
+): Vendor {
+  assert(can.registerOwnVendor(actor, getDB()), "registerOwnVendor");
+  updateProfile(actor, { name: input.ownerName, city: input.city, phone: input.phone });
+  const slugBase =
+    input.name
+      .toLowerCase()
+      .replace(/[^a-z0-9а-яё]+/gi, "-")
+      .replace(/^-|-$/g, "") || "vendor";
+  const tagline = input.tagline.trim().slice(0, 160);
+  const vendor: Vendor = {
+    id: uid("v"),
+    ownerId: actor.id,
+    slug: `${slugBase}-${Math.random().toString(36).slice(2, 6)}`,
+    name: input.name.trim().slice(0, 80),
+    category: input.category,
+    city: input.city,
+    tagline: { ru: tagline, en: tagline },
+    description: { ru: "", en: "" },
+    rating: 0,
+    reviewsCount: 0,
+    verified: false,
+    hidden: false,
+    prepayPercent: demoConfig.defaultPrepayPercent,
+    cover: "",
+    portfolio: [],
+    phone: input.phone?.trim() ?? "",
+    yearsOnMarket: 0,
+    responseMinutes: 30,
+    createdAt: now(),
+  };
+  update((d) => ({ ...d, vendors: [...d.vendors, vendor], stats: [...d.stats, { vendorId: vendor.id, views: 0 }] }));
+  finishOnboarding(actor.id, "vendor");
+  return vendor;
+}

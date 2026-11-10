@@ -406,5 +406,134 @@
       "contact": "Questions: {contact}"
     },
     "demoLink": "In the demo, replies are stored in this browser — open the link in another tab to see a guest reply."
+  },
+  "auth": {
+    "title": "Everything for your event in one place",
+    "subtitle": "Venues, motorcades, hosts and hundreds more vendors across Kyrgyzstan. The assistant helps you assemble the team in one evening.",
+    "google": "Continue with Google",
+    "or": "or with email",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "emailContinue": "Get a code",
+    "emailInvalid": "Check the email address",
+    "codeTitle": "Code from the email",
+    "codeSent": "We sent a 6-digit code to {email}",
+    "demoCode": "Demo mode: no email is sent, your code is {code}",
+    "codeWrong": "Wrong code. Attempts left: {n}",
+    "codeExpired": "The code has expired. Request a new one",
+    "codeLocked": "Too many attempts. Request a new code",
+    "resend": "Send the code again",
+    "resendIn": "Resend in {s}s",
+    "changeEmail": "Change email",
+    "verify": "Sign in",
+    "googleTitle": "Sign in with Google",
+    "googleDemo": "In the demo, Google sign-in is simulated: enter your name and email and we'll do the rest.",
+    "googleName": "Full name",
+    "googleEmail": "Google email",
+    "googleContinue": "Continue",
+    "demoLink": "Explore the demo without signing up",
+    "terms": "By continuing you agree to the terms of service and privacy policy.",
+    "signOut": "Sign out",
+    "backToAccount": "Back to my account",
+    "demoSwitch": "Demo: sign in as",
+    "welcomeBack": "Welcome back, {name}"
+  },
+  "onboarding": {
+    "title": "Getting started",
+    "back": "Back",
+    "skip": "Skip",
+    "restart": "Start over",
+    "placeholder": "Type an answer or pick an option",
+    "thinking": "Reading your answer",
+    "continue": "Continue",
+    "selected": "Selected: {n}",
+    "confirm": "Looks right",
+    "edit": "Edit",
+    "creating": "Creating your plan",
+    "doneClient": "Done. Your event is created and the checklist is waiting on the home screen.",
+    "doneVendor": "Profile created. Add services and photos so clients find you faster.",
+    "q": {
+      "hello": "Hello! I'm the EVENTUS assistant. I'll help you plan your event and find vendors. It takes a couple of minutes.",
+      "helloName": "Hello, {name}! I'm the EVENTUS assistant. I'll help you plan your event and find vendors. It takes a couple of minutes.",
+      "name": "What should I call you?",
+      "role": "What brings you here?",
+      "eventType": "What are we celebrating? Feel free to add details right away: date, city, number of guests.",
+      "date": "When is it? An exact date works, or roughly: “in August”, “in six months”.",
+      "city": "Which city?",
+      "guests": "Roughly how many guests?",
+      "budget": "What's the budget for the whole event? I'll use it to suggest the right options.",
+      "priorities": "Where do we start? Pick what matters most to find first.",
+      "bizName": "What's the name of your company or project?",
+      "category": "What services do you offer?",
+      "phone": "Phone for clients. They see it only after booking. You can add it later.",
+      "tagline": "Describe in one sentence what you're great at. For example: “Premium motorcades with drivers in suits”.",
+      "summaryClient": "Here's what we have. Does it look right?",
+      "summaryVendor": "Check your profile. Clients will see it; after review it gets a “Verified” badge."
+    },
+    "ack": {
+      "name": "Nice to meet you, {name}.",
+      "client": "Great, let's start with the event.",
+      "vendor": "Glad to have you as a vendor. Let's build your profile in a minute.",
+      "noted": "Noted: {list}."
+    },
+    "retry": {
+      "default": "I didn't quite get that. Pick an option below or try rephrasing.",
+      "name": "Please type just your name.",
+      "date": "I couldn't read the date. Try “August 15” or “in June”.",
+      "city": "For now we work in Bishkek, Osh and Cholpon-Ata. Pick a city below.",
+      "guests": "Type the number of guests, e.g. “150”.",
+      "budget": "Type an amount, e.g. “1.5 million” or “800k”.",
+      "phone": "The number seems to be missing digits. For example: 0700 123 456.",
+      "tagline": "A bit more detail, at least a few words."
+    },
+    "options": {
+      "role": {
+        "client": "I'm planning an event",
+        "vendor": "I'm a vendor"
+      },
+      "eventType": {
+        "wedding": "Wedding",
+        "toi": "Toi",
+        "anniversary": "Anniversary",
+        "birthday": "Birthday",
+        "corporate": "Corporate",
+        "other": "Other"
+      },
+      "date": {
+        "month": "Within a month",
+        "3m": "In 3 months",
+        "6m": "In 6 months",
+        "year": "In a year",
+        "pick": "Pick a date"
+      },
+      "guests": {
+        "50": "Up to 50",
+        "100": "About 100",
+        "200": "About 200",
+        "300": "About 300",
+        "500": "500 or more"
+      },
+      "budget": {
+        "500000": "Up to 500k",
+        "1000000": "Up to 1M",
+        "2000000": "1–2M",
+        "4000000": "2–4M",
+        "0": "Not sure yet"
+      }
+    },
+    "summary": {
+      "event": "Event",
+      "date": "Date",
+      "city": "City",
+      "guests": "Guests",
+      "budget": "Budget",
+      "budgetUnknown": "Not decided yet",
+      "priorities": "First priorities",
+      "bizName": "Name",
+      "category": "Services",
+      "phone": "Phone",
+      "tagline": "About",
+      "none": "Not set"
+    }
   }
 }
