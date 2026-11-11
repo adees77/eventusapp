@@ -72,6 +72,11 @@ export default function OnboardingPage() {
   // which story the start screen asks for; a vendor never has to "sound like" one to get the right path
   const [introRole, setIntroRole] = useState<OnbRole>("client");
   const intro = !story && log.length === 0 && !stepMode;
+  // once the story or the role step says «vendor», the rest happens in the vendor form (prefilled from the draft)
+  const isVendor = answers.role === "vendor";
+  useEffect(() => {
+    if (isVendor) router.replace("/onboarding/vendor");
+  }, [isVendor, router]);
   const step = currentStep(answers);
   const def = STEPS[step];
 
@@ -392,7 +397,8 @@ export default function OnboardingPage() {
                   role="tab"
                   aria-selected={introRole === r}
                   disabled={!!thinking}
-                  onClick={() => setIntroRole(r)}
+                  // a vendor fills in a form of their own instead of chatting with the assistant
+                  onClick={() => (r === "vendor" ? router.push("/onboarding/vendor") : setIntroRole(r))}
                   className={cn(
                     "h-9 rounded-lg px-4 text-sm transition-colors",
                     introRole === r ? "bg-secondary text-secondary-foreground" : "text-text-secondary hover:text-foreground",

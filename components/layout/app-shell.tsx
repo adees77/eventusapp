@@ -52,10 +52,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         ? null
         : "/welcome"
       : needsOnboarding
-        ? pathname === "/onboarding"
+        ? matches(pathname, ["/onboarding"])
           ? null
           : "/onboarding"
-        : isLanding || pathname === "/welcome" || pathname === "/onboarding"
+        : isLanding || pathname === "/welcome" || matches(pathname, ["/onboarding"])
           ? HOME_BY_ROLE[role]
           : null;
 

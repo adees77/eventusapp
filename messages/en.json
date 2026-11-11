@@ -449,7 +449,9 @@
     "signOut": "Sign out",
     "backToAccount": "Back to my account",
     "demoSwitch": "Demo: sign in as",
-    "welcomeBack": "Welcome back, {name}"
+    "welcomeBack": "Welcome back, {name}",
+    "vendorTitle": "Vendor account",
+    "vendorSubtitle": "Set up your profile in a couple of minutes — clients will see your work in the feed and the assistant will start suggesting you for their events."
   },
   "onboarding": {
     "title": "Getting started",
@@ -676,7 +678,7 @@
     "message": "Message",
     "book": "Book",
     "fromPrice": "from {amount}",
-    "similar": "More like this",
+    "similar": "Similar",
     "profile": "Profile",
     "share": "Share",
     "copied": "Link copied",
@@ -689,10 +691,16 @@
     "commentPlaceholder": "Your comment…",
     "commentSend": "Send",
     "commentDelete": "Delete comment",
-    "commentsRule": "Only clients who completed a deal with this vendor can comment.",
+    "commentsRule": "Only clients who have used this vendor’s service through EVENTUS can comment.",
     "realClient": "client",
     "realClientHint": "Deal with the vendor confirmed through EVENTUS",
-    "showAllComments": "Show all · {n}"
+    "showAllComments": "Show all · {n}",
+    "similarShow": "Show similar",
+    "similarTo": "Similar to {name}",
+    "similarNone": "No similar posts yet",
+    "close": "Close",
+    "prev": "Previous post",
+    "next": "Next post"
   },
   "profile": {
     "posts": "posts",
@@ -1107,5 +1115,52 @@
     "titleCount": "Notifications: {n} new",
     "readAll": "Mark all read",
     "empty": "All quiet. Deals, RSVPs and messages will show up here."
+  },
+  "vsetup": {
+    "kicker": "Vendor account",
+    "business": {
+      "short": "Business",
+      "title": "Tell us about your business",
+      "hint": "Clients see the name and category in the feed and in the assistant’s search.",
+      "after": "Next — your first service and price"
+    },
+    "offer": {
+      "short": "Service",
+      "title": "First service and price",
+      "hint": "One service is enough for clients to book you. Add the rest in your panel.",
+      "after": "Next — photos of your work"
+    },
+    "photos": {
+      "short": "Photos",
+      "title": "Show your work",
+      "hint": "We’ll build your first feed post and profile portfolio from these.",
+      "after": "Your vendor panel opens next"
+    },
+    "bizName": "Name",
+    "bizNamePlaceholder": "E.g. “Ala-Too Photo” or your own name",
+    "category": "Category",
+    "city": "City",
+    "phone": "Phone",
+    "phoneHint": "Hidden from clients — only for EVENTUS to reach you",
+    "tagline": "About you in short",
+    "taglineHint": "{n} characters left",
+    "taglinePlaceholder": "We shoot weddings and toys across Kyrgyzstan, reportage and staged shots",
+    "offerTitle": "Service name",
+    "offerTitlePlaceholder": "Wedding shoot, full day",
+    "photosPicked": "{n} of {max} selected",
+    "photosCover": "The first photo becomes the cover",
+    "photosMax": "Up to {n} photos per post",
+    "photosHint": "No photos at hand? Pick samples from the library and replace them later in your panel.",
+    "photoError": "Couldn’t read the photo",
+    "upload": "Upload",
+    "next": "Next",
+    "finish": "Open my panel",
+    "preview": "How clients will see you",
+    "previewName": "Your name",
+    "previewTagline": "A line or two about what you do",
+    "previewOffer": "Your service",
+    "previewCategory": "Category",
+    "previewHint": "Clients scroll the feed, like posts and book right from them.",
+    "previewEmpty": "Pick a category — your photo will appear here"
   }
 }

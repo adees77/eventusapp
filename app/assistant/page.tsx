@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { PanelLeft, SquarePen } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Composer } from "@/components/chat/composer";
 import { VoiceHero } from "@/components/chat/voice-hero";
@@ -20,6 +21,11 @@ const SUGGESTIONS: CategoryId[] = ["halls", "hosts", "photo"];
 export default function AssistantPage() {
   const { t } = useI18n();
   const actor = useActor();
+  const router = useRouter();
+  // the assistant plans events for clients; a vendor works from their own panel
+  useEffect(() => {
+    if (actor.role === "vendor") router.replace("/vendor");
+  }, [actor.role, router]);
   const allThreads = useChatStore((s) => s.threads);
   const removeThread = useChatStore((s) => s.remove);
   const threads = allThreads.filter((th) => th.userId === actor.id);

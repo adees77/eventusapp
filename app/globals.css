@@ -68,6 +68,25 @@
   }
 }
 
+@keyframes like-burst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
 /* splash fallback hint: hidden, fades in after 6s if the app never mounts */
 .splash-hint {
   opacity: 0;

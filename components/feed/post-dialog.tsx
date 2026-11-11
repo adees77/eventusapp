@@ -1,21 +1,34 @@
 "use client";
 
-import { ArrowUp, BadgeCheck, Bookmark, ChevronLeft, ChevronRight, Heart, Link2, MessageCircle, Trash2 } from "lucide-react";
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
+import {
+  ArrowUp,
+  BadgeCheck,
+  Bookmark,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  GalleryVerticalEnd,
+  Heart,
+  MessageCircle,
+  Send,
+  Trash2,
+  X,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Monogram, Rating, VerifiedSeal } from "@/components/vendor/badges";
-import { addComment, deleteComment, ensureConversation, toggleFollow } from "@/lib/data/actions";
-import { commentsOf, feedItem, viewerSequence } from "@/lib/data/feed";
+import { Monogram, VerifiedSeal } from "@/components/vendor/badges";
+import { addComment, deleteComment, ensureConversation, toggleFollow, toggleLike } from "@/lib/data/actions";
+import { commentsOf, feedItem, likeCount, viewerSequence } from "@/lib/data/feed";
 import { can } from "@/lib/data/policies";
-import { minPrice, activeOffers } from "@/lib/data/queries";
+import { activeOffers, minPrice } from "@/lib/data/queries";
 import { CITIES } from "@/lib/data/seed/catalog";
-import { useDB } from "@/lib/data/store";
-import type { Post, Vendor } from "@/lib/data/types";
+import { getDB, useDB } from "@/lib/data/store";
+import type { DB, Post, Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -23,9 +36,35 @@ import { useFeedActions } from "./post-card";
 
 const STEP = 3;
 
+/** Unsplash photos are re-cropped to the tall viewer frame; other sources are shown as they are */
+function tall(src: string) {
+  if (!src.startsWith("https://images.unsplash.com/")) return src;
+  const u = new URL(src);
+  u.searchParams.set("w", "900");
+  u.searchParams.set("h", "1600");
+  u.searchParams.set("fit", "crop");
+  return u.toString();
+}
+
+/** Posts most like this one: same category first, then same city, then the most liked */
+function similarTo(db: DB, post: Post, exclude: Set<string>): string[] {
+  const vendor = db.vendors.find((v) => v.id === post.vendorId);
+  return db.posts
+    .filter((p) => !p.hidden && !exclude.has(p.id) && p.category === post.category)
+    .map((p) => {
+      const v = db.vendors.find((x) => x.id === p.vendorId);
+      const s = (v && vendor && v.city === vendor.city ? 2 : 0) + (p.vendorId !== post.vendorId ? 1 : 0) + Math.log10(likeCount(db, p) + 10);
+      return { id: p.id, s };
+    })
+    .sort((a, b) => b.s - a.s)
+    .map((x) => x.id);
+}
+
 /**
- * Post viewer. Opens on the tapped post and keeps going: scrolling down walks
- * through the rest of the list the post was opened from (`order`).
+ * Full-screen post viewer, one publication per screen (like Reels / Shorts):
+ * the photo fills the frame, the caption and booking bar sit over it at the
+ * bottom, and the actions run down the right edge. Scrolling snaps to the next
+ * post of the list it was opened from (`order`).
  */
 export function PostDialog({
   postId,
@@ -40,8 +79,12 @@ export function PostDialog({
   const { t } = useI18n();
   const posts = useDB((d) => d.posts);
   // the order is frozen when a post is opened: a like must not reshuffle what is under the finger
-  const [view, setView] = useState<{ id: string | null; seq: string[]; n: number }>({ id: null, seq: [], n: STEP });
-  if (view.id !== postId) setView({ id: postId, seq: postId ? viewerSequence(order ?? [], postId) : [], n: STEP });
+  const [view, setView] = useState<{ id: string | null; seq: string[]; n: number; similar: Record<string, string> }>({
+    id: null,
+    seq: [],
+    n: STEP,
+    similar: {},
+  });
 
   const byId = new Map(posts.map((p) => [p.id, p]));
   const seq = view.seq.flatMap((id) => {
@@ -51,46 +94,128 @@ export function PostDialog({
   const shown = seq.slice(0, view.n);
   const open = !!postId && shown.length > 0;
 
-  // callback refs: the dialog mounts its content in a portal after this component's first effects
   const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
-  const [sentinel, setSentinel] = useState<HTMLDivElement | null>(null);
-  const more = view.n < seq.length;
-  useEffect(() => {
-    if (!sentinel || !scroller) return;
-    const io = new IntersectionObserver((e) => e[0].isIntersecting && setView((v) => ({ ...v, n: v.n + STEP })), {
-      root: scroller,
-      rootMargin: "900px",
-    });
-    io.observe(sentinel);
-    return () => io.disconnect();
-  }, [sentinel, scroller, view.n]);
+  const [active, setActive] = useState(0);
+  if (view.id !== postId) {
+    setView({ id: postId, seq: postId ? viewerSequence(order ?? [], postId) : [], n: STEP, similar: {} });
+    setActive(0);
+  }
+
   useEffect(() => {
     scroller?.scrollTo({ top: 0 });
   }, [postId, scroller]);
 
+  const onScroll = useCallback(() => {
+    if (!scroller) return;
+    const i = Math.round(scroller.scrollTop / scroller.clientHeight);
+    setActive(i);
+    // keep a couple of screens rendered ahead of the finger
+    setView((v) => (i + 2 >= v.n ? { ...v, n: v.n + STEP } : v));
+  }, [scroller]);
+
+  const goTo = useCallback(
+    (i: number) => {
+      if (!scroller) return;
+      scroller.scrollTo({ top: i * scroller.clientHeight, behavior: "smooth" });
+    },
+    [scroller],
+  );
+
+  /** «Показать похожее»: the posts right after the current one become similar ones, and we scroll to them */
+  const showSimilar = useCallback(
+    (post: Post, vendorName: string) => {
+      const i = view.seq.indexOf(post.id);
+      const head = view.seq.slice(0, i + 1);
+      const similar = similarTo(getDB(), post, new Set(head));
+      if (!similar.length) return toast(t("feed.similarNone"));
+      const rest = view.seq.slice(i + 1).filter((id) => !similar.includes(id));
+      const tag = Object.fromEntries(similar.map((id) => [id, vendorName]));
+      setView((v) => ({ ...v, seq: [...head, ...similar, ...rest], n: Math.max(v.n, i + 1 + STEP), similar: { ...v.similar, ...tag } }));
+      requestAnimationFrame(() => goTo(i + 1));
+    },
+    [view.seq, goTo, t],
+  );
+
+  function onKey(e: React.KeyboardEvent) {
+    if ((e.target as HTMLElement).closest("input, textarea")) return;
+    if (e.key === "ArrowDown" || e.key === "j") {
+      e.preventDefault();
+      goTo(Math.min(active + 1, seq.length - 1));
+    } else if (e.key === "ArrowUp" || e.key === "k") {
+      e.preventDefault();
+      goTo(Math.max(active - 1, 0));
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[92dvh] w-[min(96vw,1080px)] max-w-none flex-col gap-0 overflow-hidden p-0 sm:max-w-none">
-        <DialogTitle className="sr-only">{t("nav.feed")}</DialogTitle>
-        <div ref={setScroller} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          {shown.map((p, k) => (
-            <PostView key={p.id} post={p} first={k === 0} />
-          ))}
-          {more && <div ref={setSentinel} className="h-px" aria-hidden />}
-        </div>
-      </DialogContent>
-    </Dialog>
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
+        <DialogPrimitive.Popup
+          className="fixed inset-0 z-50 bg-black text-white outline-none duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+          onKeyDown={onKey}
+        >
+          <DialogPrimitive.Title className="sr-only">{t("nav.feed")}</DialogPrimitive.Title>
+          <div
+            ref={setScroller}
+            onScroll={onScroll}
+            className="no-scrollbar h-dvh snap-y snap-mandatory overflow-y-auto overscroll-contain"
+          >
+            {shown.map((p, k) => (
+              <PostView
+                key={p.id}
+                post={p}
+                near={Math.abs(k - active) <= 1}
+                similarTo={view.similar[p.id]}
+                onSimilar={showSimilar}
+              />
+            ))}
+          </div>
+
+          <DialogPrimitive.Close
+            aria-label={t("feed.close")}
+            className="absolute top-[max(12px,env(safe-area-inset-top))] left-3 z-10 flex size-10 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur transition-colors hover:bg-black/50 md:top-5 md:left-5 md:bg-white/10 md:hover:bg-white/20"
+          >
+            <X className="size-5" strokeWidth={1.75} />
+          </DialogPrimitive.Close>
+
+          <div className="absolute top-1/2 right-6 hidden -translate-y-1/2 flex-col gap-3 md:flex">
+            <NavBtn label={t("feed.prev")} disabled={active === 0} onClick={() => goTo(active - 1)}>
+              <ChevronUp className="size-5" />
+            </NavBtn>
+            <NavBtn label={t("feed.next")} disabled={active >= seq.length - 1} onClick={() => goTo(active + 1)}>
+              <ChevronDown className="size-5" />
+            </NavBtn>
+          </div>
+        </DialogPrimitive.Popup>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }
 
-/** One full post: photo carousel on the left; vendor, caption, actions and comments on the right */
-function PostView({ post, first }: { post: Post; first: boolean }) {
-  const { t, l, money, tn, date } = useI18n();
+/** One publication on its own screen */
+function PostView({
+  post,
+  near,
+  similarTo: similarName,
+  onSimilar,
+}: {
+  post: Post;
+  /** on screen or next to it → load photos eagerly */
+  near: boolean;
+  similarTo?: string;
+  onSimilar: (post: Post, vendorName: string) => void;
+}) {
+  const { t, l, money, num, date } = useI18n();
   const router = useRouter();
   const actor = useActor();
-  const { like, save } = useFeedActions();
-  const [slide, setSlide] = useState(0);
+  const { save } = useFeedActions();
   const db = useDB((d) => d);
+  const [slide, setSlide] = useState(0);
+  const [expanded, setExpanded] = useState(false);
+  const [comments, setComments] = useState(false);
+  const [burst, setBurst] = useState(0);
+  const strip = useRef<HTMLDivElement>(null);
   const item = feedItem(db, post, actor);
   if (!item) return null;
 
@@ -99,201 +224,296 @@ function PostView({ post, first }: { post: Post; first: boolean }) {
   const offer = post.offerId ? offers.find((o) => o.id === post.offerId) : undefined;
   const following = db.follows.some((f) => f.userId === actor.id && f.vendorId === vendor.id);
   const photos = post.photos;
-  const i = Math.min(slide, Math.max(0, photos.length - 1));
-  const go = (d: number) => setSlide((s) => (s + d + photos.length) % photos.length);
+  const price = offer ? offer.price : minPrice(offers);
 
   const clientOnly = (fn: () => void) => () => (actor.role === "client" ? fn() : toast(t("feed.loginToAct")));
+  const like = clientOnly(() => toggleLike(actor, post.id));
+  const likeOnce = clientOnly(() => {
+    if (!item.liked) toggleLike(actor, post.id);
+    setBurst((b) => b + 1);
+  });
+
+  const scrollStrip = (d: number) => {
+    const el = strip.current;
+    if (el) el.scrollTo({ left: (slide + d) * el.clientWidth, behavior: "smooth" });
+  };
 
   return (
-    <article className={cn("grid md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]", !first && "border-t border-border")}>
-      <div className="relative bg-foreground/95 md:min-h-[520px]">
-        <div className="relative mx-auto h-full w-full" style={{ aspectRatio: `1 / ${post.ratio}`, maxHeight: "80dvh" }}>
-          <Image
-            key={photos[i]}
-            src={photos[i]}
-            alt=""
-            fill
-            loading={first ? "eager" : "lazy"}
-            sizes="(min-width: 768px) 560px, 96vw"
-            className="animate-rise object-contain"
-          />
+    <section className="relative flex h-dvh snap-start snap-always items-center justify-center md:py-4">
+      <div className="relative h-full w-full overflow-hidden bg-neutral-900 md:aspect-[9/16] md:h-[calc(100dvh-32px)] md:w-auto md:rounded-2xl">
+        {/* photos: swipe sideways */}
+        <div
+          ref={strip}
+          onScroll={(e) => setSlide(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
+          onDoubleClick={likeOnce}
+          className="no-scrollbar absolute inset-0 flex snap-x snap-mandatory overflow-x-auto"
+        >
+          {photos.map((src, k) => (
+            <div key={src} className="relative h-full w-full shrink-0 snap-center">
+              <Image
+                src={tall(src)}
+                alt=""
+                fill
+                loading={near && k === 0 ? "eager" : "lazy"}
+                sizes="(min-width: 768px) 520px, 100vw"
+                className="object-cover"
+                draggable={false}
+              />
+            </div>
+          ))}
         </div>
-        {photos.length > 1 && (
-          <>
-            <SlideButton side="left" onClick={() => go(-1)} label={t("common.back")} />
-            <SlideButton side="right" onClick={() => go(1)} label={t("feed.loadMore")} />
-            <div className="absolute inset-x-0 bottom-3 flex justify-center gap-1" aria-hidden>
+
+        {burst > 0 && (
+          <Heart
+            key={burst}
+            className="pointer-events-none absolute top-1/2 left-1/2 size-24 -translate-x-1/2 -translate-y-1/2 fill-white text-white drop-shadow-lg"
+            style={{ animation: "like-burst 700ms var(--ease-out-soft) both" }}
+            aria-hidden
+          />
+        )}
+
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/45 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
+
+        {/* top: carousel position and the «similar» trail */}
+        <div className="pointer-events-none absolute inset-x-0 top-[max(20px,env(safe-area-inset-top))] flex flex-col items-center gap-2 px-16 md:top-4">
+          {photos.length > 1 && (
+            <div className="flex gap-1" aria-hidden>
               {photos.map((p, k) => (
-                <span key={p} className={cn("h-1 rounded-full transition-all", k === i ? "w-4 bg-white" : "w-1.5 bg-white/50")} />
+                <span key={p} className={cn("h-1 rounded-full transition-all", k === slide ? "w-4 bg-white" : "w-1.5 bg-white/50")} />
               ))}
             </div>
-          </>
-        )}
-      </div>
-
-      <div className="flex min-w-0 flex-col p-5 md:p-6">
-        <div className={cn("flex items-center gap-3", first && "pr-8")}>
-          <Link href={`/vendors/${vendor.slug}`} className="flex min-w-0 flex-1 items-center gap-3">
-            <Monogram name={vendor.name} className="size-10 rounded-full text-sm" />
-            <span className="min-w-0">
-              <span className="flex items-center gap-1.5">
-                <span className="truncate text-md font-medium">{vendor.name}</span>
-                {vendor.verified && <VerifiedSeal />}
-              </span>
-              <span className="block truncate text-xs text-muted-foreground">
-                {l(db.categories.find((c) => c.id === vendor.category)?.name)} · {l(CITIES[vendor.city])}
-              </span>
-            </span>
-          </Link>
-          <Button variant={following ? "outline" : "default"} className="h-9 px-4" onClick={clientOnly(() => toggleFollow(actor, vendor.id))}>
-            {following ? t("feed.unfollow") : t("feed.follow")}
-          </Button>
+          )}
+          {similarName && (
+            <span className="truncate text-xs text-white/80">{t("feed.similarTo", { name: similarName })}</span>
+          )}
         </div>
 
-        <p className="mt-5 text-md leading-relaxed">{l(post.caption)}</p>
-        <p className="mt-2 text-xs text-muted-foreground">{date(post.createdAt.slice(0, 10), "d MMMM")}</p>
+        {photos.length > 1 && (
+          <>
+            {slide > 0 && <SlideBtn side="left" onClick={() => scrollStrip(-1)} label={t("common.back")} />}
+            {slide < photos.length - 1 && <SlideBtn side="right" onClick={() => scrollStrip(1)} label={t("feed.loadMore")} />}
+          </>
+        )}
 
-        <div className="mt-5 flex items-center gap-1 border-y border-border py-2">
-          <ActionBtn active={item.liked} onClick={() => like(post.id)} label={t("feed.like")}>
-            <Heart className={cn("size-5", item.liked && "fill-primary text-primary")} strokeWidth={1.5} />
-            <span className="text-sm tabular-nums">{tn("feed.likes", item.likes)}</span>
-          </ActionBtn>
-          <ActionBtn active={item.saved} onClick={() => save(post.id)} label={t("feed.save")}>
-            <Bookmark className={cn("size-5", item.saved && "fill-current text-primary")} strokeWidth={1.5} />
-          </ActionBtn>
-          <ActionBtn
+        {/* right rail */}
+        <div className="absolute right-2 bottom-[calc(120px+env(safe-area-inset-bottom))] z-10 flex flex-col items-center gap-4">
+          <RailBtn label={t("feed.like")} active={item.liked} onClick={like} count={num(item.likes)}>
+            <Heart className={cn("size-7", item.liked && "fill-[#ff3b5c] text-[#ff3b5c]")} strokeWidth={1.75} />
+          </RailBtn>
+          <RailBtn label={t("feed.comments")} onClick={() => setComments(true)} count={num(item.comments)}>
+            <MessageCircle className="size-7 -scale-x-100" strokeWidth={1.75} />
+          </RailBtn>
+          <RailBtn label={item.saved ? t("feed.saved") : t("feed.save")} active={item.saved} onClick={() => save(post.id)}>
+            <Bookmark className={cn("size-7", item.saved && "fill-white")} strokeWidth={1.75} />
+          </RailBtn>
+          <RailBtn
+            label={t("feed.share")}
             onClick={() => {
               void navigator.clipboard?.writeText(`${location.origin}/vendors?post=${post.id}`).catch(() => {});
               toast.success(t("feed.copied"));
             }}
-            label={t("feed.share")}
           >
-            <Link2 className="size-5" strokeWidth={1.5} />
-          </ActionBtn>
+            <Send className="size-6" strokeWidth={1.75} />
+          </RailBtn>
+          <RailBtn label={t("feed.similarShow")} onClick={() => onSimilar(post, vendor.name)} count={t("feed.similar")}>
+            <GalleryVerticalEnd className="size-6" strokeWidth={1.75} />
+          </RailBtn>
         </div>
 
-        <div className="mt-5 rounded-xl border border-border p-4">
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="min-w-0 truncate text-sm">{offer ? l(offer.title) : t("feed.profile")}</span>
-            <span className="shrink-0 text-sm font-medium tabular-nums">
-              {t("feed.fromPrice", { amount: money(offer ? offer.price : minPrice(offers)) })}
-            </span>
-          </div>
-          <Rating value={vendor.rating} count={vendor.reviewsCount} className="mt-1 text-xs" />
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              className="h-10"
-              onClick={clientOnly(() => router.push(`/messages/${ensureConversation(actor, vendor.id)}`))}
+        {/* bottom: who, what, how much */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-3 pr-16 pb-[max(16px,env(safe-area-inset-bottom))] pl-4 *:pointer-events-auto">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <Link href={`/vendors/${vendor.slug}`} className="flex min-w-0 items-center gap-2.5">
+              <Monogram name={vendor.name} className="size-9 shrink-0 rounded-full text-xs ring-2 ring-white/80" />
+              <span className="truncate text-sm font-medium">{vendor.name}</span>
+              {vendor.verified && <VerifiedSeal className="[&_svg]:size-3.5" />}
+            </Link>
+            <button
+              type="button"
+              onClick={clientOnly(() => toggleFollow(actor, vendor.id))}
+              className={cn(
+                "h-7 shrink-0 rounded-lg border px-2.5 text-xs transition-colors",
+                following ? "border-white/30 text-white/80" : "border-white/70 text-white hover:bg-white/10",
+              )}
             >
-              <MessageCircle strokeWidth={1.75} />
-              {t("feed.message")}
-            </Button>
-            <Button
-              className="h-10"
+              {following ? t("feed.unfollow") : t("feed.follow")}
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setExpanded((x) => !x)}
+            className={cn("text-left text-sm leading-relaxed text-white/95", !expanded && "line-clamp-2")}
+          >
+            {l(post.caption)}
+          </button>
+          <p className="-mt-1.5 text-xs text-white/65">
+            {l(db.categories.find((c) => c.id === vendor.category)?.name)} · {l(CITIES[vendor.city])} · {date(post.createdAt.slice(0, 10), "d MMMM")}
+          </p>
+
+          <div className="flex items-center gap-2 rounded-xl bg-white/12 p-1.5 pl-3 backdrop-blur-md">
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-xs text-white/75">{offer ? l(offer.title) : t("feed.profile")}</span>
+              <span className="block text-sm font-medium tabular-nums">{t("feed.fromPrice", { amount: money(price) })}</span>
+            </span>
+            <button
+              type="button"
+              aria-label={t("feed.message")}
+              title={t("feed.message")}
+              onClick={clientOnly(() => router.push(`/messages/${ensureConversation(actor, vendor.id)}`))}
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/15"
+            >
+              <MessageCircle className="size-[18px]" strokeWidth={1.75} />
+            </button>
+            <button
+              type="button"
               onClick={clientOnly(() => router.push(offer ? `/book/${offer.id}` : `/vendors/${vendor.slug}?tab=services`))}
+              className="h-9 shrink-0 rounded-lg bg-white px-3.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-white/90"
             >
               {t("feed.book")}
-            </Button>
+            </button>
           </div>
         </div>
 
-        <Comments post={post} vendor={vendor} />
+        {comments && <CommentsSheet post={post} vendor={vendor} onClose={() => setComments(false)} />}
       </div>
-    </article>
+    </section>
   );
 }
 
-/** Comments under a post. Writing is open only to clients who had a finished deal with the vendor. */
-function Comments({ post, vendor }: { post: Post; vendor: Vendor }) {
+/** Comments slide up over the photo. Only clients with a finished deal with this vendor can write. */
+function CommentsSheet({ post, vendor, onClose }: { post: Post; vendor: Vendor; onClose: () => void }) {
   const { t, date } = useI18n();
   const actor = useActor();
   const list = useDB((db) => commentsOf(db, post.id));
   const allowed = useDB((db) => can.commentPost(actor, db, vendor.id));
-  const [all, setAll] = useState(false);
   const [text, setText] = useState("");
-  const visible = all ? list : list.slice(-3);
+  const listRef = useRef<HTMLUListElement>(null);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!text.trim()) return;
     addComment(actor, post.id, text);
     setText("");
-    setAll(true);
+    requestAnimationFrame(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" }));
   }
 
   return (
-    <section className="mt-6">
-      <h3 className="flex items-baseline gap-2 text-sm font-medium">
-        {t("feed.comments")}
-        {list.length > 0 && <span className="text-xs font-normal text-muted-foreground tabular-nums">{list.length}</span>}
-      </h3>
+    <>
+      <button type="button" aria-label={t("feed.close")} onClick={onClose} className="absolute inset-0 animate-in bg-black/40 fade-in-0" />
+      <div
+        role="dialog"
+        aria-label={t("feed.comments")}
+        className="absolute inset-x-0 bottom-0 flex max-h-[72%] min-h-[45%] animate-in flex-col rounded-t-2xl bg-card text-foreground duration-200 slide-in-from-bottom"
+      >
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h3 className="flex items-baseline gap-2 text-sm font-medium">
+            {t("feed.comments")}
+            {list.length > 0 && <span className="text-xs font-normal text-muted-foreground tabular-nums">{list.length}</span>}
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("feed.close")}
+            className="-mr-1.5 flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
 
-      {list.length > visible.length && (
-        <button type="button" onClick={() => setAll(true)} className="mt-2 text-xs text-primary hover:text-primary-hover">
-          {t("feed.showAllComments", { n: list.length })}
-        </button>
-      )}
-
-      {visible.length > 0 && (
-        <ul className="mt-3 flex flex-col gap-3.5">
-          {visible.map((c) => (
-            <li key={c.id} className="group/c text-sm">
-              <div className="flex items-center gap-1.5">
-                <span className="truncate font-medium">{c.author}</span>
-                <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground" title={t("feed.realClientHint")}>
-                  <BadgeCheck className="size-3.5 text-gold" strokeWidth={1.75} />
-                  {t("feed.realClient")}
-                </span>
-                <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">{date(c.createdAt.slice(0, 10), "d MMM")}</span>
-                {(c.userId === actor.id || actor.role === "admin") && (
-                  <button
-                    type="button"
-                    onClick={() => deleteComment(actor, c.id)}
-                    aria-label={t("feed.commentDelete")}
-                    title={t("feed.commentDelete")}
-                    className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                  >
-                    <Trash2 className="size-3.5" strokeWidth={1.75} />
-                  </button>
-                )}
+        <ul ref={listRef} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
+          {list.length === 0 && <li className="m-auto text-sm text-muted-foreground">{t("feed.noComments")}</li>}
+          {list.map((c) => (
+            <li key={c.id} className="flex gap-3 text-sm">
+              <Monogram name={c.author} className="size-8 shrink-0 rounded-full text-[11px]" />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="truncate font-medium">{c.author}</span>
+                  <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground" title={t("feed.realClientHint")}>
+                    <BadgeCheck className="size-3.5 text-gold" strokeWidth={1.75} />
+                    {t("feed.realClient")}
+                  </span>
+                  <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">{date(c.createdAt.slice(0, 10), "d MMM")}</span>
+                  {(c.userId === actor.id || actor.role === "admin") && (
+                    <button
+                      type="button"
+                      onClick={() => deleteComment(actor, c.id)}
+                      aria-label={t("feed.commentDelete")}
+                      title={t("feed.commentDelete")}
+                      className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      <Trash2 className="size-3.5" strokeWidth={1.75} />
+                    </button>
+                  )}
+                </div>
+                <p className="mt-0.5 leading-relaxed text-text-secondary">{c.text}</p>
               </div>
-              <p className="mt-0.5 leading-relaxed text-text-secondary">{c.text}</p>
             </li>
           ))}
         </ul>
-      )}
 
-      {allowed ? (
-        <form onSubmit={submit} className="mt-4 flex items-center gap-2">
-          <input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            maxLength={500}
-            placeholder={t("feed.commentPlaceholder")}
-            aria-label={t("feed.commentPlaceholder")}
-            className="h-10 min-w-0 flex-1 rounded-xl border border-border bg-card px-3.5 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/50"
-          />
-          <button
-            type="submit"
-            disabled={!text.trim()}
-            aria-label={t("feed.commentSend")}
-            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-40"
-          >
-            <ArrowUp className="size-4" />
-          </button>
-        </form>
-      ) : (
-        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-          {list.length === 0 ? `${t("feed.noComments")}. ` : ""}
-          {t("feed.commentsRule")}
-        </p>
-      )}
-    </section>
+        <div className="border-t border-border px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+          {allowed ? (
+            <form onSubmit={submit} className="flex items-center gap-2">
+              <input
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                maxLength={500}
+                placeholder={t("feed.commentPlaceholder")}
+                aria-label={t("feed.commentPlaceholder")}
+                className="h-10 min-w-0 flex-1 rounded-xl border border-border bg-background px-3.5 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/50"
+              />
+              <button
+                type="submit"
+                disabled={!text.trim()}
+                aria-label={t("feed.commentSend")}
+                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-40"
+              >
+                <ArrowUp className="size-4" />
+              </button>
+            </form>
+          ) : (
+            <p className="flex items-start gap-2.5 text-xs leading-relaxed text-text-secondary">
+              <BadgeCheck className="mt-px size-4 shrink-0 text-gold" strokeWidth={1.75} />
+              {t("feed.commentsRule")}
+            </p>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 
-function SlideButton({ side, onClick, label }: { side: "left" | "right"; onClick: () => void; label: string }) {
+function RailBtn({
+  children,
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  children: React.ReactNode;
+  label: string;
+  count?: string;
+  active?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      aria-pressed={active}
+      className="flex w-14 flex-col items-center gap-1 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] transition-transform active:scale-90"
+    >
+      {children}
+      {count !== undefined && <span className="text-[11px] leading-none font-medium tabular-nums">{count}</span>}
+    </button>
+  );
+}
+
+function SlideBtn({ side, onClick, label }: { side: "left" | "right"; onClick: () => void; label: string }) {
   const Icon = side === "left" ? ChevronLeft : ChevronRight;
   return (
     <button
@@ -301,7 +521,7 @@ function SlideButton({ side, onClick, label }: { side: "left" | "right"; onClick
       onClick={onClick}
       aria-label={label}
       className={cn(
-        "absolute top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-card/90 text-foreground shadow-soft",
+        "absolute top-[38%] hidden size-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-neutral-900 shadow-soft md:flex",
         side === "left" ? "left-3" : "right-3",
       )}
     >
@@ -310,24 +530,14 @@ function SlideButton({ side, onClick, label }: { side: "left" | "right"; onClick
   );
 }
 
-function ActionBtn({
-  children,
-  onClick,
-  label,
-  active,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  label: string;
-  active?: boolean;
-}) {
+function NavBtn({ children, label, disabled, onClick }: { children: React.ReactNode; label: string; disabled?: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-label={label}
-      aria-pressed={active}
-      className="flex h-10 items-center gap-2 rounded-lg px-2.5 text-text-secondary transition-colors hover:bg-muted hover:text-foreground"
+      className="flex size-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 disabled:opacity-30"
     >
       {children}
     </button>

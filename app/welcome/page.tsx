@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { Logo } from "@/components/brand/logo";
 import { EmailSignIn } from "@/components/auth/email-sign-in";
 import { GoogleButton } from "@/components/auth/google-button";
@@ -13,8 +14,18 @@ import { LOCALES, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export default function WelcomePage() {
+  return (
+    <Suspense>
+      <Welcome />
+    </Suspense>
+  );
+}
+
+function Welcome() {
   const { t, locale, setLocale } = useI18n();
   const router = useRouter();
+  // «Я исполнитель» on the landing: after sign-in the vendor goes to their own form, not the assistant
+  const asVendor = useSearchParams().get("as") === "vendor";
   const signInWithGoogle = useAuth((s) => s.signInWithGoogle);
   const signInDemo = useAuth((s) => s.signInDemo);
   const pending = useAuth((s) => s.pending);
@@ -22,7 +33,7 @@ export default function WelcomePage() {
   function afterSignIn() {
     const id = useAuth.getState().userId;
     const user = getDB().users.find((u) => u.id === id);
-    router.replace(!user || user.needsOnboarding ? "/onboarding" : HOME_BY_ROLE[user.role]);
+    router.replace(!user || user.needsOnboarding ? (asVendor ? "/onboarding/vendor" : "/onboarding") : HOME_BY_ROLE[user.role]);
   }
 
   return (
@@ -52,9 +63,9 @@ export default function WelcomePage() {
           {!pending && (
             <div className="animate-rise">
               <h1 className="font-serif text-[34px] leading-[1.05] tracking-[-0.01em] [text-wrap:balance] md:text-5xl">
-                {t("auth.title")}
+                {t(asVendor ? "auth.vendorTitle" : "auth.title")}
               </h1>
-              <p className="mt-4 text-md leading-relaxed text-text-secondary">{t("auth.subtitle")}</p>
+              <p className="mt-4 text-md leading-relaxed text-text-secondary">{t(asVendor ? "auth.vendorSubtitle" : "auth.subtitle")}</p>
             </div>
           )}
 

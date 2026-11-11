@@ -102,7 +102,7 @@ export default function Landing() {
               {t("landing.ctaClient")}
               <ArrowRight />
             </LinkButton>
-            <LinkButton href="/welcome" variant="outline" className="h-12 px-6 text-md">
+            <LinkButton href="/welcome?as=vendor" variant="outline" className="h-12 px-6 text-md">
               {t("landing.ctaVendor")}
             </LinkButton>
           </div>
@@ -301,7 +301,7 @@ export default function Landing() {
                 </li>
               ))}
             </ul>
-            <LinkButton href="/welcome" className="mt-10 h-11 px-5">
+            <LinkButton href="/welcome?as=vendor" className="mt-10 h-11 px-5">
               {t("landing.ctaVendor")}
               <ArrowRight />
             </LinkButton>
