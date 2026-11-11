@@ -11,10 +11,10 @@ export interface NavItem {
 
 export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   client: [
+    { href: "/assistant", label: "nav.chat", icon: MessageSquareText },
     { href: "/vendors", label: "nav.feed", icon: LayoutGrid },
-    { href: "/assistant", label: "nav.assistant", icon: MessageSquareText },
-    { href: "/messages", label: "nav.messages", icon: MessageCircle },
     { href: "/invitations", label: "nav.invitations", icon: Mail },
+    { href: "/messages", label: "nav.messages", icon: MessageCircle },
     { href: "/dashboard", label: "nav.cabinet", icon: CalendarHeart },
   ],
   vendor: [

@@ -26,6 +26,7 @@ import type {
   Offer,
   PlatformSettings,
   Post,
+  PostComment,
   Transaction,
   Vendor,
 } from "./types";
@@ -599,7 +600,7 @@ function editGuests(actor: Actor, invitationId: string, fn: (g: InvitationGuest[
 
 export function addGuests(actor: Actor, invitationId: string, list: Omit<InvitationGuest, "id">[]) {
   const clean = list
-    .map((g) => ({ ...g, name: g.name.trim().slice(0, 80), phone: g.phone?.trim().slice(0, 32) || undefined, seats: Math.min(10, Math.max(1, Math.floor(g.seats || 1))) }))
+    .map((g) => ({ ...g, name: g.name.trim().slice(0, 80), phone: g.phone?.trim().slice(0, 32) || undefined, group: g.group?.trim().slice(0, 40) || undefined, seats: Math.min(10, Math.max(1, Math.floor(g.seats || 1))) }))
     .filter((g) => g.name);
   editGuests(actor, invitationId, (gs) => [...gs, ...clean.map((g) => ({ ...g, id: uid("g") }))]);
   return clean.length;
@@ -672,7 +673,36 @@ export function deletePost(actor: Actor, postId: string) {
   const v = p && db.vendors.find((x) => x.id === p.vendorId);
   if (!p || !v) return;
   assert(can.editVendor(actor, v), "deletePost");
-  update((d) => ({ ...d, posts: d.posts.filter((x) => x.id !== postId), likes: d.likes.filter((l) => l.postId !== postId), saved: d.saved.filter((l) => l.postId !== postId) }));
+  update((d) => ({
+    ...d,
+    posts: d.posts.filter((x) => x.id !== postId),
+    likes: d.likes.filter((l) => l.postId !== postId),
+    saved: d.saved.filter((l) => l.postId !== postId),
+    comments: d.comments.filter((c) => c.postId !== postId),
+  }));
+}
+
+/** Only a client with a finished deal with this vendor can comment (see can.commentPost) */
+export function addComment(actor: Actor, postId: string, text: string): PostComment | undefined {
+  const db = getDB();
+  const p = db.posts.find((x) => x.id === postId);
+  const clean = text.trim().replace(/\s+/g, " ").slice(0, 500);
+  if (!p || !clean) return;
+  assert(can.commentPost(actor, db, p.vendorId), "commentPost");
+  const author = db.users.find((u) => u.id === actor.id)?.name || "Клиент";
+  const comment: PostComment = { id: uid("pc"), postId, userId: actor.id, author, text: clean, createdAt: now() };
+  update((d) => ({ ...d, comments: [...d.comments, comment] }));
+  const v = db.vendors.find((x) => x.id === p.vendorId);
+  if (v) notify(v.ownerId, "review", { ru: `${author} оставил комментарий`, en: `${author} left a comment` }, `/vendors?post=${postId}`);
+  return comment;
+}
+
+/** The author removes their own comment; admin moderates */
+export function deleteComment(actor: Actor, commentId: string) {
+  const c = getDB().comments.find((x) => x.id === commentId);
+  if (!c) return;
+  assert(actor.role === "admin" || c.userId === actor.id, "deleteComment");
+  update((d) => ({ ...d, comments: d.comments.filter((x) => x.id !== commentId) }));
 }
 
 export function setPostHidden(actor: Actor, postId: string, hidden: boolean) {

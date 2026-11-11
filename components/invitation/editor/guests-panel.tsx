@@ -225,6 +225,7 @@ export function GuestsPanel({ inv }: { inv: Invitation }) {
                         <span className={cn("size-1.5 rounded-full", STATUS_TONE[st])} />
                         {t(`inv.status.${st}`)}
                       </span>
+                      {g.direct && !r && <div className="mt-0.5 text-xs text-muted-foreground">{t("inv.direct")}</div>}
                       {r?.note && <div className="mt-0.5 max-w-56 truncate text-xs text-muted-foreground">«{r.note}»</div>}
                     </td>
                     <td className="px-4 py-3">

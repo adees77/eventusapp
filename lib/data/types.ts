@@ -226,6 +226,17 @@ export interface Post {
   createdAt: string;
 }
 
+/** A comment under a post. Only clients with a finished deal with this vendor can write one. */
+export interface PostComment {
+  id: string;
+  postId: string;
+  /** set for comments written in the app (seeded ones come from past clients) */
+  userId?: string;
+  author: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface PostLike {
   userId: string;
   postId: string;
@@ -407,6 +418,8 @@ export interface InvitationGuest {
   seats: number;
   sentAt?: string;
   openedAt?: string;
+  /** added by the host without sending an invitation: counts as coming right away */
+  direct?: boolean;
 }
 
 export interface InvitationView {
@@ -431,6 +444,7 @@ export interface DB {
   invitations: Invitation[];
   posts: Post[];
   likes: PostLike[];
+  comments: PostComment[];
   saved: PostLike[];
   follows: Follow[];
   transactions: Transaction[];

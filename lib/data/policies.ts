@@ -67,4 +67,9 @@ export const can = {
 
   manageEvent: (a: Actor, clientId: string) => a.role === "client" && a.id === clientId,
   favorite: (a: Actor) => a.role === "client",
+
+  /** Comments are only for people who really used the vendor: a client with a finished deal */
+  commentPost: (a: Actor, db: Pick<DB, "bookings">, vendorId: string) =>
+    a.role === "client" &&
+    db.bookings.some((b) => b.clientId === a.id && b.vendorId === vendorId && (b.status === "completed" || b.escrow?.state === "released")),
 };

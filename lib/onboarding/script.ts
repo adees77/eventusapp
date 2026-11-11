@@ -237,7 +237,24 @@ function parseOwn(step: StepId, text: string, now: Date): Partial<Answers> | nul
  * («Меня зовут Айгерим, у нас свадьба 14 июня в Бишкеке, человек 150, бюджет 1,5 млн»).
  * Picks every detail it recognises; the chat then asks only for what's missing.
  */
-export function parseStory(text: string, now = new Date()): Partial<Answers> {
+/** Someone looking for a service, not offering one: «нужен фотограф», «ищем зал» */
+const NEED_CUE = /(нуж[енад]|ищу|ищем|хочу|хотим|планиру|подыскива|подбира|need|looking for|\bwant\b)/i;
+/** «я фотограф», «у меня своя студия» */
+const VENDOR_SELF_CUE =
+  /(я\s+(фотограф|видеограф|ведущ|тамад|флорист|декоратор|визажист|стилист|кондитер|диджей|dj|музыкант|певец|певица|аниматор)|у (меня|нас)\s+(сво[йяёеи]\S*\s+|есть\s+)?(\S+\s+)?(студи|компани|салон|зал|ресторан|кафе|парк|автопарк|машин|агентств|кондитерск|ателье|команд)|i'm a (photographer|host|florist|dj)|i run|we (rent|offer)|i offer)/i;
+const VENDOR_WORK_CUE =
+  /(фотограф|видеограф|ведущ(ий|ая)|тамада|флорист|декоратор|визажист|стилист|кондитер|диджей|музыкант|аниматор|сда[её]м|сдаю|аренда|прокат|оказыва|предлага|предоставля|снима(ю|ем)|оформля(ю|ем)|пеку|печ[её]м|шь(ю|[её]м)|провожу|проводим|photographer|videographer|florist|\bdj\b)/i;
+
+/** True when the text reads like someone offering services rather than planning an event */
+export function looksLikeVendor(text: string, now = new Date()): boolean {
+  if (VENDOR_SELF_CUE.test(text)) return true;
+  // a bare profession is weak: «свадьба 14 июня, 150 гостей, ведущий и фотограф» is a client's wish list
+  if (NEED_CUE.test(text) || parseDate(text, now) || parseGuests(text, true)) return false;
+  return VENDOR_WORK_CUE.test(text);
+}
+
+/** `forcedRole`: the user already chose the path on the start screen, so the text can't change it */
+export function parseStory(text: string, now = new Date(), forcedRole?: OnbRole): Partial<Answers> {
   const out: Partial<Answers> = {};
   const nameMatch = text.match(/(?:меня зовут|зовут меня|my name is|call me|i'm|i am|я\s+[—–-])\s+(\p{Lu}\p{Ll}+(?:\s+\p{Lu}\p{Ll}+)?)/iu);
   const name = nameMatch && parseName(nameMatch[1]);
@@ -248,10 +265,7 @@ export function parseStory(text: string, now = new Date()): Partial<Answers> {
   const city = parseCity(text);
   const guests = parseGuests(text, true);
   const budget = parseBudget(text, true);
-  // "я фотограф", "у меня своя студия", "снимаю свадьбы" — someone offering services
-  const vendorCue =
-    /(я\s+(фотограф|видеограф|ведущ|тамад|флорист|декоратор|визажист|кондитер|диджей|dj|музыкант)|у меня (сво[йяё]|есть)\s+(студи|компани|салон|зал|парк|машин)|снима(ю|ем)|оформля(ю|ем)|предоставля|i'm a (photographer|host|florist|dj)|i run)/i;
-  const role = vendorCue.test(text) ? "vendor" : (parseRole(text) ?? (eventType || date || guests ? "client" : null));
+  const role = forcedRole ?? (looksLikeVendor(text, now) ? "vendor" : (parseRole(text) ?? (eventType || date || guests ? "client" : null)));
   if (!role) return out;
   out.role = role;
   if (city) out.city = city;
@@ -259,6 +273,9 @@ export function parseStory(text: string, now = new Date()): Partial<Answers> {
   if (role === "vendor") {
     const category = parseCategory(text);
     if (category) out.category = category;
+    const phone = text.match(/\+?\d[\d\s()-]{7,}\d/);
+    const parsedPhone = phone && parsePhone(phone[0]);
+    if (parsedPhone) out.phone = parsedPhone;
     return out;
   }
   if (eventType) out.eventType = eventType;

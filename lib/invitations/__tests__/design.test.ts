@@ -4,6 +4,22 @@ import { migrate } from "@/lib/data/store";
 import type { DB } from "@/lib/data/types";
 import { designFromLegacy, duplicateBlock, guestStatus, guestsCsv, invitationStats, moveBlock } from "../design";
 
+describe("guests without an invitation", () => {
+  it("count as coming and stay out of the sending funnel", () => {
+    const inv = {
+      guests: [
+        { id: "a", name: "A", seats: 1, sentAt: "2026-11-01" },
+        { id: "b", name: "B", seats: 3, direct: true },
+      ],
+      rsvps: [],
+      views: [],
+    };
+    const s = invitationStats(inv);
+    expect(s).toMatchObject({ guests: 2, invited: 1, sent: 1, coming: 1, persons: 3, waiting: 1 });
+    expect(guestStatus(inv, inv.guests[1])).toBe("coming");
+  });
+});
+
 describe("invitation design", () => {
   it("converts a legacy invitation into blocks", () => {
     const d = designFromLegacy({ style: "night", occasion: "birthday", heading: "Приглашаем", names: "Алина", message: "Ждём", dressCode: "Black tie", contact: "+996", photo: undefined });

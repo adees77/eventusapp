@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { VOICE_LANGS, useSpeech } from "@/lib/voice/use-speech";
+import { useSpeech } from "@/lib/voice/use-speech";
 
 /**
  * The voice-first start: one large round mic in the middle. Tap, tell everything
@@ -89,19 +89,8 @@ export function VoiceHero({
           <span className="text-muted-foreground">{t("voice.tapToTalk")}</span>
         )}
       </div>
-      {!listening && (
-        <button
-          type="button"
-          onClick={() => speech.setLang(VOICE_LANGS[(VOICE_LANGS.indexOf(speech.lang) + 1) % VOICE_LANGS.length])}
-          className="mt-1 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        >
-          {t("voice.language")}: {t(`voice.langs.${speech.lang}`)}
-        </button>
-      )}
-
       {examples && examples.length > 0 && !listening && (
         <div className="mt-6 w-full md:mt-8">
-          <p className="mb-2.5 text-xs text-muted-foreground">{t("voice.orTry")}</p>
           <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:justify-center md:px-0">
             {examples.map((ex) => (
               <button

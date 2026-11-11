@@ -6,7 +6,7 @@ import { feeOf } from "@/lib/payments/escrow";
 import { hash } from "../availability";
 import { CATEGORIES, REVIEW_AUTHORS, REVIEW_TEMPLATES } from "./catalog";
 import { PHOTOS, unsplash } from "./photos";
-import { buildPosts } from "./posts";
+import { buildComments, buildPosts } from "./posts";
 import { SEED_VENDORS } from "./vendors";
 
 export const DEMO_CLIENT_ID = "u-client";
@@ -339,6 +339,7 @@ export function buildSeed(now = new Date()): DB {
     ],
     stats,
     posts,
+    comments: buildComments(posts, reviews, now),
     likes: posts.filter((_, i) => i % 9 === 0).slice(0, 6).map((p) => ({ userId: DEMO_CLIENT_ID, postId: p.id })),
     saved: posts.filter((_, i) => i % 13 === 4).slice(0, 5).map((p) => ({ userId: DEMO_CLIENT_ID, postId: p.id })),
     follows: [

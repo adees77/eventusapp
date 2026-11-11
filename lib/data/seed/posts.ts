@@ -1,6 +1,6 @@
 import { subDays, subHours } from "date-fns";
 import { hash } from "../availability";
-import type { CategoryId, LText, Offer, Post, Vendor } from "../types";
+import type { CategoryId, LText, Offer, Post, PostComment, Review, Vendor } from "../types";
 import { PHOTOS, unsplash } from "./photos";
 import type { SeedVendor } from "./vendors";
 
@@ -112,4 +112,44 @@ export function buildPosts(seedVendors: SeedVendor[], vendors: Vendor[], offers:
     }
   });
   return posts.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/** Short notes past clients leave under a vendor's work */
+const COMMENTS = [
+  "Работали с ними на нашей свадьбе — всё было именно так, как на фото.",
+  "Спасибо за наш день! Гости до сих пор вспоминают.",
+  "Заказывали в сентябре. Приехали вовремя, сделали даже больше, чем договаривались.",
+  "Рекомендую. Всё чётко по договору, без сюрпризов в день события.",
+  "Были у них на той. Очень внимательные, всё объяснили заранее.",
+  "Брали на юбилей мамы — она была в восторге.",
+  "Это с нашего праздника! Спасибо команде.",
+  "Второй раз обращаемся, и снова всё на уровне.",
+  "Thank you for our day — exactly what we asked for.",
+  "Цена полностью совпала с той, что была при бронировании. Приятно.",
+];
+
+/**
+ * Seeded comments come from the same people who left reviews for the vendor,
+ * so the rule "only real clients comment" holds for the demo data too.
+ */
+export function buildComments(posts: Post[], reviews: Review[], now: Date): PostComment[] {
+  const out: PostComment[] = [];
+  for (const p of posts) {
+    const authors = reviews.filter((r) => r.vendorId === p.vendorId).map((r) => r.author);
+    const h = hash(`c:${p.id}`);
+    const n = authors.length ? [0, 0, 1, 1, 2, 3][h % 6] : 0;
+    const posted = Date.parse(p.createdAt);
+    for (let i = 0; i < n; i++) {
+      // after the post, never in the future
+      const at = Math.min(now.getTime() - (i + 1) * 3600000, posted + (1 + ((h >>> (i + 2)) % 9)) * 86400000 + i * 5400000);
+      out.push({
+        id: `pc-${p.id}-${i}`,
+        postId: p.id,
+        author: authors[(h + i * 3) % authors.length],
+        text: COMMENTS[((h >>> 5) + i * 7) % COMMENTS.length],
+        createdAt: new Date(Math.max(at, posted + 600000)).toISOString(),
+      });
+    }
+  }
+  return out;
 }

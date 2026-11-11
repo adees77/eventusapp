@@ -21,12 +21,14 @@ import { type Draft, type LogEntry, useOnboardingDraft } from "@/lib/onboarding/
 import { dateChip } from "@/lib/onboarding/parse";
 import {
   type Answers,
+  type OnbRole,
   STEPS,
   type StepId,
   choiceAnswer,
   clearStep,
   currentStep,
   filledSteps,
+  looksLikeVendor,
   mergeAnswers,
   parseAnswer,
   parseStory,
@@ -67,6 +69,8 @@ export default function OnboardingPage() {
   const { answers, log, story } = draft;
   // voice-first start: until the user tells their story (or chooses step-by-step)
   const [stepMode, setStepMode] = useState(false);
+  // which story the start screen asks for; a vendor never has to "sound like" one to get the right path
+  const [introRole, setIntroRole] = useState<OnbRole>("client");
   const intro = !story && log.length === 0 && !stepMode;
   const step = currentStep(answers);
   const def = STEPS[step];
@@ -102,6 +106,8 @@ export default function OnboardingPage() {
     return steps
       .map((s) => {
         if (s === "eventType") return eventTitle(a, t).toLowerCase();
+        if (s === "category" && a.category) return cat(a.category).toLowerCase();
+        if (s === "phone" && a.phone) return a.phone;
         if (s === "date" && a.date) return date(a.date, "d MMMM yyyy");
         if (s === "city" && a.city) return l(CITIES[a.city]);
         if (s === "guests" && a.guests) return tn("common.guests", a.guests);
@@ -120,7 +126,7 @@ export default function OnboardingPage() {
     // answers as they were after each reply, to phrase acks
     let running: Answers = user?.name ? { name: user.name } : {};
     if (story) {
-      out.push({ from: "bot", lines: [t("onboarding.intro.bubble")], key: "hello" });
+      out.push({ from: "bot", lines: [t(answers.role === "vendor" ? "onboarding.intro.bubbleVendor" : "onboarding.intro.bubble")], key: "hello" });
       out.push({ from: "user", text: story.text, key: "story" });
       running = replay(running, { step: "name", text: story.text, filled: story.filled }, answers);
       const lines: string[] = [];
@@ -203,7 +209,8 @@ export default function OnboardingPage() {
     if (!text || thinking) return;
     setInput("");
     setThinking(text);
-    const local = parseStory(text);
+    const forced = introRole === "vendor" ? "vendor" : undefined;
+    const local = parseStory(text, new Date(), forced);
     let ai: Partial<Answers> = {};
     // the local parser is strict; let the model fill the rest when it's configured
     if (Object.keys(local).length < 5) {
@@ -220,7 +227,9 @@ export default function OnboardingPage() {
     }
     setThinking(null);
     const base: Answers = user?.name ? { name: user.name } : {};
-    const next = mergeAnswers(base, { ...ai, ...local, role: local.role ?? ai.role });
+    // the chosen tab wins, then a clear "I offer services" phrase, then the model, then the local guess
+    const role = forced ?? (looksLikeVendor(text) ? "vendor" : (ai.role ?? local.role));
+    const next = mergeAnswers(base, { ...ai, ...local, role });
     saveDraft(actor.id, { answers: next, log: [], story: { text, filled: filledSteps(base, next) } });
   }
 
@@ -247,6 +256,17 @@ export default function OnboardingPage() {
     setThinking(null);
     const own = def.field;
     commit({ step, text }, own && fields[own] !== undefined ? fields : null);
+  }
+
+  /** «По шагам» for a vendor: the path is already chosen, so the chat starts with the first vendor question */
+  function startSteps() {
+    if (introRole !== "vendor") return setStepMode(true);
+    const base: Answers = user?.name ? { name: user.name } : {};
+    saveDraft(actor.id, {
+      answers: mergeAnswers(base, { role: "vendor" }),
+      log: [],
+      story: { text: t("onboarding.options.role.vendor"), filled: ["role"] },
+    });
   }
 
   function back() {
@@ -364,10 +384,37 @@ export default function OnboardingPage() {
       {intro ? (
         <div className="flex flex-1 flex-col overflow-y-auto">
           <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 py-8">
+            <div className="mx-auto mb-8 flex rounded-xl border border-border bg-card p-1" role="tablist" aria-label={t("onboarding.q.role")}>
+              {(["client", "vendor"] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  role="tab"
+                  aria-selected={introRole === r}
+                  disabled={!!thinking}
+                  onClick={() => setIntroRole(r)}
+                  className={cn(
+                    "h-9 rounded-lg px-4 text-sm transition-colors",
+                    introRole === r ? "bg-secondary text-secondary-foreground" : "text-text-secondary hover:text-foreground",
+                  )}
+                >
+                  {t(`onboarding.intro.role.${r}`)}
+                </button>
+              ))}
+            </div>
             <VoiceHero
-              title={user?.name ? t("onboarding.intro.titleName", { name: user.name.split(" ")[0] }) : t("onboarding.intro.title")}
-              subtitle={t("onboarding.intro.subtitle")}
-              examples={list("onboarding.intro.examples")}
+              key={introRole}
+              title={
+                introRole === "vendor"
+                  ? user?.name
+                    ? t("onboarding.intro.vendorTitleName", { name: user.name.split(" ")[0] })
+                    : t("onboarding.intro.vendorTitle")
+                  : user?.name
+                    ? t("onboarding.intro.titleName", { name: user.name.split(" ")[0] })
+                    : t("onboarding.intro.title")
+              }
+              subtitle={t(introRole === "vendor" ? "onboarding.intro.vendorSubtitle" : "onboarding.intro.subtitle")}
+              examples={list(introRole === "vendor" ? "onboarding.intro.vendorExamples" : "onboarding.intro.examples")}
               onSend={(text) => void submitStory(text)}
               disabled={!!thinking}
             />
@@ -383,7 +430,7 @@ export default function OnboardingPage() {
             ) : (
               <button
                 type="button"
-                onClick={() => setStepMode(true)}
+                onClick={startSteps}
                 className="mx-auto mt-6 text-sm text-text-secondary underline-offset-4 transition-colors hover:text-foreground hover:underline"
               >
                 {t("onboarding.intro.stepByStep")}

@@ -109,6 +109,7 @@ function Feed() {
   }, [key]);
 
   const shown = useMemo(() => items.slice(0, n), [items, n]);
+  const order = items.map((x) => x.post.id);
   const filtered = Boolean(state.query || state.category || state.city || state.date || state.budgetMax);
 
   return (
@@ -170,7 +171,7 @@ function Feed() {
       )}
       {n < items.length && <div ref={sentinel} className="h-px" aria-hidden />}
 
-      <PostDialog postId={postId} onOpenChange={(o) => !o && setParams({ post: null })} onOpen={(id) => setParams({ post: id })} />
+      <PostDialog postId={postId} order={order} onOpenChange={(o) => !o && setParams({ post: null })} />
     </div>
   );
 }

@@ -15,10 +15,10 @@ import type { CategoryId } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
 
-const SUGGESTIONS: CategoryId[] = ["cars", "halls", "hosts", "decor", "photo"];
+const SUGGESTIONS: CategoryId[] = ["halls", "hosts", "photo"];
 
 export default function AssistantPage() {
-  const { t, tn, date } = useI18n();
+  const { t } = useI18n();
   const actor = useActor();
   const allThreads = useChatStore((s) => s.threads);
   const removeThread = useChatStore((s) => s.remove);
@@ -109,18 +109,8 @@ export default function AssistantPage() {
           <>
             <div className="flex flex-1 overflow-y-auto">
               <div className="m-auto w-full max-w-2xl animate-rise px-4 py-6 md:px-8">
-                {event && (
-                  <p className="mb-4 text-center text-sm text-muted-foreground tabular-nums">
-                    {t("home.eventLine", {
-                      title: event.title,
-                      date: date(event.date, "d MMMM"),
-                      guests: tn("common.guests", event.guests),
-                    })}
-                  </p>
-                )}
                 <VoiceHero
                   title={event ? t("home.titleEvent") : t("home.titleEmpty")}
-                  subtitle={t("home.subtitle")}
                   examples={SUGGESTIONS.map((c) => t(`chat.suggestionPrompts.${c}` as never))}
                   onSend={submit}
                   disabled={busy}

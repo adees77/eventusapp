@@ -183,7 +183,10 @@ export function duplicateBlock(blocks: InvitationBlock[], id: string): Invitatio
 // ── Stats ─────────────────────────────────────────────────────
 
 export interface InvitationStats {
+  /** everyone on the list, incl. guests added without an invitation */
   guests: number;
+  /** guests who get an invitation link */
+  invited: number;
   sent: number;
   opened: number;
   views: number;
@@ -195,21 +198,26 @@ export interface InvitationStats {
   persons: number;
 }
 
+/** Added by the host without an invitation and has not answered through a link: counts as coming */
+const isDirect = (inv: Pick<Invitation, "rsvps">, g: Invitation["guests"][number]) =>
+  !!g.direct && !inv.rsvps.some((r) => r.guestId === g.id);
+
 export function invitationStats(inv: Pick<Invitation, "guests" | "rsvps" | "views">): InvitationStats {
   const coming = inv.rsvps.filter((r) => r.attending);
   const answeredGuestIds = new Set(inv.rsvps.flatMap((r) => (r.guestId ? [r.guestId] : [])));
-  const sent = inv.guests.filter((g) => g.sentAt).length;
-  const opened = inv.guests.filter((g) => g.openedAt).length;
+  const direct = inv.guests.filter((g) => isDirect(inv, g));
+  const invited = inv.guests.filter((g) => !g.direct);
   return {
     guests: inv.guests.length,
-    sent,
-    opened,
+    invited: invited.length,
+    sent: invited.filter((g) => g.sentAt).length,
+    opened: invited.filter((g) => g.openedAt).length,
     views: inv.views.length,
     answered: inv.rsvps.length,
-    coming: coming.length,
+    coming: coming.length + direct.length,
     declined: inv.rsvps.length - coming.length,
-    waiting: inv.guests.filter((g) => !answeredGuestIds.has(g.id)).length,
-    persons: coming.reduce((s, r) => s + r.guests, 0),
+    waiting: inv.guests.filter((g) => !g.direct && !answeredGuestIds.has(g.id)).length,
+    persons: coming.reduce((s, r) => s + r.guests, 0) + direct.reduce((s, g) => s + g.seats, 0),
   };
 }
 
@@ -217,15 +225,14 @@ export function rsvpOfGuest(inv: Pick<Invitation, "rsvps">, guestId: string) {
   return inv.rsvps.find((r) => r.guestId === guestId);
 }
 
-/** Status of one guest for tables: waiting → sent → opened → coming/declined */
 export function guestStatus(inv: Pick<Invitation, "rsvps">, g: Invitation["guests"][number]) {
   const r = rsvpOfGuest(inv, g.id);
   if (r) return r.attending ? "coming" : "declined";
+  if (g.direct) return "coming";
   if (g.openedAt) return "opened";
   if (g.sentAt) return "sent";
   return "draft";
 }
-
 export type GuestStatus = ReturnType<typeof guestStatus>;
 
 /** CSV for export (Excel-friendly: BOM + semicolons) */
@@ -234,7 +241,8 @@ export function guestsCsv(inv: Pick<Invitation, "guests" | "rsvps">, labels: Rec
   const rows = [["Имя", "Телефон", "Группа", "Мест", "Статус", "Персон", "Комментарий"].map(esc).join(";")];
   for (const g of inv.guests) {
     const r = rsvpOfGuest(inv, g.id);
-    rows.push([g.name, g.phone, g.group, g.seats, labels[guestStatus(inv, g)], r?.guests ?? "", r?.note ?? ""].map(esc).join(";"));
+    const persons = r ? r.guests : g.direct ? g.seats : "";
+    rows.push([g.name, g.phone, g.group, g.seats, labels[guestStatus(inv, g)], persons, r?.note ?? ""].map(esc).join(";"));
   }
   // answers left through the common link (no personal guest)
   for (const r of inv.rsvps.filter((x) => !x.guestId)) {

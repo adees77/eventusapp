@@ -150,6 +150,23 @@ describe("parseStory", () => {
     expect(currentStep(mergeAnswers({}, a))).toBe("name");
   });
 
+  it("recognises a vendor without «я …»", () => {
+    expect(parseStory("Свадебный фотограф из Бишкека", NOW)).toMatchObject({ role: "vendor", category: "photo", city: "bishkek" });
+    expect(parseStory("У нас банкетный зал в Бишкеке на 300 гостей", NOW)).toMatchObject({ role: "vendor", category: "halls" });
+    expect(parseStory("Прокат лимузинов, Ош, +996 555 123 456", NOW)).toMatchObject({ role: "vendor", category: "cars", phone: "+996 555 123 456" });
+  });
+
+  it("keeps a client's wish list on the client path", () => {
+    expect(parseStory("Свадьба 14 июня в Бишкеке, 150 гостей, ведущий и фотограф", NOW).role).toBe("client");
+    expect(parseStory("Юбилей мамы в августе, 60 человек, нужен ресторан и ведущий", NOW).role).toBe("client");
+  });
+
+  it("the chosen path wins over the wording", () => {
+    const a = parseStory("Свадьбы и юбилеи в Бишкеке", NOW, "vendor");
+    expect(a).toMatchObject({ role: "vendor", city: "bishkek" });
+    expect(a.eventType).toBeUndefined();
+  });
+
   it("returns little for small talk", () => {
     expect(parseStory("привет", NOW)).toEqual({});
   });

@@ -15,6 +15,7 @@ export interface FeedItem {
   post: Post;
   vendor: Vendor;
   likes: number;
+  comments: number;
   liked: boolean;
   saved: boolean;
 }
@@ -28,6 +29,7 @@ export function feedItem(db: DB, post: Post, actor: Actor | null): FeedItem | nu
     post,
     vendor,
     likes: likeCount(db, post),
+    comments: db.comments.filter((c) => c.postId === post.id).length,
     liked: !!actor && db.likes.some((l) => l.userId === actor.id && l.postId === post.id),
     saved: !!actor && db.saved.some((l) => l.userId === actor.id && l.postId === post.id),
   };
@@ -102,17 +104,18 @@ function spread(items: FeedItem[], gap = 4): FeedItem[] {
   return out;
 }
 
-/** "More like this": same category first, other vendors preferred */
-export function similarPosts(db: DB, post: Post, actor: Actor | null, n = 12): FeedItem[] {
-  return db.posts
-    .filter((p) => p.id !== post.id && !p.hidden && p.category === post.category)
-    .sort(
-      (a, b) =>
-        Number(a.vendorId === post.vendorId) - Number(b.vendorId === post.vendorId) ||
-        (hash(a.id + post.id) % 97) - (hash(b.id + post.id) % 97),
-    )
-    .slice(0, n)
-    .flatMap((p) => feedItem(db, p, actor) ?? []);
+/**
+ * What you scroll through after opening a post: the opened one first, then the
+ * posts that follow it in the list it was opened from, then the ones before it.
+ */
+export function viewerSequence(order: string[], openedId: string): string[] {
+  const i = order.indexOf(openedId);
+  if (i === -1) return [openedId, ...order];
+  return [...order.slice(i), ...order.slice(0, i)];
+}
+
+export function commentsOf(db: Pick<DB, "comments">, postId: string) {
+  return db.comments.filter((c) => c.postId === postId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
 export function followersOf(db: DB, vendorId: string) {

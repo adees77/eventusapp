@@ -288,6 +288,16 @@ create table posts (
 create index on posts (created_at desc);
 create table post_likes (user_id uuid references profiles(id) on delete cascade, post_id uuid references posts(id) on delete cascade, primary key (user_id, post_id));
 create table saved_posts (user_id uuid references profiles(id) on delete cascade, post_id uuid references posts(id) on delete cascade, primary key (user_id, post_id));
+-- comments: insert is allowed only to clients with a finished deal with the post's vendor
+create table post_comments (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references posts(id) on delete cascade,
+  user_id uuid references profiles(id) on delete set null,
+  author text not null,
+  text text not null check (char_length(text) between 1 and 500),
+  created_at timestamptz not null default now()
+);
+create index on post_comments (post_id, created_at);
 create table follows (user_id uuid references profiles(id) on delete cascade, vendor_id uuid references vendors(id) on delete cascade, primary key (user_id, vendor_id));
 
 alter table reviews
@@ -334,7 +344,8 @@ create table invitation_guests (
   "group" text,
   seats int not null default 1,
   sent_at timestamptz,
-  opened_at timestamptz
+  opened_at timestamptz,
+  direct boolean not null default false  -- added without an invitation, counts as coming
 );
 create table invitation_rsvps (
   id uuid primary key default gen_random_uuid(),
@@ -357,6 +368,7 @@ alter table platform_settings enable row level security;
 alter table posts enable row level security;
 alter table post_likes enable row level security;
 alter table saved_posts enable row level security;
+alter table post_comments enable row level security;
 alter table follows enable row level security;
 alter table notifications enable row level security;
 alter table invitations enable row level security;
@@ -371,6 +383,14 @@ create policy "posts read" on posts for select using (not hidden or owns_vendor(
 create policy "posts owner write" on posts for all using (owns_vendor(vendor_id) or is_admin()) with check (owns_vendor(vendor_id) or is_admin());
 create policy "likes own" on post_likes for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "likes count" on post_likes for select using (true);
+create policy "comments read" on post_comments for select using (true);
+create policy "comments by real clients" on post_comments for insert with check (
+  user_id = auth.uid() and exists (
+    select 1 from bookings b join posts p on p.vendor_id = b.vendor_id
+    where p.id = post_id and b.client_id = auth.uid() and b.status = 'completed'
+  )
+);
+create policy "comments delete own" on post_comments for delete using (user_id = auth.uid() or is_admin());
 create policy "saved own" on saved_posts for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "follows own" on follows for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "follows count" on follows for select using (true);

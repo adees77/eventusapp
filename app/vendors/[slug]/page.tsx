@@ -380,7 +380,7 @@ function VendorProfile() {
         </div>
       )}
 
-      <PostDialog postId={openPost} onOpenChange={(o) => !o && setOpenPost(null)} onOpen={setOpenPost} />
+      <PostDialog postId={openPost} order={posts.map((p) => p.id)} onOpenChange={(o) => !o && setOpenPost(null)} />
 
       {/* Mobile booking bar */}
       <div

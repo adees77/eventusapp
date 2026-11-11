@@ -110,6 +110,9 @@ export function migrate(input: DB): DB {
     };
     if (!input.transactions) db = { ...db, transactions: ledgerFromEscrow(db) };
   }
+  if (!db.comments) {
+    db = { ...db, comments: seed().comments.filter((c) => db.posts.some((p) => p.id === c.postId)) };
+  }
   return db;
 }
 

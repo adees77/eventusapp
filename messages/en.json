@@ -37,7 +37,8 @@
     "admin": "Admin",
     "menu": "Menu",
     "feed": "Feed",
-    "cabinet": "Dashboard"
+    "cabinet": "Dashboard",
+    "chat": "Chat"
   },
   "roles": {
     "label": "Role",
@@ -566,13 +567,26 @@
       "titleName": "{name}, tell me about your celebration",
       "subtitle": "What, when, where and how many guests — all at once, by voice or text. I'll sort it out and ask only what's missing.",
       "examples": [
-        "A wedding on June 14 in Bishkek, about 150 guests, budget 1.5M som",
-        "Mom's anniversary in August, 60 people, need a restaurant and a host",
-        "I'm a photographer from Osh, I shoot weddings and tois"
+        "Wedding on June 14 in Bishkek, about 150 guests, budget 1.5M",
+        "Mum's anniversary in August, 60 people, need a restaurant and a host",
+        "Birthday in Osh, 25 people, looking for a café"
       ],
       "stepByStep": "Answer step by step instead",
       "placeholder": "Or type here…",
-      "bubble": "Tell me about your celebration — what, when, where and how many guests."
+      "bubble": "Tell me about your celebration — what, when, where and how many guests.",
+      "role": {
+        "client": "Planning an event",
+        "vendor": "I'm a vendor"
+      },
+      "vendorTitle": "Tell us about your services",
+      "vendorTitleName": "{name}, tell us about your services",
+      "vendorSubtitle": "What you do and in which city. I'll set up your profile, first service and post — clients will see you in the feed right away.",
+      "vendorExamples": [
+        "I'm a photographer from Osh, I shoot weddings and tois",
+        "We have a banquet hall in Bishkek for 300 guests",
+        "Wedding motorcade in Bishkek, five cars"
+      ],
+      "bubbleVendor": "Tell us about your services — what you do and in which city."
     }
   },
   "escrow": {
@@ -669,7 +683,16 @@
     "likes": "{n} like|{n} likes",
     "loginToAct": "Sign in as a client to save and follow",
     "loadMore": "More",
-    "availableOn": "Available on {date}"
+    "availableOn": "Available on {date}",
+    "comments": "Comments",
+    "noComments": "No comments yet",
+    "commentPlaceholder": "Your comment…",
+    "commentSend": "Send",
+    "commentDelete": "Delete comment",
+    "commentsRule": "Only clients who completed a deal with this vendor can comment.",
+    "realClient": "client",
+    "realClientHint": "Deal with the vendor confirmed through EVENTUS",
+    "showAllComments": "Show all · {n}"
   },
   "profile": {
     "posts": "posts",
@@ -982,7 +1005,13 @@
     "shareNames": "{names} invite you to celebrate. Details and RSVP at the link:",
     "shareGeneric": "You're invited to celebrate. Details and RSVP at the link:",
     "listHint": "Build an invitation page from blocks, send guests personal links and track their answers",
-    "cardStats": "sent {sent} · coming {coming} · waiting {waiting}"
+    "cardStats": "sent {sent} · coming {coming} · waiting {waiting}",
+    "guestList": "Guest list",
+    "addDirect": "Guest without invitation",
+    "addDirectHint": "For people you invited in person or by phone. No link is sent; the guest counts as coming right away.",
+    "direct": "no invitation",
+    "persons": "People",
+    "noneInStatus": "Nobody in this status"
   },
   "landing": {
     "navHow": "How it works",
