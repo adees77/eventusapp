@@ -3,12 +3,13 @@
  * vendor filters as the catalog search (so the AI tools and the feed agree).
  */
 import { hash } from "./availability";
-import type { Actor } from "./policies";
+import { isFinishedDeal, type Actor } from "./policies";
 import { searchVendors, type VendorFilters } from "./queries";
 import type { DB, Post, Vendor } from "./types";
 
 export interface FeedFilters extends VendorFilters {
-  tab?: "foryou" | "following";
+  /** «Высокий рейтинг»: well-rated vendors with a track record first */
+  tab?: "foryou" | "top";
 }
 
 export interface FeedItem {
@@ -50,11 +51,10 @@ export function searchPosts(db: DB, f: FeedFilters, actor: Actor | null, now = D
   const q = f.query?.trim().toLowerCase();
   // the vendor set that passes the structured filters (query handled below so captions count too)
   const allowed = new Map(searchVendors(db, { ...f, query: null, onlyAvailable: !!f.date }, actor).map((r) => [r.vendor.id, r]));
-  const following = new Set(actor ? db.follows.filter((x) => x.userId === actor.id).map((x) => x.vendorId) : []);
   const boost = interests(db, actor);
 
   let posts = db.posts.filter((p) => !p.hidden && allowed.has(p.vendorId));
-  if (f.tab === "following") posts = posts.filter((p) => following.has(p.vendorId));
+  if (f.tab === "top") posts = posts.filter((p) => (allowed.get(p.vendorId)!.vendor.rating ?? 0) >= 4.7);
   if (q) {
     posts = posts.filter((p) => {
       const v = allowed.get(p.vendorId)!.vendor;
@@ -66,6 +66,10 @@ export function searchPosts(db: DB, f: FeedFilters, actor: Actor | null, now = D
   }
 
   const items = posts.flatMap((p) => feedItem(db, p, actor) ?? []);
+  if (f.tab === "top") {
+    const trust = (i: FeedItem) => i.vendor.rating * 10 + Math.log10(ordersDone(db, i.vendor) + 1);
+    return spread(items.sort((a, b) => trust(b) - trust(a) || b.post.createdAt.localeCompare(a.post.createdAt)));
+  }
   const sort = f.sort ?? "rating";
   if (vendorFilterActive && sort !== "rating") {
     const price = (id: string) => allowed.get(id)?.minPrice ?? 0;
@@ -78,8 +82,7 @@ export function searchPosts(db: DB, f: FeedFilters, actor: Actor | null, now = D
       Math.log10(i.likes + 10) * 2 +
       i.vendor.rating +
       (i.vendor.verified ? 0.4 : 0) +
-      (boost.has(i.post.category) ? 1.2 : 0) +
-      (following.has(i.vendor.id) ? 0.6 : 0) -
+      (boost.has(i.post.category) ? 1.2 : 0) -
       ageDays / 20 +
       (hash(i.post.id) % 100) / 60
     );
@@ -118,6 +121,26 @@ export function commentsOf(db: Pick<DB, "comments">, postId: string) {
   return db.comments.filter((c) => c.postId === postId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
-export function followersOf(db: DB, vendorId: string) {
-  return db.follows.filter((f) => f.vendorId === vendorId).length;
+/** Orders a vendor has done: history before EVENTUS plus deals completed on the platform */
+export function ordersDone(db: Pick<DB, "bookings">, vendor: Pick<Vendor, "id" | "ordersBase">) {
+  return (
+    (vendor.ordersBase ?? 0) +
+    db.bookings.filter((b) => b.vendorId === vendor.id && isFinishedDeal(b)).length
+  );
+}
+
+/** A client's finished booking with this vendor that has no review yet → they may rate it */
+export function reviewableBooking(db: Pick<DB, "bookings" | "reviews">, clientId: string, vendorId: string) {
+  return db.bookings.find(
+    (b) =>
+      b.clientId === clientId &&
+      b.vendorId === vendorId &&
+      isFinishedDeal(b) &&
+      !db.reviews.some((r) => r.bookingId === b.id),
+  );
+}
+
+/** Has this client ever had a finished deal with the vendor (and so may comment and review) */
+export function hadDealWith(db: Pick<DB, "bookings">, clientId: string, vendorId: string) {
+  return db.bookings.some((b) => b.clientId === clientId && b.vendorId === vendorId && isFinishedDeal(b));
 }

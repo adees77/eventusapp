@@ -10,6 +10,8 @@ import { useActor, useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { DemoBadge } from "./demo-badge";
 import { NotificationsBell } from "./notifications-bell";
+import { vendorOfOwner } from "@/lib/data/queries";
+import { CreateMenu } from "./create-menu";
 import { HOME_BY_ROLE, NAV_BY_ROLE, isActive } from "./nav-items";
 import { SettingsMenu } from "./settings-menu";
 
@@ -20,6 +22,9 @@ export function Header() {
   const items = NAV_BY_ROLE[role];
   const actor = useActor();
   const unread = useDB((db) => unreadCount(db, actor));
+  const mySlug = useDB((db) => (role === "vendor" ? vendorOfOwner(db, actor.id)?.slug : undefined));
+  const onMine = !!mySlug && pathname === `/vendors/${mySlug}`;
+  const on = (href: string) => (href === "/me" ? onMine : isActive(pathname, href) && !(href === "/vendors" && onMine));
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background print:hidden">
@@ -29,13 +34,13 @@ export function Header() {
         </Link>
 
         <nav className="ml-4 hidden items-center gap-1 lg:flex xl:ml-8">
-          {items.map((item) => (
+          {items.filter((item) => !item.create).map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
                 "flex h-8 items-center whitespace-nowrap rounded-lg px-3 text-sm text-text-secondary transition-colors hover:bg-muted hover:text-foreground",
-                isActive(pathname, item.href) && "bg-card text-foreground shadow-[inset_0_0_0_1px_var(--border)]",
+                on(item.href) && "bg-card text-foreground shadow-[inset_0_0_0_1px_var(--border)]",
               )}
             >
               {t(item.label)}
@@ -49,6 +54,7 @@ export function Header() {
         </nav>
 
         <div className="ml-auto flex items-center gap-3 xl:gap-4">
+          {items.some((i) => i.create) && <CreateMenu variant="header" />}
           <DemoBadge />
           <NotificationsBell />
           <SettingsMenu />

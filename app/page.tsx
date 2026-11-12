@@ -311,7 +311,7 @@ export default function Landing() {
               [t("vcab.available"), money(184500), t("vcab.availableNote")],
               [t("cabinet.frozen"), money(62000), t("vcab.frozenNote")],
               [t("vp.bookingsCount"), "28", t("vcab.conversion", { p: "3.4" })],
-              [t("profile.followers"), "1 240", t("landing.venMock")],
+              [t("profile.orders"), "214", t("landing.venMock")],
             ].map(([a, b, c], i) => (
               <div key={a} className={cn("rounded-2xl border border-border bg-background p-5", i === 0 && "col-span-2")}>
                 <div className="text-sm text-text-secondary">{a}</div>

@@ -71,7 +71,16 @@ export interface Vendor {
   yearsOnMarket: number;
   responseMinutes: number;
   createdAt: string;
+  /** category-specific details (fleet, hall area, languages…), see lib/data/specs.ts */
+  specs?: VendorSpecs;
+  /** orders done before joining EVENTUS; completed bookings on the platform are added on top */
+  ordersBase?: number;
 }
+
+/** One row of a repeatable spec list: a car, a hall room, a furniture item… */
+export type SpecItem = Record<string, string | number | undefined>;
+export type SpecValue = string | number | boolean | string[] | SpecItem[];
+export type VendorSpecs = Record<string, SpecValue>;
 
 export interface Offer {
   id: string;
@@ -429,6 +438,8 @@ export interface InvitationView {
 
 export interface DB {
   version: number;
+  /** version of the demo vendors' details (lib/data/seed/specs.ts); bumped when the schema grows */
+  specsVersion?: number;
   users: User[];
   categories: Category[];
   vendors: Vendor[];

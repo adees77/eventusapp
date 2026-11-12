@@ -9,6 +9,7 @@ import { GoogleButton } from "@/components/auth/google-button";
 import { HOME_BY_ROLE } from "@/components/layout/nav-items";
 import { useAuth } from "@/lib/auth/store";
 import { getDB } from "@/lib/data/store";
+import { TEST_ACCOUNTS } from "@/lib/data/seed";
 import { PHOTOS, unsplash } from "@/lib/data/seed/photos";
 import { LOCALES, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,7 @@ function Welcome() {
   const asVendor = useSearchParams().get("as") === "vendor";
   const signInWithGoogle = useAuth((s) => s.signInWithGoogle);
   const signInDemo = useAuth((s) => s.signInDemo);
+  const signInTestAccount = useAuth((s) => s.signInTestAccount);
   const pending = useAuth((s) => s.pending);
 
   function afterSignIn() {
@@ -101,6 +103,27 @@ function Welcome() {
               >
                 {t("auth.demoLink")}
               </button>
+              {/* seeded test accounts: quick entry for demos and QA */}
+              <div className="mt-8 border-t border-border pt-5">
+                <p className="text-xs text-muted-foreground">{t("auth.testAccounts")}</p>
+                <ul className="mt-2 flex flex-col gap-1">
+                  {TEST_ACCOUNTS.map((a) => (
+                    <li key={a.userId}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          signInTestAccount(a.userId);
+                          router.replace(HOME_BY_ROLE.vendor);
+                        }}
+                        className="-mx-2 flex w-[calc(100%+16px)] items-center justify-between gap-3 rounded-lg px-2 py-2 text-left text-sm transition-colors hover:bg-muted"
+                      >
+                        <span>{t(`auth.test.${a.kind}`)}</span>
+                        <span className="text-xs text-muted-foreground">{a.email}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </>
           )}
         </main>

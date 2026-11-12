@@ -32,7 +32,7 @@ function Feed() {
   const actor = useActor();
   const planner = usePlanner();
 
-  const tab = params.get("tab") === "following" ? "following" : "foryou";
+  const tab = params.get("tab") === "top" ? "top" : "foryou";
   const state: SearchState = {
     query: params.get("q") ?? "",
     category: (params.get("category") as CategoryId | null) ?? null,
@@ -119,18 +119,18 @@ function Feed() {
           <FeedSearch value={state} onChange={onChange} onReset={reset} count={items.length} />
         </div>
         <nav className="mx-auto mt-3 flex max-w-3xl items-center justify-center gap-6 text-sm" aria-label={t("nav.feed")}>
-          {(["foryou", "following"] as const).map((k) => (
+          {(["foryou", "top"] as const).map((k) => (
             <button
               key={k}
               type="button"
-              onClick={() => setParams({ tab: k === "following" ? "following" : null })}
+              onClick={() => setParams({ tab: k === "top" ? "top" : null })}
               aria-pressed={tab === k}
               className={cn(
                 "relative pb-1.5 transition-colors",
                 tab === k ? "text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {k === "foryou" ? t("feed.forYou") : t("feed.following")}
+              {k === "foryou" ? t("feed.forYou") : t("feed.topRated")}
               {tab === k && <span className="absolute inset-x-0 -bottom-px h-px bg-foreground" aria-hidden />}
             </button>
           ))}
@@ -152,16 +152,16 @@ function Feed() {
         </Masonry>
       ) : (
         <div className="mx-auto mt-20 flex max-w-sm flex-col items-center gap-2 text-center">
-          <p className="font-serif text-2xl">{tab === "following" && !filtered ? t("feed.emptyFollowing") : t("feed.empty")}</p>
+          <p className="font-serif text-2xl">{t("feed.empty")}</p>
           <p className="text-sm text-text-secondary">
-            {tab === "following" && !filtered ? t("feed.emptyFollowingHint") : t("feed.emptyHint")}
+            {t("feed.emptyHint")}
           </p>
           {filtered ? (
             <Button variant="outline" className="mt-4" onClick={reset}>
               {t("feed.reset")}
             </Button>
           ) : (
-            tab === "following" && (
+            tab === "top" && (
               <Button variant="outline" className="mt-4" onClick={() => setParams({ tab: null })}>
                 {t("feed.forYou")}
               </Button>

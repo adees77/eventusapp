@@ -8,7 +8,8 @@ import { Kpi } from "@/components/layout/cabinet-shell";
 import { PageHeader, Section } from "@/components/panel";
 import { useMyVendor } from "@/components/vendor-panel/use-my-vendor";
 import { VendorBookingList } from "@/components/vendor-panel/vendor-booking-list";
-import { followersOf, likeCount } from "@/lib/data/feed";
+import { likeCount, ordersDone } from "@/lib/data/feed";
+import { specsProgress } from "@/lib/data/specs";
 import { vendorBookings } from "@/lib/data/queries";
 import { useDB } from "@/lib/data/store";
 import { useI18n } from "@/lib/i18n";
@@ -75,8 +76,13 @@ export default function VendorOverview() {
 
   const offersCount = db.offers.filter((o) => o.vendorId === vendor.id && o.active).length;
   const setup = [
-    { done: offersCount > 0, text: t("vcab.setupOffer"), href: "/vendor/services" },
-    { done: posts.length >= 3, text: t("vcab.setupPosts", { n: posts.length }), href: "/vendor/posts" },
+    {
+      done: specsProgress(vendor.category, vendor.specs) >= 0.6,
+      text: t("vcab.setupDetails", { p: Math.round(specsProgress(vendor.category, vendor.specs) * 100) }),
+      href: "/vendor/details",
+    },
+    { done: offersCount > 0, text: t("vcab.setupOffer"), href: "/create/service" },
+    { done: posts.length >= 3, text: t("vcab.setupPosts", { n: posts.length }), href: "/create/post" },
     { done: !!vendor.description.ru || !!vendor.description.en, text: t("vcab.setupAbout"), href: "/vendor/profile" },
     {
       done: db.blocks.some((b) => db.offers.find((o) => o.id === b.offerId)?.vendorId === vendor.id),
@@ -122,7 +128,7 @@ export default function VendorOverview() {
         <Kpi
           label={t("vp.views")}
           value={num(views)}
-          note={t("vcab.socialNote", { f: num(followersOf(db, vendor.id)), l: num(likes) })}
+          note={t("vcab.socialNote", { f: num(ordersDone(db, vendor)), l: num(likes) })}
           tone="gold"
         />
       </div>

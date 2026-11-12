@@ -4,7 +4,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useSyncExternalStore } from "react";
 import { LogoMark } from "@/components/brand/logo";
 import { ensureSessionBound, useAuth } from "@/lib/auth/store";
-import { useDataStore } from "@/lib/data/store";
+import { toast } from "sonner";
+import { STORAGE_FULL_EVENT, useDataStore } from "@/lib/data/store";
 import { useT } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { BottomNav } from "./bottom-nav";
@@ -35,6 +36,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
   const pathname = usePathname();
   const router = useRouter();
+  const t = useT();
   const userId = useAuth((s) => s.userId);
   const role = useSession((s) => s.role);
   const bound = useSession((s) => s.bound);
@@ -54,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       : needsOnboarding
         ? matches(pathname, ["/onboarding"])
           ? null
-          : "/onboarding"
+          : onboardingStart(pathname)
         : isLanding || pathname === "/welcome" || matches(pathname, ["/onboarding"])
           ? HOME_BY_ROLE[role]
           : null;
@@ -73,6 +75,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (target) router.replace(target);
   }, [target, router]);
 
+  // the demo DB stopped fitting in localStorage (usually many device photos): say so once
+  useEffect(() => {
+    let shown = false;
+    const onFull = () => {
+      if (shown) return;
+      shown = true;
+      toast.error(t("common.storageFull"), { duration: 10000 });
+    };
+    window.addEventListener(STORAGE_FULL_EVENT, onFull);
+    return () => window.removeEventListener(STORAGE_FULL_EVENT, onFull);
+  }, [t]);
+
   if (!ready || target) return <Splash />;
   if (isLanding || matches(pathname, BARE) || pathname.startsWith("/i/")) return <>{children}</>;
 
@@ -86,6 +100,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 const noopSubscribe = () => () => {};
+
+/**
+ * Where a signed-in user who still needs onboarding goes. «Я исполнитель» on the
+ * landing leads to /welcome?as=vendor — that intent must survive this redirect
+ * (welcome's own router.replace would otherwise lose the race to this one).
+ */
+function onboardingStart(pathname: string) {
+  const asVendor = pathname === "/welcome" && new URLSearchParams(window.location.search).get("as") === "vendor";
+  return asVendor ? "/onboarding/vendor" : "/onboarding";
+}
 
 function Splash() {
   const t = useT();

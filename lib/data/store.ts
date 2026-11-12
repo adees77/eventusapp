@@ -15,7 +15,8 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { safeStorage } from "@/lib/utils";
 import { demoConfig } from "@/config/demo";
 import { designFromLegacy } from "@/lib/invitations/design";
-import { buildSeed } from "./seed";
+import { buildSeed, TEST_ACCOUNTS } from "./seed";
+import { SEED_SPECS_VERSION } from "./seed/specs";
 import type { DB, Transaction } from "./types";
 
 interface DataState {
@@ -25,6 +26,32 @@ interface DataState {
   update: (fn: (db: DB) => DB) => void;
   resetDemo: () => void;
 }
+
+/**
+ * True while we apply a snapshot written by another tab: that state is already
+ * in localStorage, and writing it back would race with that tab's newer writes
+ * (it used to wipe the second half of a multi-step action, e.g. vendor sign-up).
+ */
+let applyingRemote = false;
+/** Fired on window when the DB no longer fits in localStorage */
+export const STORAGE_FULL_EVENT = "eventus:storage-full";
+const localStore = () => {
+  const s = safeStorage("localStorage");
+  return {
+    getItem: (k: string) => s.getItem(k),
+    removeItem: (k: string) => s.removeItem(k),
+    setItem: (k: string, v: string) => {
+      if (applyingRemote) return;
+      try {
+        s.setItem(k, v);
+      } catch (err) {
+        // quota exceeded (photos are data URLs): keep working in memory, tell the UI once, never throw out of update()
+        console.warn("[store] could not persist the demo DB", err);
+        if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(STORAGE_FULL_EVENT));
+      }
+    },
+  };
+};
 
 export const useDataStore = create<DataState>()(
   persist(
@@ -40,7 +67,7 @@ export const useDataStore = create<DataState>()(
     }),
     {
       name: demoConfig.storageKey,
-      storage: createJSONStorage(() => safeStorage("localStorage")),
+      storage: createJSONStorage(localStore),
       partialize: (s) => ({ db: s.db }),
       onRehydrateStorage: () => (state, error) => {
         // v2 → v3 is additive: upgrade in place so sign-ups and edits survive
@@ -63,6 +90,48 @@ export function migrate(input: DB): DB {
   let db = input;
   let cached: DB | undefined;
   const seed = () => (cached ??= buildSeed());
+  // test accounts arrived later: give their demo users an email to sign in with — once, and never one
+  // that a real sign-up already uses (that person must keep reaching their own account)
+  const emailless = TEST_ACCOUNTS.filter(
+    (a) =>
+      db.users.some((u) => u.id === a.userId && !u.email) && !db.users.some((u) => u.email?.toLowerCase() === a.email.toLowerCase()),
+  );
+  if (emailless.length) {
+    db = {
+      ...db,
+      users: db.users.map((u) => {
+        const a = emailless.find((x) => x.userId === u.id);
+        return a ? { ...u, email: a.email, authProvider: "email" as const } : u;
+      }),
+    };
+  }
+  // compare with the constant: building the seed just to read a number ran on every hydration and every tab sync
+  if (db.specsVersion !== SEED_SPECS_VERSION) {
+    // the details schema grew (prices with periods, menus…): refresh the demo vendors' details, keep everyone else's.
+    // Test accounts are real logins whose edits must survive, so they only get details if they have none.
+    const byId = new Map(seed().vendors.map((v) => [v.id, v]));
+    const testOwners = new Set(TEST_ACCOUNTS.map((a) => a.userId));
+    db = {
+      ...db,
+      specsVersion: SEED_SPECS_VERSION,
+      vendors: db.vendors.map((v) => {
+        const s = byId.get(v.id);
+        if (!s) return v;
+        const keep = testOwners.has(v.ownerId) && v.specs && Object.keys(v.specs).length > 0;
+        return { ...v, specs: keep ? v.specs : s.specs, ordersBase: v.ordersBase ?? s.ordersBase };
+      }),
+    };
+  }
+  if (db.vendors.some((v) => v.ordersBase === undefined)) {
+    // vendor details and completed-orders count arrived later: fill them in for the demo vendors
+    const byId = new Map(seed().vendors.map((v) => [v.id, v]));
+    db = {
+      ...db,
+      vendors: db.vendors.map((v) =>
+        v.ordersBase !== undefined ? v : { ...v, specs: v.specs ?? byId.get(v.id)?.specs, ordersBase: byId.get(v.id)?.ordersBase ?? 0 },
+      ),
+    };
+  }
   if (!db.invitations) {
     // keep the demo invitation, re-pinned to the user's (possibly edited) wedding date
     const invitations = seed().invitations.flatMap((inv) => {
@@ -150,11 +219,30 @@ export function getDB(): DB {
   return db;
 }
 
-/** Cross-tab sync: another tab wrote to localStorage → rehydrate here */
+/** Cross-tab sync: another tab wrote to localStorage → take its snapshot here, without writing it back */
 if (typeof window !== "undefined") {
   window.addEventListener("storage", (e) => {
-    if (e.key === demoConfig.storageKey) {
-      void useDataStore.persist.rehydrate();
+    if (e.key !== demoConfig.storageKey) return;
+    // storage was cleared elsewhere (site data, DevTools): keeping the old DB would resurrect it on our next write
+    if (!e.newValue) return window.location.reload();
+    let db: DB | undefined;
+    try {
+      db = (JSON.parse(e.newValue) as { state?: { db?: DB } }).state?.db;
+    } catch {
+      return;
+    }
+    if (!db) return;
+    // another tab already runs a newer build: reload to get it instead of overwriting its data with our older schema
+    if (db.version > demoConfig.seedVersion) return window.location.reload();
+    // an older tab still on v1 data — nothing safe to take from it
+    if (db.version !== demoConfig.seedVersion && db.version !== 2) return;
+    const next = migrate(db);
+    // the snapshot is already stored; write only if our migration changed it, so storage matches what we show
+    applyingRemote = next === db;
+    try {
+      useDataStore.setState({ db: next });
+    } finally {
+      applyingRemote = false;
     }
   });
 }

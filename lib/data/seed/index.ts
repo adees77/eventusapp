@@ -1,4 +1,5 @@
 import { addDays, format, isBefore, setMonth, setDate, startOfDay, subDays, subHours } from "date-fns";
+import { SEED_SPECS, SEED_SPECS_VERSION } from "./specs";
 import { demoConfig } from "@/config/demo";
 import type { Booking, Conversation, DB, Escrow, EventItem, Message, Offer, Review, Transaction, User, Vendor } from "../types";
 import { designFromLegacy } from "@/lib/invitations/design";
@@ -13,6 +14,13 @@ export const DEMO_CLIENT_ID = "u-client";
 export const DEMO_ADMIN_ID = "u-admin";
 export const DEMO_VENDOR_SLUG = "altyn-kortezh";
 export const demoVendorOwnerId = `u-${DEMO_VENDOR_SLUG}`;
+
+/**
+ * Test accounts that can be signed into on /welcome (email + the on-screen demo
+ * code, or the quick button). The motorcade vendor has a full history: fleet,
+ * services, bookings with escrow, chats and reviews.
+ */
+export const TEST_ACCOUNTS = [{ userId: demoVendorOwnerId, email: "kortezh@eventus.demo", kind: "vendorCars" as const }];
 
 const iso = (d: Date) => format(d, "yyyy-MM-dd");
 
@@ -59,7 +67,14 @@ export function buildSeed(now = new Date()): DB {
 
   SEED_VENDORS.forEach((sv, vi) => {
     const ownerId = `u-${sv.slug}`;
-    users.push({ id: ownerId, role: "vendor", name: sv.owner, createdAt: subDays(now, 31 + vi * 3).toISOString() });
+    const test = TEST_ACCOUNTS.find((a) => a.userId === ownerId);
+    users.push({
+      id: ownerId,
+      role: "vendor",
+      name: sv.owner,
+      createdAt: subDays(now, 31 + vi * 3).toISOString(),
+      ...(test && { email: test.email, authProvider: "email" as const }),
+    });
     const set = PHOTOS[sv.photoSet];
     const extra = sv.extraSet ? PHOTOS[sv.extraSet] : [];
     const portfolio = [...set, ...extra.slice(0, 4)].map((id) => unsplash(id, 1200));
@@ -86,6 +101,8 @@ export function buildSeed(now = new Date()): DB {
       yearsOnMarket: sv.years,
       responseMinutes: sv.response,
       createdAt: subDays(now, 30 + vi * 3).toISOString(),
+      specs: SEED_SPECS[sv.slug],
+      ordersBase: seedOrdersBase(sv.slug, sv.reviews),
     });
 
     sv.offers.forEach((so, oi) => {
@@ -323,6 +340,7 @@ export function buildSeed(now = new Date()): DB {
 
   return {
     version: demoConfig.seedVersion,
+    specsVersion: SEED_SPECS_VERSION,
     users,
     categories: CATEGORIES,
     vendors,
@@ -430,4 +448,9 @@ export function buildSeed(now = new Date()): DB {
       },
     ],
   };
+}
+
+/** Orders done before EVENTUS: not every client leaves a review, so a bit more than the review count */
+export function seedOrdersBase(slug: string, reviews: number) {
+  return Math.round(reviews * (1.6 + (hash(slug) % 9) / 10));
 }

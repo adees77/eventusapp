@@ -10,42 +10,24 @@ import { CategoryIcon } from "@/components/category-icon";
 import { Field, inputClass, textareaClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Monogram } from "@/components/vendor/badges";
-import { createPost, registerOwnVendor, updateVendor, upsertOffer } from "@/lib/data/actions";
+import { signUpVendor } from "@/lib/data/actions";
 import { can } from "@/lib/data/policies";
 import { CITIES } from "@/lib/data/seed/catalog";
 import { CATEGORY_PHOTOS, PHOTOS, unsplash } from "@/lib/data/seed/photos";
 import { useDB } from "@/lib/data/store";
-import type { CategoryId } from "@/lib/data/types";
+import { specFacts, specsProgress } from "@/lib/data/specs";
+import type { CategoryId, VendorSpecs } from "@/lib/data/types";
+import { SpecsForm } from "@/components/vendor-panel/specs-form";
+import { defaultUnit, unitText, UnitPicker, type UnitValue } from "@/components/vendor-panel/unit-picker";
 import { useI18n, type MessageKey } from "@/lib/i18n";
 import { useOnboardingDraft } from "@/lib/onboarding/draft";
 import { useActor, useSession } from "@/lib/session";
+import { readPhoto } from "@/lib/photos";
 import { cn } from "@/lib/utils";
 
-const STEPS = ["business", "offer", "photos"] as const;
+const STEPS = ["business", "details", "offer", "photos"] as const;
 type Step = (typeof STEPS)[number];
 const MAX_PHOTOS = 6;
-
-/** Shrinks a photo from the device to a JPEG data URL, so it fits the demo's local storage */
-function readPhoto(file: File, max = 1080): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new window.Image();
-    img.onload = () => {
-      const k = Math.min(1, max / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * k);
-      canvas.height = Math.round(img.height * k);
-      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL("image/jpeg", 0.8));
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("image"));
-    };
-    img.src = url;
-  });
-}
 
 /**
  * Vendor sign-up: a short form (business → first service → photos) with a live
@@ -59,6 +41,7 @@ export default function VendorSetupPage() {
   const user = useDB((db) => db.users.find((u) => u.id === actor.id));
   const categories = useDB((db) => [...db.categories].sort((a, b) => a.order - b.order));
   const hasVendor = useDB((db) => !can.registerOwnVendor(actor, db));
+  const onboarded = user ? !user.needsOnboarding : false;
   // what the user already told the assistant on the first screen, if anything
   const prefill = useOnboardingDraft((s) => s.drafts[actor.id]?.answers);
   const clearDraft = useOnboardingDraft((s) => s.clear);
@@ -71,15 +54,17 @@ export default function VendorSetupPage() {
   const [tagline, setTagline] = useState(prefill?.tagline ?? "");
   const [offerTitle, setOfferTitle] = useState(prefill?.offerTitle ?? "");
   const [price, setPrice] = useState(prefill?.offerPrice ? String(prefill.offerPrice) : "");
-  const [unit, setUnit] = useState("");
+  const [unit, setUnit] = useState<UnitValue | null>(null);
   const [uploads, setUploads] = useState<string[]>([]);
   const [picked, setPicked] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const [specs, setSpecs] = useState<VendorSpecs>({});
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (hasVendor && !busy) router.replace("/vendor");
-  }, [hasVendor, busy, router]);
+    // an onboarded vendor has nothing to fill in here; an interrupted sign-up stays and finishes below
+    if (hasVendor && onboarded && !busy) router.replace("/vendor");
+  }, [hasVendor, onboarded, busy, router]);
 
   const stock = category ? PHOTOS[CATEGORY_PHOTOS[category]].slice(0, 9).map((id) => unsplash(id, 1080, 1350)) : [];
   const library = [...uploads, ...stock];
@@ -87,10 +72,14 @@ export default function VendorSetupPage() {
   const photos = picked ?? stock.slice(0, 3);
 
   const priceNum = Number(price.replace(/\s/g, ""));
+  // what the price is for: the category's usual period until the vendor picks another
+  const unitOf = unit ?? (category ? defaultUnit(category) : { per: "event" as const, qty: 1, text: "" });
   const valid: Record<Step, boolean> = {
     business: bizName.trim().length >= 2 && !!category && !!city,
     offer: tagline.trim().length >= 10 && offerTitle.trim().length >= 2 && priceNum > 0,
     photos: photos.length > 0,
+    // details are optional, but the progress line nudges to fill them in
+    details: true,
   };
   const idx = STEPS.indexOf(step);
 
@@ -122,33 +111,24 @@ export default function VendorSetupPage() {
     if (busy || !category) return;
     setBusy(true);
     try {
-      const vendor = registerOwnVendor(actor, {
+      // one atomic write; it also finishes an earlier interrupted attempt by reusing its vendor
+      signUpVendor(actor, {
         ownerName: user?.name ?? bizName,
         name: bizName,
         category,
         city,
         phone: phone.trim() || undefined,
         tagline,
+        specs,
+        photos,
+        offer: { title: offerTitle, price: priceNum, unit: unitText(unitOf) },
       });
-      const owner = { id: actor.id, role: "vendor" as const };
       useSession.getState().setRole("vendor", actor.id);
-      updateVendor(owner, vendor.id, { portfolio: [...photos, ...vendor.portfolio.filter((p) => !photos.includes(p))], cover: photos[0] });
-      const offerId = upsertOffer(owner, {
-        vendorId: vendor.id,
-        title: { ru: offerTitle.trim(), en: offerTitle.trim() },
-        description: { ru: tagline.trim(), en: tagline.trim() },
-        price: priceNum,
-        unit: unit.trim() ? { ru: unit.trim(), en: unit.trim() } : { ru: "услуга", en: "service" },
-        totalUnits: 1,
-        photos: photos.slice(0, 2),
-        active: true,
-      });
-      createPost(owner, { vendorId: vendor.id, photos, caption: tagline, offerId });
       clearDraft(actor.id);
       toast.success(t("onboarding.doneVendor"));
       router.replace("/vendor");
     } catch (err) {
-      console.error(err);
+      console.error("[vendor-setup] finish failed", err);
       toast.error(t("common.error"));
       setBusy(false);
     }
@@ -243,7 +223,9 @@ export default function VendorSetupPage() {
                         type="button"
                         aria-pressed={category === c.id}
                         onClick={() => {
+                          if (c.id !== category) setSpecs({});
                           setCategory(c.id);
+                          setUnit(null);
                           setPicked(null);
                         }}
                         className={cn(
@@ -291,6 +273,23 @@ export default function VendorSetupPage() {
               </>
             )}
 
+            {step === "details" && category && (
+              <>
+                <div className="flex items-center gap-3">
+                  <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-[width] duration-300"
+                      style={{ width: `${Math.round(specsProgress(category, specs) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {t("vsetup.detailsFilled", { p: Math.round(specsProgress(category, specs) * 100) })}
+                  </span>
+                </div>
+                <SpecsForm category={category} value={specs} onChange={setSpecs} />
+              </>
+            )}
+
             {step === "offer" && (
               <>
                 <Field label={t("vsetup.tagline")} hint={t("vsetup.taglineHint", { n: 160 - tagline.length })}>
@@ -313,24 +312,21 @@ export default function VendorSetupPage() {
                     className={inputClass}
                   />
                 </Field>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-3 sm:grid-cols-[180px_minmax(0,1fr)]">
                   <Field label={t("vp.price")}>
-                    <input
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value.replace(/[^\d\s]/g, ""))}
-                      inputMode="numeric"
-                      placeholder="25 000"
-                      className={cn(inputClass, "tabular-nums")}
-                    />
+                    <span className="relative flex items-center">
+                      <input
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value.replace(/[^\d\s]/g, ""))}
+                        inputMode="numeric"
+                        placeholder="25 000"
+                        className={cn(inputClass, "pr-10 tabular-nums")}
+                      />
+                      <span className="pointer-events-none absolute right-3 text-xs text-muted-foreground">{t("specs.som")}</span>
+                    </span>
                   </Field>
-                  <Field label={t("vp.unit")}>
-                    <input
-                      value={unit}
-                      onChange={(e) => setUnit(e.target.value)}
-                      maxLength={30}
-                      placeholder={t("vp.unitPlaceholder")}
-                      className={inputClass}
-                    />
+                  <Field label={t("vsetup.priceFor")} hint={t("vsetup.priceForHint")}>
+                    {category && <UnitPicker category={category} value={unitOf} onChange={setUnit} />}
                   </Field>
                 </div>
               </>
@@ -422,13 +418,13 @@ export default function VendorSetupPage() {
                 </div>
                 <p className="line-clamp-2 text-xs leading-relaxed text-white/90">{tagline || t("vsetup.previewTagline")}</p>
                 <p className="text-[11px] text-white/65">
-                  {catName} · {l(CITIES[city])}
+                  {[catName, l(CITIES[city]), ...(category ? specFacts(category, specs, 2).map((f) => l(f)) : [])].join(" · ")}
                 </p>
                 <div className="flex items-center gap-2 rounded-lg bg-white/12 p-1 pl-2.5 backdrop-blur-md">
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[11px] text-white/75">{offerTitle || t("vsetup.previewOffer")}</span>
                     <span className="block text-xs font-medium tabular-nums">
-                      {t("feed.fromPrice", { amount: money(priceNum || 0) })}
+                      {t("feed.fromPrice", { amount: money(priceNum || 0) })} {l(unitText(unitOf)) && `/ ${l(unitText(unitOf))}`}
                     </span>
                   </span>
                   <MessageCircle className="size-4 shrink-0" strokeWidth={1.75} />

@@ -17,6 +17,14 @@ export class PolicyError extends Error {
   }
 }
 
+/**
+ * A deal that really happened: completed, or paid out to the vendor — but never a
+ * cancelled one (a vendor may cancel after the payout; that must not count as an
+ * order done or let the client post a «real client» review).
+ */
+export const isFinishedDeal = (b: Pick<Booking, "status" | "escrow">) =>
+  b.status !== "cancelled" && (b.status === "completed" || b.escrow?.state === "released");
+
 export function assert(allowed: boolean, action: string): asserts allowed {
   if (!allowed) throw new PolicyError(action);
 }
@@ -71,5 +79,5 @@ export const can = {
   /** Comments are only for people who really used the vendor: a client with a finished deal */
   commentPost: (a: Actor, db: Pick<DB, "bookings">, vendorId: string) =>
     a.role === "client" &&
-    db.bookings.some((b) => b.clientId === a.id && b.vendorId === vendorId && (b.status === "completed" || b.escrow?.state === "released")),
+    db.bookings.some((b) => b.clientId === a.id && b.vendorId === vendorId && isFinishedDeal(b)),
 };

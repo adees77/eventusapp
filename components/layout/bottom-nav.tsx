@@ -7,6 +7,8 @@ import { unreadCount } from "@/lib/data/queries";
 import { useDB } from "@/lib/data/store";
 import { useActor, useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { vendorOfOwner } from "@/lib/data/queries";
+import { CreateMenu } from "./create-menu";
 import { NAV_BY_ROLE, isActive } from "./nav-items";
 
 /** Mobile tab bar */
@@ -17,12 +19,21 @@ export function BottomNav() {
   const items = NAV_BY_ROLE[role];
   const actor = useActor();
   const unread = useDB((db) => unreadCount(db, actor));
+  // «Профиль» is the vendor's public page, so it is active there too
+  const mySlug = useDB((db) => (role === "vendor" ? vendorOfOwner(db, actor.id)?.slug : undefined));
+  const on = (href: string) => (href === "/me" ? !!mySlug && pathname === `/vendors/${mySlug}` : isActive(pathname, href) && !(href === "/vendors" && !!mySlug && pathname === `/vendors/${mySlug}`));
 
   return (
     <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background pt-2 lg:hidden print:hidden">
       <ul className="mx-auto flex max-w-md items-stretch justify-around">
-        {items.map(({ href, label, icon: Icon }) => {
-          const active = isActive(pathname, href);
+        {items.map(({ href, label, icon: Icon, create }) => {
+          if (create)
+            return (
+              <li key={href} className="flex flex-1 items-center">
+                <CreateMenu variant="tab" />
+              </li>
+            );
+          const active = on(href);
           return (
             <li key={href} className="flex-1">
               <Link

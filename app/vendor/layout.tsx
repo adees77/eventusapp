@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, ExternalLink, Images, LayoutDashboard, MessageCircle, Receipt, Settings, Star, Tag, Wallet } from "lucide-react";
+import { CalendarDays, ExternalLink, LayoutDashboard, MessageCircle, Receipt, Settings, Star, Wallet } from "lucide-react";
 import Link from "next/link";
 import { CabinetShell, RoleGate, type CabinetGroup } from "@/components/layout/cabinet-shell";
 import { Monogram, VerifiedSeal } from "@/components/vendor/badges";
@@ -29,13 +29,10 @@ export default function VendorCabinetLayout({ children }: { children: React.Reac
         { href: "/vendor/calendar", label: "vp.calendar", icon: CalendarDays },
       ],
     },
+    // posts, services and details live in the «+» menu and on the profile; the cabinet is the business side
     {
-      title: "vcab.groupShowcase",
-      items: [
-        { href: "/vendor/services", label: "vp.offers", icon: Tag },
-        { href: "/vendor/posts", label: "profile.tabPosts", icon: Images },
-        { href: "/vendor/reviews", label: "profile.tabReviews", icon: Star, badge: unanswered },
-      ],
+      title: "vcab.groupClients",
+      items: [{ href: "/vendor/reviews", label: "profile.tabReviews", icon: Star, badge: unanswered }],
     },
     {
       title: "vcab.groupBusiness",

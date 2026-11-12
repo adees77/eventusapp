@@ -19,6 +19,7 @@ import { useDB } from "@/lib/data/store";
 import type { Offer, Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
+import { parseUnit, unitText, UnitPicker, type UnitValue } from "./unit-picker";
 import { cn } from "@/lib/utils";
 
 /** Vendor self-service sections, used by the /vendor/* cabinet pages. */
@@ -86,17 +87,18 @@ export function VendorOffers({ vendor }: { vendor: Vendor }) {
   );
 }
 
-function OfferForm({ vendor, initial, onDone }: { vendor: Vendor; initial: Offer | null; onDone: () => void }) {
+export function OfferForm({ vendor, initial, onDone }: { vendor: Vendor; initial: Offer | null; onDone: () => void }) {
   const { t, locale } = useI18n();
   const actor = useActor();
   const [title, setTitle] = useState(initial?.title[locale] ?? "");
   const [description, setDescription] = useState(initial?.description[locale] ?? "");
   const [price, setPrice] = useState(String(initial?.price ?? ""));
   const [units, setUnits] = useState(String(initial?.totalUnits ?? 1));
-  const [unit, setUnit] = useState(initial?.unit[locale] ?? "");
+  const [unit, setUnit] = useState<UnitValue>(() => parseUnit(initial?.unit, locale, vendor.category));
   const [photo, setPhoto] = useState(initial?.photos[0] ?? vendor.portfolio[0] ?? "");
   const [active, setActive] = useState(initial?.active ?? true);
-  const valid = title.trim() && Number(price) >= 0 && price !== "" && Number(units) >= 0 && unit.trim();
+  const unitLabel = unitText(unit);
+  const valid = title.trim() && Number(price) >= 0 && price !== "" && Number(units) >= 0 && unitLabel[locale];
 
   const loc = (value: string, prev?: { ru: string; en: string }) => {
     const v = value.trim();
@@ -117,7 +119,8 @@ function OfferForm({ vendor, initial, onDone }: { vendor: Vendor; initial: Offer
           vendorId: vendor.id,
           title: loc(title, initial?.title),
           description: loc(description, initial?.description),
-          unit: loc(unit, initial?.unit),
+          // a period-based unit is already bilingual; free text follows the usual «other language» rule
+          unit: unit.per === "custom" ? loc(unit.text, initial?.unit) : unitLabel,
           price: Number(price),
           totalUnits: Number(units),
           capacity: initial?.capacity,
@@ -136,7 +139,7 @@ function OfferForm({ vendor, initial, onDone }: { vendor: Vendor; initial: Offer
       <Field label={t("vp.description")}>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={textareaClass} maxLength={400} />
       </Field>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <Field label={t("vp.price")}>
           <input
             type="number"
@@ -159,17 +162,10 @@ function OfferForm({ vendor, initial, onDone }: { vendor: Vendor; initial: Offer
             required
           />
         </Field>
-        <Field label={t("vp.unit")}>
-          <input
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
-            placeholder={t("vp.unitPlaceholder")}
-            className={inputClass}
-            maxLength={40}
-            required
-          />
-        </Field>
       </div>
+      <Field label={t("vsetup.priceFor")} hint={t("vsetup.priceForHint")}>
+        <UnitPicker category={vendor.category} value={unit} onChange={setUnit} />
+      </Field>
       {vendor.portfolio.length > 0 && (
         <div>
           <span className="text-sm text-text-secondary">{t("vp.photo")}</span>

@@ -25,7 +25,8 @@
     "saved": "Saved",
     "optional": "optional",
     "splashHint": "If the page does not open, update your browser or open the site in Safari or Chrome.",
-    "reload": "Reload"
+    "reload": "Reload",
+    "storageFull": "The browser is out of space to save the demo. Changes show now but may be lost after a reload — remove some uploaded photos."
   },
   "nav": {
     "assistant": "Assistant",
@@ -38,7 +39,9 @@
     "menu": "Menu",
     "feed": "Feed",
     "cabinet": "Dashboard",
-    "chat": "Chat"
+    "chat": "Chat",
+    "profile": "Profile",
+    "create": "Create"
   },
   "roles": {
     "label": "Role",
@@ -451,7 +454,11 @@
     "demoSwitch": "Demo: sign in as",
     "welcomeBack": "Welcome back, {name}",
     "vendorTitle": "Vendor account",
-    "vendorSubtitle": "Set up your profile in a couple of minutes — clients will see your work in the feed and the assistant will start suggesting you for their events."
+    "vendorSubtitle": "Set up your profile in a couple of minutes — clients will see your work in the feed and the assistant will start suggesting you for their events.",
+    "testAccounts": "Test accounts",
+    "test": {
+      "vendorCars": "Vendor · Altyn Kortezh motorcade"
+    }
   },
   "onboarding": {
     "title": "Getting started",
@@ -700,7 +707,9 @@
     "similarNone": "No similar posts yet",
     "close": "Close",
     "prev": "Previous post",
-    "next": "Next post"
+    "next": "Next post",
+    "orders": "{n} order|{n} orders|{n} orders",
+    "topRated": "Top rated"
   },
   "profile": {
     "posts": "posts",
@@ -711,7 +720,12 @@
     "tabServices": "Services & prices",
     "tabReviews": "Reviews",
     "noPosts": "No posts yet",
-    "vendorReply": "Vendor's reply"
+    "vendorReply": "Vendor's reply",
+    "orders": "orders done",
+    "tabDetails": "Details",
+    "noDetails": "The vendor hasn't added details yet",
+    "ordersN": "order done|orders done|orders done",
+    "postsN": "post|posts|posts"
   },
   "cabinet": {
     "overview": "Overview",
@@ -783,7 +797,7 @@
     "availableNote": "from confirmed deals",
     "frozenNote": "released once both sides confirm",
     "conversion": "{p}% of views convert",
-    "socialNote": "{f} followers · {l} likes",
+    "socialNote": "{f} orders done · {l} likes",
     "revenueChart": "New bookings value by week",
     "weekdayChart": "Demand by weekday",
     "todoConfirm": "Confirm the deal with {client} — {amount} frozen",
@@ -821,7 +835,17 @@
     "setupPosts": "Publish 3 posts to the feed ({n} so far)",
     "setupAbout": "Write about yourself in the profile",
     "setupCalendar": "Mark busy dates in the calendar",
-    "setupVerify": "Get verified by EVENTUS"
+    "setupVerify": "Get verified by EVENTUS",
+    "details": "Details",
+    "detailsHint": "The facts clients compare vendors by",
+    "detailsForm": "Details",
+    "detailsFilled": "{p}% filled",
+    "detailsWhy": "The more detailed your profile, the more often the assistant suggests you and the fewer questions in chat.",
+    "detailsFeed": "How it shows in the feed",
+    "setupDetails": "Fill in your details (now {p}%)",
+    "groupClients": "Clients",
+    "cabinetTitle": "Business",
+    "detailsChangedElsewhere": "The details were changed in another tab. Saving keeps your version."
   },
   "acab": {
     "console": "Control panel",
@@ -1122,7 +1146,7 @@
       "short": "Business",
       "title": "Tell us about your business",
       "hint": "Clients see the name and category in the feed and in the assistant’s search.",
-      "after": "Next — your first service and price"
+      "after": "Next — details"
     },
     "offer": {
       "short": "Service",
@@ -1161,6 +1185,55 @@
     "previewOffer": "Your service",
     "previewCategory": "Category",
     "previewHint": "Clients scroll the feed, like posts and book right from them.",
-    "previewEmpty": "Pick a category — your photo will appear here"
+    "previewEmpty": "Pick a category — your photo will appear here",
+    "details": {
+      "short": "Details",
+      "title": "Details for clients",
+      "hint": "Clients compare vendors by exactly these facts, and the assistant uses them to match you to events. You can finish later in your panel.",
+      "after": "Next — your first service and price"
+    },
+    "detailsFilled": "{p}% filled",
+    "priceFor": "Price for",
+    "priceForHint": "An hour, several hours, a day, an event, a guest — however you sell this service"
+  },
+  "reviews": {
+    "count": "{n} review|{n} reviews|{n} reviews",
+    "orders": "{n} orders done",
+    "empty": "No reviews yet",
+    "thanks": "Thanks — your review is published. You can leave another one after your next deal.",
+    "rule": "Only clients who used this vendor’s service through EVENTUS can rate and review.",
+    "yourRating": "Your rating",
+    "submit": "Publish review",
+    "title": "Rating and reviews"
+  },
+  "specs": {
+    "som": "som",
+    "per": "per",
+    "qty": "How many periods",
+    "qtyHint": "E.g. 4 — price per 4 hours or 4 days",
+    "period": "Period",
+    "custom": "custom unit…"
+  },
+  "create": {
+    "captionPlaceholder": "What's in the photo: the event, what you did, how many guests",
+    "linkHint": "Clients can book right from the post",
+    "title": "Create",
+    "post": "Post",
+    "postHint": "Photos of your work — to the feed and profile",
+    "service": "Service",
+    "serviceHint": "A new service with price and period",
+    "details": "Details",
+    "detailsHint": "Fleet, capacity, menu, prices — what clients compare",
+    "calendar": "Busy dates",
+    "calendarHint": "Mark days you're already booked"
+  },
+  "owner": {
+    "editProfile": "Edit profile",
+    "stats": "Statistics",
+    "editDetails": "Edit details",
+    "noDetails": "Add your details — clients compare vendors by them",
+    "banner": "This is how clients see your profile",
+    "deletePostConfirm": "Delete this post? It disappears from the feed and your profile.",
+    "offerOff": "Off — hidden from clients"
   }
 }

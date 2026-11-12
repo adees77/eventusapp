@@ -7,7 +7,7 @@
  */
 import { demoConfig } from "@/config/demo";
 import { getAvailability } from "./availability";
-import { assert, can, type Actor } from "./policies";
+import { assert, can, isFinishedDeal, type Actor } from "./policies";
 import { getDB, useDataStore } from "./store";
 import * as escrow from "@/lib/payments/escrow";
 import { CATEGORY_PHOTOS, PHOTOS, unsplash } from "./seed/photos";
@@ -29,7 +29,9 @@ import type {
   PostComment,
   Transaction,
   Vendor,
+  VendorSpecs,
 } from "./types";
+import { sanitizeSpecs } from "./specs";
 
 const uid = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const now = () => new Date().toISOString();
@@ -438,6 +440,8 @@ export function createVendor(
     yearsOnMarket: 0,
     responseMinutes: 30,
     createdAt: now(),
+    specs: {},
+    ordersBase: 0,
   };
   update((d) => ({
     ...d,
@@ -633,17 +637,6 @@ export function toggleSave(actor: Actor, postId: string) {
   update((d) => ({ ...d, saved: toggleIn(d.saved, (l) => l.userId === actor.id && l.postId === postId, { userId: actor.id, postId }) }));
 }
 
-export function toggleFollow(actor: Actor, vendorId: string) {
-  const db = getDB();
-  const was = db.follows.some((f) => f.userId === actor.id && f.vendorId === vendorId);
-  update((d) => ({ ...d, follows: toggleIn(d.follows, (f) => f.userId === actor.id && f.vendorId === vendorId, { userId: actor.id, vendorId }) }));
-  const v = db.vendors.find((x) => x.id === vendorId);
-  if (!was && v && v.ownerId !== actor.id) {
-    const who = db.users.find((u) => u.id === actor.id)?.name || "Клиент";
-    notify(v.ownerId, "follow", { ru: `${who} подписался на вас`, en: `${who} followed you` }, "/vendor");
-  }
-}
-
 export function createPost(actor: Actor, input: { vendorId: string; photos: string[]; caption: string; offerId?: string; ratio?: number }): Post {
   const db = getDB();
   const v = db.vendors.find((x) => x.id === input.vendorId);
@@ -661,9 +654,6 @@ export function createPost(actor: Actor, input: { vendorId: string; photos: stri
     createdAt: now(),
   };
   update((d) => ({ ...d, posts: [post, ...d.posts] }));
-  for (const f of db.follows.filter((x) => x.vendorId === v.id)) {
-    notify(f.userId, "system", { ru: `${v.name}: новая публикация`, en: `${v.name}: new post` }, `/vendors?post=${post.id}`);
-  }
   return post;
 }
 
@@ -716,7 +706,7 @@ export function setPostHidden(actor: Actor, postId: string, hidden: boolean) {
 export function leaveReview(actor: Actor, bookingId: string, rating: number, text: string) {
   const db = getDB();
   const b = db.bookings.find((x) => x.id === bookingId);
-  assert(!!b && b.clientId === actor.id && (b.status === "completed" || b.escrow?.state === "released"), "leaveReview");
+  assert(!!b && b.clientId === actor.id && isFinishedDeal(b), "leaveReview");
   if (db.reviews.some((r) => r.bookingId === bookingId)) return;
   const clean = text.trim().slice(0, 1000);
   const r = Math.min(5, Math.max(1, Math.round(rating)));
@@ -851,6 +841,117 @@ export function completeClientOnboarding(
   return { ...e, checklist };
 }
 
+/**
+ * The whole vendor sign-up in ONE store update: profile, vendor with details and
+ * photos, first service and first post, onboarding done. A single write leaves
+ * nothing half-saved (another tab, a failed storage write, a closed tab) and also
+ * finishes an earlier interrupted attempt by reusing the vendor it created.
+ */
+export function signUpVendor(
+  actor: Actor,
+  input: {
+    ownerName: string;
+    name: string;
+    category: CategoryId;
+    city: string;
+    phone?: string;
+    tagline: string;
+    specs: VendorSpecs;
+    photos: string[];
+    offer: { title: string; price: number; unit: LText };
+  },
+): { vendor: Vendor; offerId: string; postId: string } {
+  assert(actor.role !== "admin", "signUpVendor");
+  const db = getDB();
+  const existing = db.vendors.find((v) => v.ownerId === actor.id);
+  const name = input.name.trim().slice(0, 80);
+  const tagline = input.tagline.trim().slice(0, 160);
+  const stock = PHOTOS[CATEGORY_PHOTOS[input.category]];
+  const photos = input.photos.slice(0, 10);
+  const slugBase =
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9а-яё]+/gi, "-")
+      .replace(/^-|-$/g, "") || "vendor";
+  const base: Vendor = existing ?? {
+    id: uid("v"),
+    ownerId: actor.id,
+    slug: `${slugBase}-${Math.random().toString(36).slice(2, 6)}`,
+    name,
+    category: input.category,
+    city: input.city,
+    tagline: { ru: tagline, en: tagline },
+    description: { ru: "", en: "" },
+    rating: 0,
+    reviewsCount: 0,
+    verified: false,
+    hidden: false,
+    prepayPercent: db.settings?.defaultPrepayPercent ?? demoConfig.defaultPrepayPercent,
+    cover: "",
+    portfolio: [],
+    phone: "",
+    yearsOnMarket: 0,
+    responseMinutes: 30,
+    createdAt: now(),
+    ordersBase: 0,
+  };
+  const portfolio = [...photos, ...stock.slice(0, 6).map((id) => unsplash(id, 1200))].filter((p, i, a) => a.indexOf(p) === i);
+  const vendor: Vendor = {
+    ...base,
+    name,
+    category: input.category,
+    city: input.city,
+    tagline: { ru: tagline, en: tagline },
+    phone: input.phone?.trim().slice(0, 30) ?? base.phone,
+    specs: sanitizeSpecs(input.category, input.specs),
+    portfolio,
+    cover: photos[0] ?? unsplash(stock[0], 1600, 900),
+  };
+  const offer: Offer = {
+    id: uid("o"),
+    vendorId: vendor.id,
+    title: { ru: input.offer.title.trim().slice(0, 100), en: input.offer.title.trim().slice(0, 100) },
+    description: { ru: tagline, en: tagline },
+    price: Math.max(0, Math.round(input.offer.price)),
+    unit: input.offer.unit,
+    totalUnits: 1,
+    photos: photos.slice(0, 2),
+    active: true,
+  };
+  const post: Post = {
+    id: uid("p"),
+    vendorId: vendor.id,
+    photos: photos.length ? photos : portfolio.slice(0, 3),
+    caption: { ru: tagline, en: tagline },
+    category: input.category,
+    offerId: offer.id,
+    baseLikes: 0,
+    ratio: 1.25,
+    createdAt: now(),
+  };
+  update((d) => ({
+    ...d,
+    users: d.users.map((u) =>
+      u.id === actor.id
+        ? {
+            ...u,
+            name: input.ownerName.trim().slice(0, 80) || u.name,
+            city: input.city,
+            ...(input.phone?.trim() && { phone: input.phone.trim().slice(0, 32) }),
+            role: "vendor" as const,
+            needsOnboarding: false,
+            onboardedAt: now(),
+          }
+        : u,
+    ),
+    vendors: existing ? d.vendors.map((v) => (v.id === vendor.id ? vendor : v)) : [...d.vendors, vendor],
+    stats: existing ? d.stats : [...d.stats, { vendorId: vendor.id, views: 0 }],
+    offers: [...d.offers, offer],
+    posts: [post, ...d.posts],
+  }));
+  return { vendor, offerId: offer.id, postId: post.id };
+}
+
 /** Vendor branch: the signed-up user becomes the owner of a new (unverified) vendor profile */
 export function registerOwnVendor(
   actor: Actor,
@@ -884,6 +985,8 @@ export function registerOwnVendor(
     yearsOnMarket: 0,
     responseMinutes: 30,
     createdAt: now(),
+    specs: {},
+    ordersBase: 0,
   };
   update((d) => ({ ...d, vendors: [...d.vendors, vendor], stats: [...d.stats, { vendorId: vendor.id, views: 0 }] }));
   finishOnboarding(actor.id, "vendor");

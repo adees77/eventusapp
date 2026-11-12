@@ -11,7 +11,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { upsertAuthUser } from "@/lib/data/actions";
 import { getDB } from "@/lib/data/store";
-import { DEMO_CLIENT_ID } from "@/lib/data/seed";
+import { DEMO_CLIENT_ID, TEST_ACCOUNTS } from "@/lib/data/seed";
 import { useSession } from "@/lib/session";
 import { safeStorage } from "@/lib/utils";
 import { checkCode, createCode, type PendingCode, type VerifyResult } from "./otp";
@@ -27,6 +27,8 @@ interface AuthState {
   verifyEmailCode: (code: string) => VerifyResult;
   cancelEmailCode: () => void;
   signInDemo: () => void;
+  /** Quick entry into a seeded test account (see TEST_ACCOUNTS) without the email code */
+  signInTestAccount: (userId: string) => void;
   signOut: () => void;
 }
 
@@ -67,6 +69,11 @@ export const useAuth = create<AuthState>()(
       signInDemo: () => {
         set({ userId: DEMO_CLIENT_ID, demo: true, pending: null });
         bindSession(DEMO_CLIENT_ID);
+      },
+      signInTestAccount: (userId) => {
+        if (!TEST_ACCOUNTS.some((a) => a.userId === userId) || !getDB().users.some((u) => u.id === userId)) return;
+        set({ userId, demo: false, pending: null });
+        bindSession(userId);
       },
       signOut: () => {
         set({ userId: null, demo: false, pending: null });

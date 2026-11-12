@@ -13,6 +13,7 @@ import {
   Heart,
   MessageCircle,
   Send,
+  Star,
   Trash2,
   X,
 } from "lucide-react";
@@ -22,8 +23,10 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Monogram, VerifiedSeal } from "@/components/vendor/badges";
-import { addComment, deleteComment, ensureConversation, toggleFollow, toggleLike } from "@/lib/data/actions";
-import { commentsOf, feedItem, likeCount, viewerSequence } from "@/lib/data/feed";
+import { addComment, deleteComment, deletePost, ensureConversation, toggleLike } from "@/lib/data/actions";
+import { commentsOf, feedItem, likeCount, ordersDone, viewerSequence } from "@/lib/data/feed";
+import { specFacts } from "@/lib/data/specs";
+import { ReviewComposer, ReviewList, ReviewSummary, useVendorReviews } from "@/components/vendor/reviews";
 import { can } from "@/lib/data/policies";
 import { activeOffers, minPrice } from "@/lib/data/queries";
 import { CITIES } from "@/lib/data/seed/catalog";
@@ -105,6 +108,17 @@ export function PostDialog({
     scroller?.scrollTo({ top: 0 });
   }, [postId, scroller]);
 
+  // nothing left to show (the owner deleted the last post, a stale ?post= link): tell the parent so it clears its selection
+  useEffect(() => {
+    if (postId && !open) onOpenChange(false);
+  }, [postId, open, onOpenChange]);
+
+  // an open comments/reviews sheet: Escape and the arrow keys belong to it, not to the whole viewer
+  const sheetCloser = useRef<(() => void) | null>(null);
+  const registerSheet = useCallback((close: (() => void) | null) => {
+    sheetCloser.current = close;
+  }, []);
+
   const onScroll = useCallback(() => {
     if (!scroller) return;
     const i = Math.round(scroller.scrollTop / scroller.clientHeight);
@@ -122,22 +136,21 @@ export function PostDialog({
   );
 
   /** «Показать похожее»: the posts right after the current one become similar ones, and we scroll to them */
-  const showSimilar = useCallback(
-    (post: Post, vendorName: string) => {
-      const i = view.seq.indexOf(post.id);
-      const head = view.seq.slice(0, i + 1);
+  function showSimilar(post: Post, vendorName: string) {
+      // indexes of what is actually rendered (deleted / hidden posts are already filtered out)
+      const ids = seq.map((p) => p.id);
+      const i = ids.indexOf(post.id);
+      const head = ids.slice(0, i + 1);
       const similar = similarTo(getDB(), post, new Set(head));
       if (!similar.length) return toast(t("feed.similarNone"));
-      const rest = view.seq.slice(i + 1).filter((id) => !similar.includes(id));
+      const rest = ids.slice(i + 1).filter((id) => !similar.includes(id));
       const tag = Object.fromEntries(similar.map((id) => [id, vendorName]));
       setView((v) => ({ ...v, seq: [...head, ...similar, ...rest], n: Math.max(v.n, i + 1 + STEP), similar: { ...v.similar, ...tag } }));
       requestAnimationFrame(() => goTo(i + 1));
-    },
-    [view.seq, goTo, t],
-  );
+  }
 
   function onKey(e: React.KeyboardEvent) {
-    if ((e.target as HTMLElement).closest("input, textarea")) return;
+    if (sheetCloser.current || (e.target as HTMLElement).closest("input, textarea")) return;
     if (e.key === "ArrowDown" || e.key === "j") {
       e.preventDefault();
       goTo(Math.min(active + 1, seq.length - 1));
@@ -148,7 +161,14 @@ export function PostDialog({
   }
 
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+    <DialogPrimitive.Root
+      open={open}
+      onOpenChange={(next) => {
+        // Escape / outside press with a sheet open closes the sheet only
+        if (!next && sheetCloser.current) return sheetCloser.current();
+        onOpenChange(next);
+      }}
+    >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
         <DialogPrimitive.Popup
@@ -168,6 +188,7 @@ export function PostDialog({
                 near={Math.abs(k - active) <= 1}
                 similarTo={view.similar[p.id]}
                 onSimilar={showSimilar}
+                registerSheet={registerSheet}
               />
             ))}
           </div>
@@ -199,21 +220,29 @@ function PostView({
   near,
   similarTo: similarName,
   onSimilar,
+  registerSheet,
 }: {
   post: Post;
   /** on screen or next to it → load photos eagerly */
   near: boolean;
   similarTo?: string;
   onSimilar: (post: Post, vendorName: string) => void;
+  registerSheet: (close: (() => void) | null) => void;
 }) {
-  const { t, l, money, num, date } = useI18n();
+  const { t, tn, l, money, num } = useI18n();
   const router = useRouter();
   const actor = useActor();
   const { save } = useFeedActions();
   const db = useDB((d) => d);
   const [slide, setSlide] = useState(0);
   const [expanded, setExpanded] = useState(false);
-  const [comments, setComments] = useState(false);
+  const [sheet, setSheet] = useState<"comments" | "reviews" | null>(null);
+  useEffect(() => {
+    registerSheet(sheet ? () => setSheet(null) : null);
+    return () => {
+      if (sheet) registerSheet(null);
+    };
+  }, [sheet, registerSheet]);
   const [burst, setBurst] = useState(0);
   const strip = useRef<HTMLDivElement>(null);
   const item = feedItem(db, post, actor);
@@ -222,7 +251,8 @@ function PostView({
   const vendor = item.vendor;
   const offers = activeOffers(db, vendor.id);
   const offer = post.offerId ? offers.find((o) => o.id === post.offerId) : undefined;
-  const following = db.follows.some((f) => f.userId === actor.id && f.vendorId === vendor.id);
+  const orders = ordersDone(db, vendor);
+  const facts = specFacts(vendor.category, vendor.specs, 2).map((f) => l(f));
   const photos = post.photos;
   const price = offer ? offer.price : minPrice(offers);
 
@@ -266,7 +296,8 @@ function PostView({
         {burst > 0 && (
           <Heart
             key={burst}
-            className="pointer-events-none absolute top-1/2 left-1/2 size-24 -translate-x-1/2 -translate-y-1/2 fill-white text-white drop-shadow-lg"
+            // centred by the like-burst keyframes (transform: translate(-50%,-50%)); a Tailwind translate here would add up
+            className="pointer-events-none absolute top-1/2 left-1/2 size-24 fill-white text-white drop-shadow-lg"
             style={{ animation: "like-burst 700ms var(--ease-out-soft) both" }}
             aria-hidden
           />
@@ -301,7 +332,7 @@ function PostView({
           <RailBtn label={t("feed.like")} active={item.liked} onClick={like} count={num(item.likes)}>
             <Heart className={cn("size-7", item.liked && "fill-[#ff3b5c] text-[#ff3b5c]")} strokeWidth={1.75} />
           </RailBtn>
-          <RailBtn label={t("feed.comments")} onClick={() => setComments(true)} count={num(item.comments)}>
+          <RailBtn label={t("feed.comments")} onClick={() => setSheet("comments")} count={num(item.comments)}>
             <MessageCircle className="size-7 -scale-x-100" strokeWidth={1.75} />
           </RailBtn>
           <RailBtn label={item.saved ? t("feed.saved") : t("feed.save")} active={item.saved} onClick={() => save(post.id)}>
@@ -319,6 +350,18 @@ function PostView({
           <RailBtn label={t("feed.similarShow")} onClick={() => onSimilar(post, vendor.name)} count={t("feed.similar")}>
             <GalleryVerticalEnd className="size-6" strokeWidth={1.75} />
           </RailBtn>
+          {actor.id === vendor.ownerId && (
+            <RailBtn
+              label={t("vcab.deletePost")}
+              onClick={() => {
+                if (!window.confirm(t("owner.deletePostConfirm"))) return;
+                deletePost(actor, post.id);
+                toast(t("vcab.postDeleted"));
+              }}
+            >
+              <Trash2 className="size-6" strokeWidth={1.75} />
+            </RailBtn>
+          )}
         </div>
 
         {/* bottom: who, what, how much */}
@@ -329,17 +372,30 @@ function PostView({
               <span className="truncate text-sm font-medium">{vendor.name}</span>
               {vendor.verified && <VerifiedSeal className="[&_svg]:size-3.5" />}
             </Link>
-            <button
-              type="button"
-              onClick={clientOnly(() => toggleFollow(actor, vendor.id))}
-              className={cn(
-                "h-7 shrink-0 rounded-lg border px-2.5 text-xs transition-colors",
-                following ? "border-white/30 text-white/80" : "border-white/70 text-white hover:bg-white/10",
-              )}
-            >
-              {following ? t("feed.unfollow") : t("feed.follow")}
-            </button>
+            {actor.id !== vendor.ownerId && (
+              <button
+                type="button"
+                onClick={clientOnly(() => router.push(offer ? `/book/${offer.id}` : `/vendors/${vendor.slug}?tab=services`))}
+                className="h-8 shrink-0 rounded-lg bg-white px-3 text-xs font-medium text-neutral-900 transition-colors hover:bg-white/90"
+              >
+                {t("feed.book")}
+              </button>
+            )}
           </div>
+
+          {/* trust line instead of followers: rating from real clients and orders done */}
+          <button
+            type="button"
+            onClick={() => setSheet("reviews")}
+            className="-mt-1 flex w-fit items-center gap-1.5 text-xs text-white/90 tabular-nums"
+            aria-label={t("reviews.title")}
+          >
+            <Star className="size-3.5 fill-gold text-gold" strokeWidth={1.5} aria-hidden />
+            <span className="font-medium text-white">{vendor.rating ? vendor.rating.toFixed(1) : "—"}</span>
+            <span className="text-white/70 underline decoration-white/30 underline-offset-2">{tn("reviews.count", vendor.reviewsCount)}</span>
+            <span className="text-white/50">·</span>
+            <span>{tn("feed.orders", orders)}</span>
+          </button>
 
           <button
             type="button"
@@ -349,7 +405,7 @@ function PostView({
             {l(post.caption)}
           </button>
           <p className="-mt-1.5 text-xs text-white/65">
-            {l(db.categories.find((c) => c.id === vendor.category)?.name)} · {l(CITIES[vendor.city])} · {date(post.createdAt.slice(0, 10), "d MMMM")}
+            {[l(db.categories.find((c) => c.id === vendor.category)?.name), l(CITIES[vendor.city]), ...facts].join(" · ")}
           </p>
 
           <div className="flex items-center gap-2 rounded-xl bg-white/12 p-1.5 pl-3 backdrop-blur-md">
@@ -357,28 +413,59 @@ function PostView({
               <span className="block truncate text-xs text-white/75">{offer ? l(offer.title) : t("feed.profile")}</span>
               <span className="block text-sm font-medium tabular-nums">{t("feed.fromPrice", { amount: money(price) })}</span>
             </span>
-            <button
+            {actor.id !== vendor.ownerId && (
+              <button
               type="button"
-              aria-label={t("feed.message")}
-              title={t("feed.message")}
               onClick={clientOnly(() => router.push(`/messages/${ensureConversation(actor, vendor.id)}`))}
-              className="flex size-9 shrink-0 items-center justify-center rounded-lg text-white transition-colors hover:bg-white/15"
+              className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-white/30 px-3 text-sm text-white transition-colors hover:bg-white/15"
             >
-              <MessageCircle className="size-[18px]" strokeWidth={1.75} />
+              <MessageCircle className="size-4" strokeWidth={1.75} />
+              {t("feed.message")}
             </button>
-            <button
-              type="button"
-              onClick={clientOnly(() => router.push(offer ? `/book/${offer.id}` : `/vendors/${vendor.slug}?tab=services`))}
-              className="h-9 shrink-0 rounded-lg bg-white px-3.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-white/90"
-            >
-              {t("feed.book")}
-            </button>
+            )}
           </div>
         </div>
 
-        {comments && <CommentsSheet post={post} vendor={vendor} onClose={() => setComments(false)} />}
+        {sheet === "comments" && <CommentsSheet post={post} vendor={vendor} onClose={() => setSheet(null)} />}
+        {sheet === "reviews" && <ReviewsSheet vendor={vendor} onClose={() => setSheet(null)} />}
       </div>
     </section>
+  );
+}
+
+/** Rating and reviews over the photo; rating is open only to clients who used the service */
+function ReviewsSheet({ vendor, onClose }: { vendor: Vendor; onClose: () => void }) {
+  const { t } = useI18n();
+  const reviews = useVendorReviews(vendor.id);
+  return (
+    <>
+      <button type="button" aria-label={t("feed.close")} onClick={onClose} className="absolute inset-0 z-20 animate-in bg-black/40 fade-in-0" />
+      <div
+        role="dialog"
+        aria-label={t("reviews.title")}
+        className="absolute inset-x-0 bottom-0 z-20 flex max-h-[80%] min-h-[55%] animate-in flex-col rounded-t-2xl bg-card text-foreground duration-200 slide-in-from-bottom"
+      >
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h3 className="text-sm font-medium">{t("reviews.title")}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("feed.close")}
+            autoFocus
+            className="-mr-1.5 flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-4">
+          <ReviewSummary vendor={vendor} reviews={reviews} className="pb-2" />
+          <ReviewList reviews={reviews} limit={5} />
+        </div>
+        <div className="border-t border-border px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+          <ReviewComposer vendor={vendor} compact />
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -401,11 +488,11 @@ function CommentsSheet({ post, vendor, onClose }: { post: Post; vendor: Vendor; 
 
   return (
     <>
-      <button type="button" aria-label={t("feed.close")} onClick={onClose} className="absolute inset-0 animate-in bg-black/40 fade-in-0" />
+      <button type="button" aria-label={t("feed.close")} onClick={onClose} className="absolute inset-0 z-20 animate-in bg-black/40 fade-in-0" />
       <div
         role="dialog"
         aria-label={t("feed.comments")}
-        className="absolute inset-x-0 bottom-0 flex max-h-[72%] min-h-[45%] animate-in flex-col rounded-t-2xl bg-card text-foreground duration-200 slide-in-from-bottom"
+        className="absolute inset-x-0 bottom-0 z-20 flex max-h-[72%] min-h-[45%] animate-in flex-col rounded-t-2xl bg-card text-foreground duration-200 slide-in-from-bottom"
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h3 className="flex items-baseline gap-2 text-sm font-medium">
@@ -416,6 +503,7 @@ function CommentsSheet({ post, vendor, onClose }: { post: Post; vendor: Vendor; 
             type="button"
             onClick={onClose}
             aria-label={t("feed.close")}
+            autoFocus
             className="-mr-1.5 flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <X className="size-4" />
