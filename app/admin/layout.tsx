@@ -1,6 +1,6 @@
 "use client";
 
-import { Gavel, Images, LayoutDashboard, Receipt, Settings, Star, Store, Users, Wallet } from "lucide-react";
+import { BadgeCheck, Flag, Gavel, Images, LayoutDashboard, Receipt, Settings, Star, Store, Users, Wallet } from "lucide-react";
 import { CabinetShell, RoleGate, type CabinetGroup } from "@/components/layout/cabinet-shell";
 import { LogoMark } from "@/components/brand/logo";
 import { useDB } from "@/lib/data/store";
@@ -11,7 +11,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { t } = useI18n();
   const actor = useActor();
   const disputes = useDB((db) => db.bookings.filter((b) => b.escrow?.state === "disputed").length);
-  const unverified = useDB((db) => db.vendors.filter((v) => !v.verified && !v.hidden).length);
+  const waiting = useDB((db) => db.vendors.filter((v) => v.verification?.state === "pending").length);
+  const complaints = useDB((db) => new Set(db.complaints.filter((c) => c.status === "open").map((c) => c.targetId)).size);
   const groups: CabinetGroup[] = [
     { items: [{ href: "/admin", label: "cabinet.overview", icon: LayoutDashboard, exact: true }] },
     {
@@ -25,7 +26,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     {
       title: "acab.groupModeration",
       items: [
-        { href: "/admin/vendors", label: "acab.vendors", icon: Store, badge: unverified },
+        { href: "/admin/verification", label: "mod.verification", icon: BadgeCheck, badge: waiting },
+        { href: "/admin/complaints", label: "mod.complaints", icon: Flag, badge: complaints },
+        { href: "/admin/vendors", label: "acab.vendors", icon: Store },
         { href: "/admin/users", label: "acab.users", icon: Users },
         { href: "/admin/posts", label: "profile.tabPosts", icon: Images },
         { href: "/admin/reviews", label: "profile.tabReviews", icon: Star },

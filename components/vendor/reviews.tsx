@@ -1,9 +1,12 @@
 "use client";
 
-import { BadgeCheck, Star } from "lucide-react";
+import { BadgeCheck, Flag, Star } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { leaveReview } from "@/lib/data/actions";
+import { ReportForm } from "@/components/feed/report-form";
+import { textareaClass } from "@/components/panel";
+import { Button } from "@/components/ui/button";
+import { leaveReview, replyToReview } from "@/lib/data/actions";
 import { hadDealWith, ordersDone, reviewableBooking } from "@/lib/data/feed";
 import { useDB } from "@/lib/data/store";
 import type { Review, Vendor } from "@/lib/data/types";
@@ -56,9 +59,17 @@ export function Stars({ value, className, size = "size-3.5" }: { value: number; 
   );
 }
 
-export function ReviewList({ reviews, limit }: { reviews: Review[]; limit?: number }) {
+/**
+ * Reviews of one vendor. The vendor's owner answers right here (the profile is the one place for
+ * reviews); a signed-in client can report a review.
+ */
+export function ReviewList({ reviews, limit, vendor }: { reviews: Review[]; limit?: number; vendor?: Vendor }) {
   const { t, l, date } = useI18n();
+  const actor = useActor();
   const [all, setAll] = useState(false);
+  const [open, setOpen] = useState<{ id: string; mode: "reply" | "report" } | null>(null);
+  const [draft, setDraft] = useState("");
+  const owner = !!vendor && actor.role === "vendor" && vendor.ownerId === actor.id;
   const shown = limit && !all ? reviews.slice(0, limit) : reviews;
   if (!reviews.length) return <p className="py-8 text-center text-sm text-muted-foreground">{t("reviews.empty")}</p>;
   return (
@@ -75,13 +86,69 @@ export function ReviewList({ reviews, limit }: { reviews: Review[]; limit?: numb
                 </span>
               )}
               <span className="ml-auto text-xs text-muted-foreground tabular-nums">{date(r.date, "d MMM yyyy")}</span>
+              {vendor && actor.role === "client" && r.authorId !== actor.id && (
+                <button
+                  type="button"
+                  onClick={() => setOpen(open?.id === r.id ? null : { id: r.id, mode: "report" })}
+                  aria-label={t("mod.report")}
+                  title={t("mod.report")}
+                  className="-mr-1 flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground"
+                >
+                  <Flag className="size-3.5" strokeWidth={1.75} />
+                </button>
+              )}
             </div>
             <Stars value={r.rating} />
             <p className="text-sm leading-relaxed text-text-secondary">{l(r.text)}</p>
-            {r.reply && (
-              <div className="mt-1 border-l-2 border-gold/50 pl-3 text-sm">
+            {r.reply && !(open?.id === r.id && open.mode === "reply") && (
+              <div className="mt-1 rounded-2xl bg-foreground/[0.035] px-3.5 py-2.5 text-sm">
                 <div className="text-xs text-muted-foreground">{t("profile.vendorReply")}</div>
                 <p className="mt-0.5 leading-relaxed text-text-secondary">{r.reply.text}</p>
+              </div>
+            )}
+            {owner && !open && (
+              <button
+                type="button"
+                className="w-fit text-xs text-primary hover:underline"
+                onClick={() => {
+                  setDraft(r.reply?.text ?? "");
+                  setOpen({ id: r.id, mode: "reply" });
+                }}
+              >
+                {r.reply ? t("common.edit") : t("vcab.reply")}
+              </button>
+            )}
+            {open?.id === r.id && open.mode === "reply" && (
+              <form
+                className="mt-1 flex flex-col gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  replyToReview(actor, r.id, draft);
+                  setOpen(null);
+                  toast.success(t("common.saved"));
+                }}
+              >
+                <textarea
+                  autoFocus
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  rows={2}
+                  placeholder={t("vcab.replyPlaceholder")}
+                  className={textareaClass}
+                />
+                <div className="flex gap-2">
+                  <Button type="submit" className="h-9 px-4" disabled={!draft.trim()}>
+                    {t("vcab.reply")}
+                  </Button>
+                  <Button type="button" variant="ghost" className="h-9 px-4" onClick={() => setOpen(null)}>
+                    {t("common.cancel")}
+                  </Button>
+                </div>
+              </form>
+            )}
+            {open?.id === r.id && open.mode === "report" && (
+              <div className="mt-2 rounded-2xl bg-foreground/[0.035] p-3">
+                <ReportForm target="review" targetId={r.id} onDone={() => setOpen(null)} />
               </div>
             )}
           </li>

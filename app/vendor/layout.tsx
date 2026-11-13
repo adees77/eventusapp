@@ -1,10 +1,10 @@
 "use client";
 
-import { CalendarDays, ExternalLink, LayoutDashboard, MessageCircle, Receipt, Settings, Star, Wallet } from "lucide-react";
+import { ExternalLink, LayoutDashboard, Receipt, Settings, Wallet } from "lucide-react";
 import Link from "next/link";
 import { CabinetShell, RoleGate, type CabinetGroup } from "@/components/layout/cabinet-shell";
 import { Monogram, VerifiedSeal } from "@/components/vendor/badges";
-import { unreadCount, vendorOfOwner } from "@/lib/data/queries";
+import { vendorOfOwner } from "@/lib/data/queries";
 import { useDB } from "@/lib/data/store";
 import { useI18n } from "@/lib/i18n";
 import { escrowOf } from "@/lib/payments/escrow";
@@ -14,26 +14,19 @@ export default function VendorCabinetLayout({ children }: { children: React.Reac
   const { t } = useI18n();
   const actor = useActor();
   const vendor = useDB((db) => vendorOfOwner(db, actor.id));
-  const unread = useDB((db) => unreadCount(db, actor));
   const toConfirm = useDB(
     (db) => db.bookings.filter((b) => b.vendorId === vendor?.id && escrowOf(b).state === "held" && !b.escrow?.vendorConfirmedAt).length,
   );
-  const unanswered = useDB((db) => db.reviews.filter((r) => r.vendorId === vendor?.id && r.bookingId && !r.reply).length);
 
   const groups: CabinetGroup[] = [
     {
       items: [
         { href: "/vendor", label: "cabinet.overview", icon: LayoutDashboard, exact: true },
         { href: "/vendor/bookings", label: "cabinet.bookings", icon: Receipt, badge: toConfirm },
-        { href: "/messages", label: "nav.messages", icon: MessageCircle, badge: unread },
-        { href: "/vendor/calendar", label: "vp.calendar", icon: CalendarDays },
       ],
     },
-    // posts, services and details live in the «+» menu and on the profile; the cabinet is the business side
-    {
-      title: "vcab.groupClients",
-      items: [{ href: "/vendor/reviews", label: "profile.tabReviews", icon: Star, badge: unanswered }],
-    },
+    // posts, services and details live in the «+» menu; reviews live on the profile; chats in the bottom bar;
+    // the calendar is on the overview. The cabinet is the business side.
     {
       title: "vcab.groupBusiness",
       items: [

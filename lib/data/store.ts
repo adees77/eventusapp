@@ -182,6 +182,19 @@ export function migrate(input: DB): DB {
   if (!db.comments) {
     db = { ...db, comments: seed().comments.filter((c) => db.posts.some((p) => p.id === c.postId)) };
   }
+  if (!db.documents || !db.complaints) {
+    // verification papers and complaints arrived later: take the demo ones for the vendors that still exist
+    const s = seed();
+    const has = (id: string) => db.vendors.some((v) => v.id === id);
+    const queued = new Map(s.vendors.filter((v) => v.verification).map((v) => [v.id, v.verification]));
+    db = {
+      ...db,
+      documents: db.documents ?? s.documents.filter((d) => has(d.vendorId)),
+      complaints: db.complaints ?? s.complaints.filter((c) => has(c.vendorId)),
+      vendors: db.vendors.map((v) => (v.verified || v.verification || !queued.has(v.id) ? v : { ...v, verification: queued.get(v.id) })),
+    };
+  }
+  if (!db.settings.requiredDocs) db = { ...db, settings: { ...seed().settings, ...db.settings } };
   return db;
 }
 

@@ -7,6 +7,7 @@ import { BarChart, LineChart } from "@/components/charts/charts";
 import { Kpi } from "@/components/layout/cabinet-shell";
 import { PageHeader, Section } from "@/components/panel";
 import { useMyVendor } from "@/components/vendor-panel/use-my-vendor";
+import { VendorCalendar } from "@/components/vendor-panel/sections";
 import { VendorBookingList } from "@/components/vendor-panel/vendor-booking-list";
 import { likeCount, ordersDone } from "@/lib/data/feed";
 import { specsProgress } from "@/lib/data/specs";
@@ -70,7 +71,7 @@ export default function VendorOverview() {
       id: r.id,
       icon: MessageSquareReply,
       text: t("vcab.todoReview", { author: r.author }),
-      href: "/vendor/reviews",
+      href: `/vendors/${vendor.slug}?tab=reviews`,
     })),
   ];
 
@@ -87,7 +88,7 @@ export default function VendorOverview() {
     {
       done: db.blocks.some((b) => db.offers.find((o) => o.id === b.offerId)?.vendorId === vendor.id),
       text: t("vcab.setupCalendar"),
-      href: "/vendor/calendar",
+      href: "/vendor#calendar",
     },
     { done: vendor.verified, text: t("vcab.setupVerify"), href: "/vendor/profile" },
   ];
@@ -131,6 +132,11 @@ export default function VendorOverview() {
           note={t("vcab.socialNote", { f: num(ordersDone(db, vendor)), l: num(likes) })}
           tone="gold"
         />
+      </div>
+
+      {/* availability is the vendor's daily tool: it lives on the overview, not a separate page */}
+      <div id="calendar" className="scroll-mt-24">
+        <VendorCalendar key={vendor.id} vendor={vendor} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">

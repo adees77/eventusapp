@@ -15,8 +15,9 @@ export default function AdminReviews() {
   const actor = useActor();
   const db = useDB((d) => d);
   const [f, setF] = useState<"low" | "all" | "hidden">("low");
+  const low = db.settings.lowRatingThreshold ?? 3;
   const list = db.reviews
-    .filter((r) => (f === "low" ? r.rating <= 3 : f === "hidden" ? r.hidden : true))
+    .filter((r) => (f === "low" ? r.rating <= low : f === "hidden" ? r.hidden : true))
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 80);
   return (
@@ -26,7 +27,7 @@ export default function AdminReviews() {
         value={f}
         onChange={setF}
         options={[
-          { value: "low", label: `${t("acab.lowRated")} · ${db.reviews.filter((r) => r.rating <= 3).length}` },
+          { value: "low", label: `${t("acab.lowRated")} · ${db.reviews.filter((r) => r.rating <= low).length}` },
           { value: "all", label: t("common.all") },
           { value: "hidden", label: `${t("admin.hidden")} · ${db.reviews.filter((r) => r.hidden).length}` },
         ]}

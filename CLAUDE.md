@@ -19,8 +19,8 @@ app/                 маршруты (все страницы — client compon
   assistant/         чат с ИИ (вендоров редиректит в /vendor; `?q=` предзаполняет запрос)
   vendors/           лента-соцсеть + [slug] профиль      book/[offerId], checkout/[bookingId]
   messages/[id]      чат клиент↔вендор  dashboard/*     кабинет клиента (events, bookings, payments, saved, profile)
-  vendor/*           кабинет вендора (services, calendar, bookings, posts, details, finance, reviews, profile)
-  admin/*            админка            onboarding/     онбординг клиента (чат); onboarding/vendor — форма вендора
+  vendor/*           кабинет исполнителя (обзор с календарём, bookings, finance, profile с документами; services/posts/details — через «+»; отзывы только в профиле /vendors/[slug])
+  admin/*            админка (verification — документы и заявки, complaints — жалобы, settings)   onboarding/     онбординг клиента (чат); onboarding/vendor — форма вендора
   invitations/, i/[id]  редактор приглашений / публичная страница   create/post, create/service
   api/chat           SSE-стрим одного хода ассистента   api/onboarding — разбор свободного текста
 components/          ui/ (shadcn, не трогать без нужды), layout/ (app-shell, header, bottom-nav, cabinet-shell, nav-items),
@@ -28,14 +28,14 @@ components/          ui/ (shadcn, не трогать без нужды), layout
 config/brand.ts      имя, цвета → CSS-переменные (инжект в app/layout.tsx)
 config/demo.ts       флаги демо; `seedVersion` — поднять при изменении формы сида
 lib/data/
-  types.ts           все сущности + `DB` (стр. ~439)
+  types.ts           все сущности + `DB` (в конце файла); VendorDocument, Complaint, Vendor.verification
   store.ts           zustand+localStorage, `useDB(selector)`, `getDB()`, `migrate()`; синхронизация вкладок по `storage`
   actions.ts         ВСЕ мутации; каждая `assert(can.x(actor,…))`
   policies.ts        права (`Actor`, `can`) = RLS в supabase/schema.sql
   queries.ts         чтение (searchVendors, vendorBySlug…)  feed.ts — ранжирование ленты
   availability.ts    свободно = всего − блок − брони; неоплаченная держит 15 мин; фоновая занятость
   specs.ts           схема характеристик по категориям (цена+период: x, xQty, xPer)
-  seed/              buildSeed(): vendors, catalog, posts, photos (Unsplash), specs
+  seed/              buildSeed(): vendors, catalog, posts, photos (Unsplash), specs, moderation (документы, жалобы, DEFAULT_SETTINGS)
 lib/ai/              protocol, tool-defs (zod), tool-exec (в браузере по стору), claude-agent, deepseek-agent,
                      mock-agent (без ключей), system-prompt, use-chat, chat-store, onboarding-extract
 lib/auth/            демо-OTP и store; lib/session.ts — роль per-tab (sessionStorage); lib/planner.ts — дата/город/гости
@@ -60,6 +60,7 @@ supabase/schema.sql  будущая схема + RLS (сейчас не испо
 - Без AI-slop: никаких эмодзи, блёсток, фиолетовых градиентов. Вместо фото-заглушек — макеты нашего UI (чат, бронь, сделка). Фирменная деталь — точки «свободно N из M». Контейнер `container-app` 1280.
 
 ## Известные грабли
+- В UI «исполнитель», не «поставщик». Входа «как владелец» нет (убран: доступ к чужому аккаунту без согласия).
 - Вкладки на localhost:3000 делят localStorage; вкладка со старым кодом может затереть запись — перезагрузи её.
 - `AGENTS.md` перезаписывает `next dev` — не редактировать, коммитить как есть.
 

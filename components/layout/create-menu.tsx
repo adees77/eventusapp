@@ -11,7 +11,7 @@ const ACTIONS: { href: string; icon: LucideIcon; title: MessageKey; hint: Messag
   { href: "/create/post", icon: Images, title: "create.post", hint: "create.postHint" },
   { href: "/create/service", icon: Tag, title: "create.service", hint: "create.serviceHint" },
   { href: "/vendor/details", icon: ListChecks, title: "create.details", hint: "create.detailsHint" },
-  { href: "/vendor/calendar", icon: CalendarX2, title: "create.calendar", hint: "create.calendarHint" },
+  { href: "/vendor#calendar", icon: CalendarX2, title: "create.calendar", hint: "create.calendarHint" },
 ];
 
 /**

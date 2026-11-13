@@ -75,6 +75,42 @@ export interface Vendor {
   specs?: VendorSpecs;
   /** orders done before joining EVENTUS; completed bookings on the platform are added on top */
   ordersBase?: number;
+  /** a verification request: set when the vendor sends documents, cleared when admin approves */
+  verification?: { state: "pending" | "rejected"; requestedAt: string; note?: string; reviewedAt?: string };
+}
+
+export type DocKind = "passport" | "registration" | "license" | "contract";
+
+/** A document the vendor uploads for verification (demo keeps the file name only) */
+export interface VendorDocument {
+  id: string;
+  vendorId: string;
+  kind: DocKind;
+  fileName: string;
+  status: "pending" | "approved" | "rejected";
+  note?: string;
+  uploadedAt: string;
+  reviewedAt?: string;
+}
+
+export type ComplaintTarget = "vendor" | "post" | "review";
+export type ComplaintReason = "fraud" | "fake" | "offensive" | "spam" | "quality" | "other";
+
+/** A user's report about a vendor, a post or a review; admin resolves it */
+export interface Complaint {
+  id: string;
+  authorId: string;
+  target: ComplaintTarget;
+  targetId: string;
+  /** the vendor the content belongs to, for grouping */
+  vendorId: string;
+  reason: ComplaintReason;
+  text?: string;
+  status: "open" | "resolved" | "dismissed";
+  /** what admin did: hid the content or left it */
+  resolution?: "hidden" | "kept";
+  createdAt: string;
+  resolvedAt?: string;
 }
 
 /** One row of a repeatable spec list: a car, a hall room, a furniture item… */
@@ -286,6 +322,18 @@ export interface PlatformSettings {
   defaultPrepayPercent: number;
   /** auto-release window after the event date, days */
   autoReleaseDays: number;
+  /** documents a vendor must have approved to get the «verified» badge */
+  requiredDocs: DocKind[];
+  /** open complaints after which a post or vendor is hidden until review; 0 = off */
+  autoHideComplaints: number;
+  /** reviews at or below this rating land in the admin «low rated» queue */
+  lowRatingThreshold: number;
+  /** admins get a notification on every new complaint */
+  notifyOnComplaint: boolean;
+  /** new vendors stay hidden from the catalog until verified */
+  hideUnverified: boolean;
+  supportPhone: string;
+  supportEmail: string;
 }
 
 export interface Favorite {
@@ -460,5 +508,7 @@ export interface DB {
   follows: Follow[];
   transactions: Transaction[];
   notifications: AppNotification[];
+  documents: VendorDocument[];
+  complaints: Complaint[];
   settings: PlatformSettings;
 }

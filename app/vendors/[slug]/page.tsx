@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, BarChart3, Clock, Heart, Layers, MessageCircle, Pencil, Plus, ShieldCheck, Users } from "lucide-react";
+import { ArrowLeft, BarChart3, Clock, Heart, Layers, MessageCircle, Pencil, Plus, ShieldCheck, Users, Flag } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -14,6 +14,8 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { AvailabilityCalendar } from "@/components/vendor/availability-calendar";
 import { Monogram, VerifiedSeal } from "@/components/vendor/badges";
 import { PostDialog } from "@/components/feed/post-dialog";
+import { ReportForm } from "@/components/feed/report-form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ensureConversation, toggleFavorite, trackView } from "@/lib/data/actions";
 import { ordersDone } from "@/lib/data/feed";
 import { specFacts, specsProgress } from "@/lib/data/specs";
@@ -71,6 +73,7 @@ function VendorProfile() {
   const setTab = (k: (typeof TABS)[number]) =>
     router.replace(`/vendors/${slug}${k === "posts" ? "" : `?tab=${k}`}`, { scroll: false });
   const [openPost, setOpenPost] = useState<string | null>(null);
+  const [reporting, setReporting] = useState(false);
   const posts = useDB((d) =>
     d.posts.filter((p) => p.vendorId === vendor?.id && !p.hidden).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
   );
@@ -112,6 +115,46 @@ function VendorProfile() {
     router.push(`/messages/${id}`);
   }
 
+  const actions = () =>
+    isOwner ? (
+      <>
+        <LinkButton href="/vendor/profile" variant="outline" className="h-10 px-4">
+          <Pencil strokeWidth={1.75} />
+          {t("owner.editProfile")}
+        </LinkButton>
+        <LinkButton href="/vendor" variant="outline" className="h-10 px-4">
+          <BarChart3 strokeWidth={1.75} />
+          {t("owner.stats")}
+        </LinkButton>
+      </>
+    ) : (
+      <>
+        <Button variant="sun" className="h-10 px-5" onClick={() => setTab("services")}>
+          {t("vendor.book")}
+        </Button>
+        <Button variant="outline" className="h-10 px-4" onClick={write}>
+          <MessageCircle strokeWidth={1.75} />
+          {t("vendor.write")}
+        </Button>
+        {isClient && (
+          <Button
+            variant="outline"
+            className="size-10 px-0"
+            onClick={() => toggleFavorite(actor, vendor.id)}
+            aria-pressed={fav}
+            aria-label={fav ? t("vendor.favorited") : t("vendor.favorite")}
+          >
+            <Heart className={cn(fav && "fill-primary text-primary")} strokeWidth={1.75} />
+          </Button>
+        )}
+        {isClient && (
+          <Button variant="outline" className="size-10 px-0" onClick={() => setReporting(true)} aria-label={t("mod.report")} title={t("mod.report")}>
+            <Flag strokeWidth={1.75} />
+          </Button>
+        )}
+      </>
+    );
+
   return (
     <div className="pb-28 lg:pb-16">
       <div className="container-app pt-4 md:pt-8">
@@ -127,84 +170,69 @@ function VendorProfile() {
         )}
         {isOwner && <p className="-mt-2 mb-4 text-xs text-muted-foreground">{t("owner.banner")}</p>}
 
-        {/* Profile header, social style */}
-        <header className="flex flex-col gap-6 md:flex-row md:items-center md:gap-10">
-          <div className="flex items-center gap-5 md:block">
-            <div className="relative size-20 shrink-0 overflow-hidden rounded-full bg-muted md:size-36">
-              {vendor.cover ? (
-                <Image src={vendor.cover} alt="" fill loading="eager" sizes="144px" className="object-cover" />
-              ) : (
-                <Monogram name={vendor.name} className="size-full rounded-full text-3xl" />
-              )}
-            </div>
-            <div className="min-w-0 md:hidden">
-              <div className="flex items-center gap-1.5">
-                <h1 className="truncate font-heading tracking-[-0.025em] text-3xl leading-tight font-normal">{vendor.name}</h1>
-                {vendor.verified && <VerifiedSeal />}
-              </div>
-              <p className="text-sm text-text-secondary">
-                {l(category?.name)} · {l(CITIES[vendor.city])}
-              </p>
-            </div>
+        {/* Profile header: cover, avatar on its edge, name on its own line, then about + numbers side by side */}
+        <header>
+          <div className="relative h-36 overflow-hidden rounded-[28px] surface-ink md:h-56">
+            {(vendor.portfolio[1] ?? vendor.cover) && (
+              <Image
+                src={vendor.portfolio[1] ?? vendor.cover}
+                alt=""
+                fill
+                loading="eager"
+                sizes="(min-width: 1280px) 1232px, 100vw"
+                className="object-cover"
+              />
+            )}
+            <span className="absolute inset-0 bg-gradient-to-t from-ink/55 via-ink/10 to-transparent" aria-hidden />
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="hidden items-center gap-2 md:flex">
-              <h1 className="font-heading tracking-[-0.025em] text-4xl leading-tight font-normal">{vendor.name}</h1>
-              {vendor.verified && <VerifiedSeal withLabel />}
+
+          <div className="px-1 md:px-6">
+            <div className="-mt-11 flex items-end justify-between gap-3 md:-mt-16">
+              <div className="relative size-22 shrink-0 overflow-hidden rounded-full bg-muted ring-4 ring-background md:size-32">
+                {vendor.cover ? (
+                  <Image src={vendor.cover} alt="" fill loading="eager" sizes="128px" className="object-cover" />
+                ) : (
+                  <Monogram name={vendor.name} className="size-full rounded-full text-3xl" />
+                )}
+              </div>
+              <div className="hidden flex-wrap justify-end gap-2 md:flex">{actions()}</div>
             </div>
-            <dl className="flex gap-8 md:mt-3">
-              <Count value={num(posts.length)} label={tn("profile.postsN", posts.length)} />
-              <Count value={num(orders)} label={tn("profile.ordersN", orders)} />
-              <Count value={vendor.rating ? vendor.rating.toFixed(1) : "—"} label={t("profile.rating")} />
-            </dl>
-            <p className="mt-3 hidden text-sm text-text-secondary md:block">
+
+            <div className="mt-3 flex items-center gap-2">
+              <h1 className="display min-w-0 text-[28px] md:text-[40px]">{vendor.name}</h1>
+              {vendor.verified && <VerifiedSeal withLabel className="shrink-0" />}
+            </div>
+            <p className="mt-1 text-sm text-text-secondary">
               {l(category?.name)} · {l(CITIES[vendor.city])} · {t("profile.responds", { n: vendor.responseMinutes })}
             </p>
-            <p className="mt-3 max-w-prose text-md leading-relaxed">{l(vendor.tagline)}</p>
-            {specFacts(vendor.category, vendor.specs).length > 0 && (
-              <button type="button" onClick={() => setTab("details")} className="mt-1 text-left text-sm text-primary hover:underline">
-                {specFacts(vendor.category, vendor.specs)
-                  .map((f) => l(f))
-                  .join(" · ")}
-              </button>
-            )}
-            {l(vendor.description) && (
-              <p className="mt-1 line-clamp-3 max-w-prose text-sm leading-relaxed text-text-secondary">{l(vendor.description)}</p>
-            )}
-            <div className="mt-5 flex flex-wrap gap-2">
-              {isOwner ? (
-                <>
-                  <LinkButton href="/vendor/profile" variant="outline" className="h-10 px-4">
-                    <Pencil strokeWidth={1.75} />
-                    {t("owner.editProfile")}
-                  </LinkButton>
-                  <LinkButton href="/vendor" variant="outline" className="h-10 px-4">
-                    <BarChart3 strokeWidth={1.75} />
-                    {t("owner.stats")}
-                  </LinkButton>
-                </>
-              ) : (
-                <>
-                  <Button className="h-10 px-5" onClick={() => setTab("services")}>
-                    {t("vendor.book")}
-                  </Button>
-                  <Button variant="outline" className="h-10 px-4" onClick={write}>
-                    <MessageCircle strokeWidth={1.75} />
-                    {t("vendor.write")}
-                  </Button>
-                </>
-              )}
-              {isClient && (
-                <Button
-                  variant="ghost"
-                  className="size-10 px-0"
-                  onClick={() => toggleFavorite(actor, vendor.id)}
-                  aria-pressed={fav}
-                  aria-label={fav ? t("vendor.favorited") : t("vendor.favorite")}
-                >
-                  <Heart className={cn(fav && "fill-primary text-primary")} strokeWidth={1.75} />
-                </Button>
-              )}
+            <div className="mt-4 flex flex-wrap gap-2 md:hidden">{actions()}</div>
+
+            <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8">
+              <div className="min-w-0">
+                <p className="max-w-prose text-md leading-relaxed md:text-lg">{l(vendor.tagline)}</p>
+                {l(vendor.description) && (
+                  <p className="mt-2 line-clamp-3 max-w-prose text-sm leading-relaxed text-text-secondary">{l(vendor.description)}</p>
+                )}
+                {specFacts(vendor.category, vendor.specs).length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-1.5">
+                    {specFacts(vendor.category, vendor.specs).map((f) => (
+                      <button
+                        key={l(f)}
+                        type="button"
+                        onClick={() => setTab("details")}
+                        className="h-8 rounded-full bg-secondary px-3.5 text-sm text-primary transition-colors hover:bg-secondary/70"
+                      >
+                        {l(f)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <dl className="grid grid-cols-3 gap-2 self-start">
+                <Count value={num(posts.length)} label={tn("profile.postsN", posts.length)} />
+                <Count value={num(orders)} label={tn("profile.ordersN", orders)} />
+                <Count value={vendor.rating ? vendor.rating.toFixed(1) : "—"} label={t("profile.rating")} />
+              </dl>
             </div>
           </div>
         </header>
@@ -235,12 +263,12 @@ function VendorProfile() {
       {tab === "posts" && (
         <div className="container-app">
           {posts.length || isOwner ? (
-            <ul className="grid grid-cols-3 gap-1 md:gap-3">
+            <ul className="-mx-4 grid grid-cols-3 gap-0.5 sm:mx-0">
               {isOwner && (
                 <li>
                   <Link
                     href="/create/post"
-                    className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border text-sm text-text-secondary transition-colors hover:border-primary hover:text-primary md:rounded-xl"
+                    className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-2 bg-cream text-sm text-text-secondary transition-colors hover:bg-secondary hover:text-primary"
                   >
                     <Plus className="size-6" strokeWidth={1.5} />
                     {t("vcab.newPost")}
@@ -252,15 +280,16 @@ function VendorProfile() {
                   <button
                     type="button"
                     onClick={() => setOpenPost(p.id)}
-                    className="group relative block aspect-[4/5] w-full overflow-hidden rounded-md bg-muted md:rounded-xl"
+                    className="group relative block aspect-[4/5] w-full overflow-hidden bg-muted"
                   >
                     <Image
                       src={p.photos[0]}
                       alt=""
                       fill
                       sizes="(min-width: 1280px) 400px, 33vw"
-                      className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                      className="object-cover"
                     />
+                    <span className="pointer-events-none absolute inset-0 bg-black/25 opacity-0 transition-opacity group-hover:opacity-100" />
                     {p.photos.length > 1 && <Layers className="absolute top-2 right-2 size-4 text-white drop-shadow" strokeWidth={1.75} />}
                   </button>
                 </li>
@@ -299,7 +328,7 @@ function VendorProfile() {
               <ReviewComposer vendor={vendor} />
             </div>
           </aside>
-          <ReviewList reviews={reviews} />
+          <ReviewList reviews={reviews} vendor={vendor} />
         </div>
       )}
 
@@ -449,6 +478,15 @@ function VendorProfile() {
 
       <PostDialog postId={openPost} order={posts.map((p) => p.id)} onOpenChange={(o) => !o && setOpenPost(null)} />
 
+      <Dialog open={reporting} onOpenChange={setReporting}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("mod.reportTitle")}</DialogTitle>
+          </DialogHeader>
+          {reporting && <ReportForm target="vendor" targetId={vendor.id} onDone={() => setReporting(false)} />}
+        </DialogContent>
+      </Dialog>
+
       {/* Mobile booking bar */}
       <div
         className={cn(
@@ -473,10 +511,10 @@ function VendorProfile() {
 
 function Count({ value, label }: { value: string; label: string }) {
   return (
-    <div className="flex flex-col md:flex-row md:items-baseline md:gap-1.5">
+    <div className="flex flex-col gap-0.5 rounded-2xl bg-cream px-4 py-3">
       <dt className="sr-only">{label}</dt>
-      <dd className="text-md font-medium tabular-nums">{value}</dd>
-      <span className="text-xs text-text-secondary md:text-sm" aria-hidden>
+      <dd className="font-heading text-2xl tracking-[-0.03em] tabular-nums">{value}</dd>
+      <span className="truncate text-xs text-text-secondary" aria-hidden>
         {label}
       </span>
     </div>

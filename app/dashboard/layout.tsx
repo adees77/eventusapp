@@ -1,9 +1,8 @@
 "use client";
 
-import { Bookmark, CalendarHeart, CreditCard, LayoutDashboard, Mail, MessageCircle, Receipt, UserRound } from "lucide-react";
+import { Bookmark, CalendarHeart, CreditCard, LayoutDashboard, Receipt, UserRound } from "lucide-react";
 import { CabinetShell, RoleGate, type CabinetGroup } from "@/components/layout/cabinet-shell";
 import { Monogram } from "@/components/vendor/badges";
-import { unreadCount } from "@/lib/data/queries";
 import { useDB } from "@/lib/data/store";
 import { useI18n } from "@/lib/i18n";
 import { escrowOf } from "@/lib/payments/escrow";
@@ -13,7 +12,6 @@ export default function ClientCabinetLayout({ children }: { children: React.Reac
   const { t } = useI18n();
   const actor = useActor();
   const name = useDB((db) => db.users.find((u) => u.id === actor.id)?.name ?? "");
-  const unread = useDB((db) => unreadCount(db, actor));
   // deals waiting for this client's confirmation or payment
   const todo = useDB(
     (db) =>
@@ -35,8 +33,6 @@ export default function ClientCabinetLayout({ children }: { children: React.Reac
       title: "cabinet.groupMore",
       items: [
         { href: "/dashboard/saved", label: "cabinet.saved", icon: Bookmark },
-        { href: "/messages", label: "nav.messages", icon: MessageCircle, badge: unread },
-        { href: "/invitations", label: "nav.invitations", icon: Mail },
         { href: "/dashboard/profile", label: "cabinet.profile", icon: UserRound },
       ],
     },

@@ -16,6 +16,11 @@ import type {
   Booking,
   CategoryId,
   ChecklistItem,
+  Complaint,
+  ComplaintReason,
+  ComplaintTarget,
+  DB,
+  DocKind,
   EventItem,
   Invitation,
   InvitationGuest,
@@ -29,6 +34,7 @@ import type {
   PostComment,
   Transaction,
   Vendor,
+  VendorDocument,
   VendorSpecs,
 } from "./types";
 import { sanitizeSpecs } from "./specs";
@@ -351,9 +357,10 @@ export function updateVendor(actor: Actor, vendorId: string, patch: Partial<Vend
   const v = db.vendors.find((x) => x.id === vendorId)!;
   assert(can.editVendor(actor, v), "editVendor");
   // Only admin may change moderation fields
-  const { hidden, verified, ownerId, id, ...rest } = patch;
+  const { hidden, verified, ownerId, id, verification, ...rest } = patch;
   void ownerId;
   void id;
+  void verification;
   const safe: Partial<Vendor> = { ...rest };
   if (actor.role === "admin") {
     if (hidden !== undefined) safe.hidden = hidden;
@@ -722,7 +729,7 @@ export function leaveReview(actor: Actor, bookingId: string, rating: number, tex
     };
   });
   const v = db.vendors.find((x) => x.id === b.vendorId);
-  if (v) notify(v.ownerId, "review", { ru: `Новый отзыв: ${r} из 5`, en: `New review: ${r} of 5` }, "/vendor/reviews");
+  if (v) notify(v.ownerId, "review", { ru: `Новый отзыв: ${r} из 5`, en: `New review: ${r} of 5` }, `/vendors/${v.slug}?tab=reviews`);
 }
 
 export function replyToReview(actor: Actor, reviewId: string, text: string) {
@@ -751,6 +758,13 @@ export function updateSettings(actor: Actor, patch: Partial<PlatformSettings>) {
       ...(patch.feePercent !== undefined && { feePercent: clamp(patch.feePercent, 30)! }),
       ...(patch.defaultPrepayPercent !== undefined && { defaultPrepayPercent: clamp(patch.defaultPrepayPercent, 100)! }),
       ...(patch.autoReleaseDays !== undefined && { autoReleaseDays: clamp(patch.autoReleaseDays, 60)! }),
+      ...(patch.autoHideComplaints !== undefined && { autoHideComplaints: clamp(patch.autoHideComplaints, 20)! }),
+      ...(patch.lowRatingThreshold !== undefined && { lowRatingThreshold: Math.min(4, Math.max(1, Math.round(patch.lowRatingThreshold))) }),
+      ...(patch.requiredDocs && { requiredDocs: patch.requiredDocs.filter((k, i, a) => DOC_KINDS.includes(k) && a.indexOf(k) === i) }),
+      ...(patch.notifyOnComplaint !== undefined && { notifyOnComplaint: !!patch.notifyOnComplaint }),
+      ...(patch.hideUnverified !== undefined && { hideUnverified: !!patch.hideUnverified }),
+      ...(patch.supportPhone !== undefined && { supportPhone: patch.supportPhone.trim().slice(0, 40) }),
+      ...(patch.supportEmail !== undefined && { supportEmail: patch.supportEmail.trim().slice(0, 80) }),
     },
   }));
 }
@@ -885,7 +899,8 @@ export function signUpVendor(
     rating: 0,
     reviewsCount: 0,
     verified: false,
-    hidden: false,
+    // the platform may keep new vendors out of the catalog until their papers are checked
+    hidden: !!db.settings?.hideUnverified,
     prepayPercent: db.settings?.defaultPrepayPercent ?? demoConfig.defaultPrepayPercent,
     cover: "",
     portfolio: [],
@@ -991,4 +1006,141 @@ export function registerOwnVendor(
   update((d) => ({ ...d, vendors: [...d.vendors, vendor], stats: [...d.stats, { vendorId: vendor.id, views: 0 }] }));
   finishOnboarding(actor.id, "vendor");
   return vendor;
+}
+
+// ── Verification (documents) ──────────────────────────────────
+
+export const DOC_KINDS: DocKind[] = ["passport", "registration", "license", "contract"];
+const admins = () => getDB().users.filter((u) => u.role === "admin").map((u) => u.id);
+
+/** The vendor attaches a document; re-uploading a kind replaces the previous file */
+export function uploadDocument(actor: Actor, vendorId: string, kind: DocKind, fileName: string) {
+  const v = getDB().vendors.find((x) => x.id === vendorId);
+  assert(can.manageDocuments(actor, v) && DOC_KINDS.includes(kind), "uploadDocument");
+  const name = fileName.trim().slice(0, 120) || `${kind}.pdf`;
+  const doc: VendorDocument = { id: uid("doc"), vendorId, kind, fileName: name, status: "pending", uploadedAt: now() };
+  update((d) => ({ ...d, documents: [...d.documents.filter((x) => !(x.vendorId === vendorId && x.kind === kind)), doc] }));
+}
+
+export function removeDocument(actor: Actor, docId: string) {
+  const db = getDB();
+  const doc = db.documents.find((x) => x.id === docId);
+  assert(!!doc && can.manageDocuments(actor, db.vendors.find((v) => v.id === doc.vendorId)) && doc.status !== "approved", "removeDocument");
+  update((d) => ({ ...d, documents: d.documents.filter((x) => x.id !== docId) }));
+}
+
+/** Kinds still missing (or rejected) before the vendor can ask for the badge */
+export function missingDocs(db: Pick<DB, "documents" | "settings">, vendorId: string): DocKind[] {
+  const ok = (k: DocKind) => db.documents.some((x) => x.vendorId === vendorId && x.kind === k && x.status !== "rejected");
+  return (db.settings.requiredDocs ?? []).filter((k) => !ok(k));
+}
+
+export function requestVerification(actor: Actor, vendorId: string) {
+  const db = getDB();
+  const v = db.vendors.find((x) => x.id === vendorId);
+  assert(!!v && actor.role === "vendor" && v.ownerId === actor.id && !v.verified && missingDocs(db, vendorId).length === 0, "requestVerification");
+  update((d) => ({ ...d, vendors: d.vendors.map((x) => (x.id === vendorId ? { ...x, verification: { state: "pending", requestedAt: now() } } : x)) }));
+  for (const a of admins()) notify(a, "system", { ru: `${v.name} отправил документы на проверку`, en: `${v.name} sent documents for review` }, "/admin/verification");
+}
+
+export function reviewDocument(actor: Actor, docId: string, status: "approved" | "rejected", note?: string) {
+  assert(can.reviewDocuments(actor), "reviewDocument");
+  const clean = note?.trim().slice(0, 300) || undefined;
+  update((d) => ({
+    ...d,
+    documents: d.documents.map((x) => (x.id === docId ? { ...x, status, note: status === "rejected" ? clean : undefined, reviewedAt: now() } : x)),
+  }));
+}
+
+/** Admin gives the badge (approving the papers still pending) or sends the request back with a reason */
+export function decideVerification(actor: Actor, vendorId: string, approve: boolean, note?: string) {
+  assert(can.reviewDocuments(actor), "decideVerification");
+  const db = getDB();
+  const v = db.vendors.find((x) => x.id === vendorId);
+  if (!v) return;
+  const clean = note?.trim().slice(0, 300) || undefined;
+  update((d) => ({
+    ...d,
+    vendors: d.vendors.map((x) =>
+      x.id !== vendorId
+        ? x
+        : approve
+          ? { ...x, verified: true, verification: undefined, hidden: d.settings.hideUnverified ? false : x.hidden }
+          : { ...x, verification: { state: "rejected", requestedAt: x.verification?.requestedAt ?? now(), reviewedAt: now(), note: clean } },
+    ),
+    documents: approve
+      ? d.documents.map((x) => (x.vendorId === vendorId && x.status === "pending" ? { ...x, status: "approved", reviewedAt: now() } : x))
+      : d.documents,
+  }));
+  notify(
+    v.ownerId,
+    "system",
+    approve
+      ? { ru: "Проверка пройдена — у профиля появилась отметка «Проверен»", en: "Verification passed: your profile is now marked «Verified»" }
+      : { ru: `Проверка не пройдена${clean ? `: ${clean}` : ""}`, en: `Verification declined${clean ? `: ${clean}` : ""}` },
+    "/vendor/profile",
+  );
+}
+
+// ── Complaints ────────────────────────────────────────────────
+
+/** Whose content a report is about — the vendor behind a post or a review */
+function complaintVendor(db: DB, target: ComplaintTarget, targetId: string): string | undefined {
+  if (target === "vendor") return db.vendors.find((v) => v.id === targetId)?.id;
+  if (target === "post") return db.posts.find((p) => p.id === targetId)?.vendorId;
+  return db.reviews.find((r) => r.id === targetId)?.vendorId;
+}
+
+function hideTarget(d: DB, target: ComplaintTarget, targetId: string, hidden: boolean): DB {
+  if (target === "vendor") return { ...d, vendors: d.vendors.map((v) => (v.id === targetId ? { ...v, hidden } : v)) };
+  if (target === "post") return { ...d, posts: d.posts.map((p) => (p.id === targetId ? { ...p, hidden } : p)) };
+  return { ...d, reviews: d.reviews.map((r) => (r.id === targetId ? { ...r, hidden } : r)) };
+}
+
+/** Returns false when this person already has an open report on the same thing */
+export function reportContent(actor: Actor, target: ComplaintTarget, targetId: string, reason: ComplaintReason, text?: string): boolean {
+  assert(can.report(actor), "report");
+  const db = getDB();
+  const vendorId = complaintVendor(db, target, targetId);
+  assert(!!vendorId && db.vendors.find((v) => v.id === vendorId)?.ownerId !== actor.id, "report");
+  if (db.complaints.some((c) => c.authorId === actor.id && c.targetId === targetId && c.status === "open")) return false;
+  const c: Complaint = {
+    id: uid("cmp"),
+    authorId: actor.id,
+    target,
+    targetId,
+    vendorId,
+    reason,
+    text: text?.trim().slice(0, 500) || undefined,
+    status: "open",
+    createdAt: now(),
+  };
+  const limit = db.settings.autoHideComplaints ?? 0;
+  update((d) => {
+    const next = { ...d, complaints: [c, ...d.complaints] };
+    const open = next.complaints.filter((x) => x.targetId === targetId && x.status === "open").length;
+    return limit > 0 && open >= limit ? hideTarget(next, target, targetId, true) : next;
+  });
+  if (db.settings.notifyOnComplaint !== false) {
+    for (const a of admins()) notify(a, "system", { ru: "Новая жалоба", en: "New complaint" }, "/admin/complaints");
+  }
+  return true;
+}
+
+/** Admin closes every open report on the same thing at once: hides it or keeps it */
+export function resolveComplaint(actor: Actor, complaintId: string, hide: boolean) {
+  assert(can.resolveComplaint(actor), "resolveComplaint");
+  const c = getDB().complaints.find((x) => x.id === complaintId);
+  if (!c) return;
+  update((d) => {
+    const closed = {
+      ...d,
+      complaints: d.complaints.map((x) =>
+        x.targetId === c.targetId && x.status === "open"
+          ? { ...x, status: hide ? ("resolved" as const) : ("dismissed" as const), resolution: hide ? ("hidden" as const) : ("kept" as const), resolvedAt: now() }
+          : x,
+      ),
+    };
+    return hideTarget(closed, c.target, c.targetId, hide);
+  });
 }

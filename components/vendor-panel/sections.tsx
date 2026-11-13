@@ -283,7 +283,7 @@ export function VendorCalendar({ vendor }: { vendor: Vendor }) {
           <AvailDots a={a} />
           <div>
             <div className="text-sm text-text-secondary">{t("vp.blockHint")}</div>
-            <div className="mt-2 flex h-11 w-fit items-center rounded-lg bg-card">
+            <div className="mt-2 flex h-11 w-fit items-center rounded-full bg-foreground/[0.045]">
               <button
                 type="button"
                 className="flex size-11 items-center justify-center text-text-secondary disabled:opacity-30"

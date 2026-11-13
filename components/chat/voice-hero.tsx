@@ -61,11 +61,11 @@ export function VoiceHero({
       <div className="relative mt-6 flex size-32 items-center justify-center md:mt-12 md:size-40">
         {listening && (
           <>
-            <span className="absolute inset-0 animate-[mic-ring_1.8s_ease-out_infinite] rounded-full bg-sun/30" aria-hidden />
-            <span className="absolute inset-0 animate-[mic-ring_1.8s_ease-out_0.6s_infinite] rounded-full bg-sun/20" aria-hidden />
+            <span className="absolute inset-0 animate-[mic-ring_1.8s_ease-out_infinite] rounded-full bg-primary/25" aria-hidden />
+            <span className="absolute inset-0 animate-[mic-ring_1.8s_ease-out_0.6s_infinite] rounded-full bg-primary/15" aria-hidden />
           </>
         )}
-        <span className={cn("absolute inset-4 rounded-full transition-colors", listening ? "bg-sun/25" : "bg-sun/20")} aria-hidden />
+        <span className={cn("absolute inset-4 rounded-full transition-colors", listening ? "bg-primary/20" : "bg-primary/15")} aria-hidden />
         <button
           type="button"
           onClick={toggle}
@@ -73,8 +73,8 @@ export function VoiceHero({
           aria-pressed={listening}
           aria-label={listening ? t("voice.stop") : t("voice.start")}
           className={cn(
-            "relative flex size-20 items-center justify-center rounded-full md:size-24 text-sun-foreground shadow-[0_12px_36px_rgb(242_201_76/0.55)] transition-[transform,background-color] active:scale-[0.96] disabled:opacity-50",
-            listening ? "bg-[color-mix(in_oklch,var(--sun),black_8%)]" : "bg-sun hover:bg-[color-mix(in_oklch,var(--sun),black_6%)]",
+            "relative flex size-20 items-center justify-center rounded-full md:size-24 text-white shadow-[0_12px_36px_rgb(42_95_165/0.45)] transition-[transform,background-color] active:scale-[0.96] disabled:opacity-50",
+            listening ? "bg-primary-hover" : "bg-primary hover:bg-primary-hover",
             !speech.supported && "opacity-60",
           )}
         >

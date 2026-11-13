@@ -144,7 +144,7 @@ function Feed() {
       )}
 
       {shown.length ? (
-        <Masonry className="mt-4 animate-rise">
+        <Masonry className="-mx-4 mt-4 animate-rise sm:mx-0">
           {shown.map((item, i) => (
             <PostCard key={item.post.id} item={item} onOpen={(id) => setParams({ post: id }, true)} priority={i < 6} />
           ))}

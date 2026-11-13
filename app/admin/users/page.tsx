@@ -1,7 +1,6 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { PageHeader, Segmented, inputClass } from "@/components/panel";
@@ -11,15 +10,12 @@ import { setUserBlocked } from "@/lib/data/actions";
 import { useDB } from "@/lib/data/store";
 import type { Role } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
-import { HOME_BY_ROLE } from "@/components/layout/nav-items";
-import { useActor, useSession } from "@/lib/session";
+import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 export default function AdminUsers() {
   const { t, date } = useI18n();
   const actor = useActor();
-  const setRole = useSession((s) => s.setRole);
-  const router = useRouter();
   const db = useDB((d) => d);
   const [q, setQ] = useState("");
   const [role, setR] = useState<Role | "all">("all");
@@ -62,16 +58,6 @@ export default function AdminUsers() {
             </div>
             {u.role !== "admin" && (
               <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  className="h-8 px-3 text-xs"
-                  onClick={() => {
-                    setRole(u.role, u.id);
-                    router.push(HOME_BY_ROLE[u.role]);
-                  }}
-                >
-                  {t("admin.actAs")}
-                </Button>
                 <Button
                   variant="outline"
                   className="h-8 px-3 text-xs"

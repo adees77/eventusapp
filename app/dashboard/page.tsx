@@ -140,7 +140,7 @@ export default function ClientOverview() {
               {t("cabinet.all")}
             </Link>
           </div>
-          <Masonry className="lg:columns-4 2xl:columns-4">
+          <Masonry className="2xl:grid-cols-4">
             {ideas.map((it) => (
               <PostCard key={it.post.id} item={it} onOpen={(id) => router.push(`/vendors?post=${id}&category=${missing}`)} />
             ))}

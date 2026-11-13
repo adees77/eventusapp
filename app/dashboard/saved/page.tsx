@@ -44,7 +44,7 @@ export default function SavedPage() {
       />
       {tab === "posts" &&
         (posts.length ? (
-          <Masonry className="lg:columns-4">
+          <Masonry className="2xl:grid-cols-4">
             {posts.map((it) => (
               <PostCard key={it.post.id} item={it} onOpen={(id) => router.push(`/vendors?post=${id}`)} />
             ))}

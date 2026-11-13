@@ -2,7 +2,6 @@
 
 import { MoreHorizontal, Plus, Search } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Field, PageHeader, Segmented, inputClass } from "@/components/panel";
@@ -12,7 +11,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -23,14 +21,12 @@ import { CITIES } from "@/lib/data/seed/catalog";
 import { useDB } from "@/lib/data/store";
 import type { CategoryId, Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
-import { useActor, useSession } from "@/lib/session";
+import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 export default function AdminVendors() {
   const { t, tn, l } = useI18n();
   const actor = useActor();
-  const setRole = useSession((s) => s.setRole);
-  const router = useRouter();
   const db = useDB((d) => d);
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Vendor | "new" | null>(null);
@@ -137,15 +133,6 @@ export default function AdminVendors() {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => updateVendor(actor, v.id, { verified: !v.verified })}>
                       {v.verified ? t("admin.unverify") : t("admin.verify")}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setRole("vendor", v.ownerId);
-                        router.push("/vendor");
-                      }}
-                    >
-                      {t("admin.actAs")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

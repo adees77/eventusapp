@@ -46,6 +46,12 @@ export const can = {
   /** Users edit only their own profile */
   editProfile: (a: Actor, userId: string) => isAdmin(a) || a.id === userId,
   setVendorHidden: (a: Actor) => isAdmin(a),
+  /** The vendor uploads own verification papers; admin reviews them */
+  manageDocuments: (a: Actor, v: Vendor | undefined) => isAdmin(a) || ownsVendor(a, v),
+  reviewDocuments: (a: Actor) => isAdmin(a),
+  /** Any signed-in client or vendor may report content; admin resolves */
+  report: (a: Actor) => a.role === "client" || a.role === "vendor",
+  resolveComplaint: (a: Actor) => isAdmin(a),
   setVendorVerified: (a: Actor) => isAdmin(a),
 
   editOffer: (a: Actor, db: DB, o: Pick<Offer, "vendorId">) =>

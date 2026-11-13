@@ -8,6 +8,7 @@ import { hash } from "../availability";
 import { CATEGORIES, REVIEW_AUTHORS, REVIEW_TEMPLATES } from "./catalog";
 import { PHOTOS, unsplash } from "./photos";
 import { buildComments, buildPosts } from "./posts";
+import { DEFAULT_SETTINGS, buildComplaints, buildDocuments } from "./moderation";
 import { SEED_VENDORS } from "./vendors";
 
 export const DEMO_CLIENT_ID = "u-client";
@@ -337,13 +338,16 @@ export function buildSeed(now = new Date()): DB {
   const posts = buildPosts(SEED_VENDORS, vendors, offers, now);
 
   const stats = vendors.map((v) => ({ vendorId: v.id, views: 120 + (hash(v.id) % 2400) }));
+  const papers = buildDocuments(vendors, now);
 
   return {
     version: demoConfig.seedVersion,
     specsVersion: SEED_SPECS_VERSION,
     users,
     categories: CATEGORIES,
-    vendors,
+    vendors: papers.vendors,
+    documents: papers.documents,
+    complaints: buildComplaints(vendors, posts, reviews, now),
     offers,
     blocks: [],
     bookings,
@@ -397,7 +401,7 @@ export function buildSeed(now = new Date()): DB {
         createdAt: subDays(now, 1).toISOString(),
       },
     ],
-    settings: { feePercent: FEE, defaultPrepayPercent: demoConfig.defaultPrepayPercent, autoReleaseDays: 3 },
+    settings: DEFAULT_SETTINGS(FEE),
     invitations: [
       {
         id: "inv-wedding",

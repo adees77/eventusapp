@@ -2,13 +2,12 @@
 
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import {
-  ArrowUp,
-  BadgeCheck,
   Bookmark,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  Flag,
   GalleryVerticalEnd,
   Heart,
   MessageCircle,
@@ -23,11 +22,11 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Monogram, VerifiedSeal } from "@/components/vendor/badges";
-import { addComment, deleteComment, deletePost, ensureConversation, toggleLike } from "@/lib/data/actions";
-import { commentsOf, feedItem, likeCount, ordersDone, viewerSequence } from "@/lib/data/feed";
+import { ReportForm } from "@/components/feed/report-form";
+import { deletePost, ensureConversation, toggleLike } from "@/lib/data/actions";
+import { feedItem, likeCount, ordersDone, viewerSequence } from "@/lib/data/feed";
 import { specFacts } from "@/lib/data/specs";
 import { ReviewComposer, ReviewList, ReviewSummary, useVendorReviews } from "@/components/vendor/reviews";
-import { can } from "@/lib/data/policies";
 import { activeOffers, minPrice } from "@/lib/data/queries";
 import { CITIES } from "@/lib/data/seed/catalog";
 import { getDB, useDB } from "@/lib/data/store";
@@ -40,12 +39,13 @@ import { useFeedActions } from "./post-card";
 const STEP = 3;
 
 /** Unsplash photos are re-cropped to the tall viewer frame; other sources are shown as they are */
-function tall(src: string) {
+/** The photo as shot: drop any server-side crop so the viewer shows the whole frame */
+function whole(src: string) {
   if (!src.startsWith("https://images.unsplash.com/")) return src;
   const u = new URL(src);
-  u.searchParams.set("w", "900");
-  u.searchParams.set("h", "1600");
-  u.searchParams.set("fit", "crop");
+  u.searchParams.set("w", "1200");
+  u.searchParams.delete("h");
+  u.searchParams.delete("fit");
   return u.toString();
 }
 
@@ -236,7 +236,7 @@ function PostView({
   const db = useDB((d) => d);
   const [slide, setSlide] = useState(0);
   const [expanded, setExpanded] = useState(false);
-  const [sheet, setSheet] = useState<"comments" | "reviews" | null>(null);
+  const [sheet, setSheet] = useState<"reviews" | "report" | null>(null);
   useEffect(() => {
     registerSheet(sheet ? () => setSheet(null) : null);
     return () => {
@@ -279,14 +279,25 @@ function PostView({
           className="no-scrollbar absolute inset-0 flex snap-x snap-mandatory overflow-x-auto"
         >
           {photos.map((src, k) => (
-            <div key={src} className="relative h-full w-full shrink-0 snap-center">
+            <div key={src} className="relative h-full w-full shrink-0 snap-center overflow-hidden">
+              {/* the same photo, blurred, fills the empty bands around an uncropped frame */}
               <Image
-                src={tall(src)}
+                src={whole(src)}
+                alt=""
+                fill
+                aria-hidden
+                loading={near && k === 0 ? "eager" : "lazy"}
+                sizes="(min-width: 768px) 520px, 100vw"
+                className="scale-110 object-cover opacity-60 blur-2xl"
+                draggable={false}
+              />
+              <Image
+                src={whole(src)}
                 alt=""
                 fill
                 loading={near && k === 0 ? "eager" : "lazy"}
                 sizes="(min-width: 768px) 520px, 100vw"
-                className="object-cover"
+                className="object-contain"
                 draggable={false}
               />
             </div>
@@ -332,8 +343,8 @@ function PostView({
           <RailBtn label={t("feed.like")} active={item.liked} onClick={like} count={num(item.likes)}>
             <Heart className={cn("size-7", item.liked && "fill-[#ff3b5c] text-[#ff3b5c]")} strokeWidth={1.75} />
           </RailBtn>
-          <RailBtn label={t("feed.comments")} onClick={() => setSheet("comments")} count={num(item.comments)}>
-            <MessageCircle className="size-7 -scale-x-100" strokeWidth={1.75} />
+          <RailBtn label={t("reviews.title")} onClick={() => setSheet("reviews")} count={num(vendor.reviewsCount)}>
+            <Star className="size-7" strokeWidth={1.75} />
           </RailBtn>
           <RailBtn label={item.saved ? t("feed.saved") : t("feed.save")} active={item.saved} onClick={() => save(post.id)}>
             <Bookmark className={cn("size-7", item.saved && "fill-white")} strokeWidth={1.75} />
@@ -350,6 +361,11 @@ function PostView({
           <RailBtn label={t("feed.similarShow")} onClick={() => onSimilar(post, vendor.name)} count={t("feed.similar")}>
             <GalleryVerticalEnd className="size-6" strokeWidth={1.75} />
           </RailBtn>
+          {actor.id !== vendor.ownerId && actor.role !== "admin" && (
+            <RailBtn label={t("mod.report")} onClick={clientOnly(() => setSheet("report"))}>
+              <Flag className="size-6" strokeWidth={1.75} />
+            </RailBtn>
+          )}
           {actor.id === vendor.ownerId && (
             <RailBtn
               label={t("vcab.deletePost")}
@@ -376,7 +392,7 @@ function PostView({
               <button
                 type="button"
                 onClick={clientOnly(() => router.push(offer ? `/book/${offer.id}` : `/vendors/${vendor.slug}?tab=services`))}
-                className="h-8 shrink-0 rounded-lg bg-white px-3 text-xs font-medium text-neutral-900 transition-colors hover:bg-white/90"
+                className="h-8 shrink-0 rounded-full bg-sun px-3.5 text-xs font-medium text-sun-foreground transition-colors hover:bg-[color-mix(in_oklch,var(--sun),black_7%)]"
               >
                 {t("feed.book")}
               </button>
@@ -408,7 +424,7 @@ function PostView({
             {[l(db.categories.find((c) => c.id === vendor.category)?.name), l(CITIES[vendor.city]), ...facts].join(" · ")}
           </p>
 
-          <div className="flex items-center gap-2 rounded-xl bg-white/12 p-1.5 pl-3 backdrop-blur-md">
+          <div className="flex items-center gap-2 rounded-full bg-white/12 p-1.5 pl-4 backdrop-blur-md">
             <span className="min-w-0 flex-1">
               <span className="block truncate text-xs text-white/75">{offer ? l(offer.title) : t("feed.profile")}</span>
               <span className="block text-sm font-medium tabular-nums">{t("feed.fromPrice", { amount: money(price) })}</span>
@@ -417,7 +433,7 @@ function PostView({
               <button
               type="button"
               onClick={clientOnly(() => router.push(`/messages/${ensureConversation(actor, vendor.id)}`))}
-              className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-white/30 px-3 text-sm text-white transition-colors hover:bg-white/15"
+              className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3.5 text-sm text-white transition-colors hover:bg-white/25"
             >
               <MessageCircle className="size-4" strokeWidth={1.75} />
               {t("feed.message")}
@@ -426,10 +442,43 @@ function PostView({
           </div>
         </div>
 
-        {sheet === "comments" && <CommentsSheet post={post} vendor={vendor} onClose={() => setSheet(null)} />}
         {sheet === "reviews" && <ReviewsSheet vendor={vendor} onClose={() => setSheet(null)} />}
+        {sheet === "report" && (
+          <BottomSheet title={t("mod.reportTitle")} onClose={() => setSheet(null)}>
+            <ReportForm target="post" targetId={post.id} onDone={() => setSheet(null)} />
+          </BottomSheet>
+        )}
       </div>
     </section>
+  );
+}
+
+/** A plain sheet over the photo (report form) */
+function BottomSheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  const { t } = useI18n();
+  return (
+    <>
+      <button type="button" aria-label={t("feed.close")} onClick={onClose} className="absolute inset-0 z-20 animate-in bg-black/40 fade-in-0" />
+      <div
+        role="dialog"
+        aria-label={title}
+        className="absolute inset-x-0 bottom-0 z-20 flex max-h-[85%] animate-in flex-col rounded-t-3xl bg-card text-foreground duration-200 slide-in-from-bottom"
+      >
+        <div className="flex items-center justify-between px-4 py-3">
+          <h3 className="text-sm font-medium">{title}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("feed.close")}
+            autoFocus
+            className="-mr-1.5 flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[max(16px,env(safe-area-inset-bottom))]">{children}</div>
+      </div>
+    </>
   );
 }
 
@@ -463,110 +512,6 @@ function ReviewsSheet({ vendor, onClose }: { vendor: Vendor; onClose: () => void
         </div>
         <div className="px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
           <ReviewComposer vendor={vendor} compact />
-        </div>
-      </div>
-    </>
-  );
-}
-
-/** Comments slide up over the photo. Only clients with a finished deal with this vendor can write. */
-function CommentsSheet({ post, vendor, onClose }: { post: Post; vendor: Vendor; onClose: () => void }) {
-  const { t, date } = useI18n();
-  const actor = useActor();
-  const list = useDB((db) => commentsOf(db, post.id));
-  const allowed = useDB((db) => can.commentPost(actor, db, vendor.id));
-  const [text, setText] = useState("");
-  const listRef = useRef<HTMLUListElement>(null);
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!text.trim()) return;
-    addComment(actor, post.id, text);
-    setText("");
-    requestAnimationFrame(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" }));
-  }
-
-  return (
-    <>
-      <button type="button" aria-label={t("feed.close")} onClick={onClose} className="absolute inset-0 z-20 animate-in bg-black/40 fade-in-0" />
-      <div
-        role="dialog"
-        aria-label={t("feed.comments")}
-        className="absolute inset-x-0 bottom-0 z-20 flex max-h-[72%] min-h-[45%] animate-in flex-col rounded-t-2xl bg-card text-foreground duration-200 slide-in-from-bottom"
-      >
-        <div className="flex items-center justify-between px-4 py-3">
-          <h3 className="flex items-baseline gap-2 text-sm font-medium">
-            {t("feed.comments")}
-            {list.length > 0 && <span className="text-xs font-normal text-muted-foreground tabular-nums">{list.length}</span>}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t("feed.close")}
-            autoFocus
-            className="-mr-1.5 flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-
-        <ul ref={listRef} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
-          {list.length === 0 && <li className="m-auto text-sm text-muted-foreground">{t("feed.noComments")}</li>}
-          {list.map((c) => (
-            <li key={c.id} className="flex gap-3 text-sm">
-              <Monogram name={c.author} className="size-8 shrink-0 rounded-full text-[11px]" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="truncate font-medium">{c.author}</span>
-                  <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground" title={t("feed.realClientHint")}>
-                    <BadgeCheck className="size-3.5 text-gold" strokeWidth={1.75} />
-                    {t("feed.realClient")}
-                  </span>
-                  <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">{date(c.createdAt.slice(0, 10), "d MMM")}</span>
-                  {(c.userId === actor.id || actor.role === "admin") && (
-                    <button
-                      type="button"
-                      onClick={() => deleteComment(actor, c.id)}
-                      aria-label={t("feed.commentDelete")}
-                      title={t("feed.commentDelete")}
-                      className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                    >
-                      <Trash2 className="size-3.5" strokeWidth={1.75} />
-                    </button>
-                  )}
-                </div>
-                <p className="mt-0.5 leading-relaxed text-text-secondary">{c.text}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-
-        <div className="px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
-          {allowed ? (
-            <form onSubmit={submit} className="flex items-center gap-2">
-              <input
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                maxLength={500}
-                placeholder={t("feed.commentPlaceholder")}
-                aria-label={t("feed.commentPlaceholder")}
-                className="h-10 min-w-0 flex-1 rounded-xl bg-background px-3.5 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/50"
-              />
-              <button
-                type="submit"
-                disabled={!text.trim()}
-                aria-label={t("feed.commentSend")}
-                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary-hover disabled:opacity-40"
-              >
-                <ArrowUp className="size-4" />
-              </button>
-            </form>
-          ) : (
-            <p className="flex items-start gap-2.5 text-xs leading-relaxed text-text-secondary">
-              <BadgeCheck className="mt-px size-4 shrink-0 text-gold" strokeWidth={1.75} />
-              {t("feed.commentsRule")}
-            </p>
-          )}
         </div>
       </div>
     </>
