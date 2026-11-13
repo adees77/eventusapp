@@ -72,7 +72,7 @@ export default function AdminVendors() {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("admin.search")} className={cn(inputClass, "pl-9")} />
       </label>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="mt-4 overflow-hidden rounded-2xl bg-card">
         <div className="hidden grid-cols-[1fr_160px_120px_72px_72px_120px_40px] gap-4 border-b border-border px-4 py-3 text-xs text-muted-foreground md:grid">
           <span>{t("admin.name")}</span>
           <span>{t("admin.category")}</span>

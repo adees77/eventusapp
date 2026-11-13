@@ -26,7 +26,7 @@ export default function AdminBookings() {
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("admin.search")} className={cn(inputClass, "pl-9")} />
       </label>
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+      <div className="overflow-x-auto rounded-2xl bg-card">
         <table className="w-full min-w-[820px] text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs text-muted-foreground">

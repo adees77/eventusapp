@@ -28,7 +28,7 @@ export function CreateShell({ title, children }: { title: string; children: (ven
             >
               <X className="size-5" strokeWidth={1.5} />
             </button>
-            <h1 className="font-serif text-3xl leading-tight md:text-4xl">{title}</h1>
+            <h1 className="font-heading tracking-[-0.025em] text-3xl leading-tight md:text-4xl">{title}</h1>
           </div>
           {children(vendor)}
         </div>

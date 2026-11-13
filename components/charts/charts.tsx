@@ -18,7 +18,7 @@ export interface Point {
 function Tooltip({ x, children }: { x: number; children: React.ReactNode }) {
   return (
     <div
-      className="pointer-events-none absolute -top-2 z-10 -translate-x-1/2 -translate-y-full rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs whitespace-nowrap shadow-lift"
+      className="pointer-events-none absolute -top-2 z-10 -translate-x-1/2 -translate-y-full rounded-lg bg-popover px-2.5 py-1.5 text-xs whitespace-nowrap shadow-lift"
       style={{ left: `${x}%` }}
       role="status"
     >

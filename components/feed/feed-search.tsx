@@ -210,7 +210,7 @@ export function FeedSearch({
                     onChange({ query: q });
                     setOpen(false);
                   }}
-                  className="flex h-8 items-center gap-1.5 rounded-lg border border-border px-2.5 text-sm text-text-secondary hover:bg-muted hover:text-foreground"
+                  className="flex h-8 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3 text-sm text-text-secondary hover:bg-foreground/[0.09] hover:text-foreground"
                 >
                   <Clock className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
                   {q}
@@ -322,7 +322,7 @@ export function FeedSearch({
       {open && (
         <>
           {/* desktop: dropdown */}
-          <div className="absolute inset-x-0 top-[calc(100%+8px)] z-50 hidden animate-rise rounded-2xl border border-border bg-card p-5 shadow-lift md:block">
+          <div className="absolute inset-x-0 top-[calc(100%+8px)] z-50 hidden animate-rise rounded-2xl bg-card p-5 shadow-lift md:block">
             {panel}
           </div>
           {/* mobile: full-screen sheet, portalled — the sticky bar's backdrop-filter would trap a fixed child */}

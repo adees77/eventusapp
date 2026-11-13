@@ -76,7 +76,7 @@ export default function VendorPosts() {
       {posts.length ? (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
           {posts.map((p) => (
-            <li key={p.id} className="group overflow-hidden rounded-2xl border border-border bg-card">
+            <li key={p.id} className="group overflow-hidden rounded-2xl bg-card">
               <div className="relative aspect-[4/5] bg-muted">
                 <Image src={p.photos[0]} alt="" fill sizes="300px" className="object-cover" />
                 <button

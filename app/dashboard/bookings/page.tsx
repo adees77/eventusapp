@@ -36,7 +36,7 @@ export default function ClientBookings() {
           { value: "cancelled", label: t("cabinet.fCancelled") },
         ]}
       />
-      <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="rounded-2xl bg-card p-5">
         <ClientBookingList bookings={f === "past" ? [...list].reverse() : list} />
       </div>
     </div>

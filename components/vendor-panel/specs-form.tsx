@@ -338,7 +338,7 @@ function ListEditor({ field: f, rows, onChange }: { field: ListField; rows: Spec
         {rows.length > 0 && f.short && <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{l(fill(f.short, total))}</span>}
       </div>
       {rows.map((row, i) => (
-        <div key={i} className="relative rounded-xl border border-border bg-card p-3 pr-10">
+        <div key={i} className="relative rounded-xl bg-card p-3 pr-10">
           <div className="grid gap-x-3 gap-y-2.5 sm:grid-cols-2">
             {f.item.map((it) => (
               <label key={it.id} className={cn("flex min-w-0 flex-col gap-1", wide(it) && "sm:col-span-2")}>

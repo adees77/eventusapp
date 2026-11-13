@@ -29,7 +29,7 @@ export default function AdminFinance() {
         onChange={setK}
         options={[{ value: "all", label: t("common.all") }, ...KINDS.map((x) => ({ value: x, label: t(`cabinet.tx.${x}`) }))]}
       />
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+      <div className="overflow-x-auto rounded-2xl bg-card">
         <table className="w-full min-w-[720px] text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs text-muted-foreground">

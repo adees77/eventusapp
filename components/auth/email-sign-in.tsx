@@ -114,7 +114,7 @@ export function EmailSignIn({ onSignedIn }: { onSignedIn: () => void }) {
         {t("auth.changeEmail")}
       </button>
       <div>
-        <h2 className="font-serif text-2xl leading-tight">{t("auth.codeTitle")}</h2>
+        <h2 className="font-heading tracking-[-0.025em] text-2xl leading-tight">{t("auth.codeTitle")}</h2>
         <p className="mt-1.5 text-sm text-text-secondary">{t("auth.codeSent", { email: pending.email })}</p>
       </div>
       <form

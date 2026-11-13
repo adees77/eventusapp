@@ -31,7 +31,7 @@ export function BookingSummary({
 }) {
   const { t, l, money, date: fmt } = useI18n();
   return (
-    <div className={cn("rounded-2xl border border-border bg-card", compact ? "p-3" : "p-5", className)}>
+    <div className={cn("rounded-2xl bg-card", compact ? "p-3" : "p-5", className)}>
       <div className="flex gap-3">
         <div className={cn("relative shrink-0 overflow-hidden rounded-xl bg-muted", compact ? "size-14" : "size-20")}>
           {offer.photos[0] && <Image src={offer.photos[0]} alt="" fill sizes="80px" className="object-cover" />}

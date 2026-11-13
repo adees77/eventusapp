@@ -44,7 +44,7 @@ export function CreateMenu({ variant }: { variant: "tab" | "header" }) {
       )}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="bottom" className="mx-auto w-full max-w-lg rounded-t-2xl px-2 pt-4 pb-[max(16px,env(safe-area-inset-bottom))]">
-          <SheetTitle className="px-4 font-serif text-2xl font-normal">{t("create.title")}</SheetTitle>
+          <SheetTitle className="px-4 font-heading tracking-[-0.025em] text-2xl font-normal">{t("create.title")}</SheetTitle>
           <ul className="flex flex-col">
             {ACTIONS.map((a) => (
               <li key={a.href}>

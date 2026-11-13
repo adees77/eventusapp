@@ -118,7 +118,7 @@ function Feed() {
         <div className="mx-auto max-w-3xl">
           <FeedSearch value={state} onChange={onChange} onReset={reset} count={items.length} />
         </div>
-        <nav className="mx-auto mt-3 flex max-w-3xl items-center justify-center gap-6 text-sm" aria-label={t("nav.feed")}>
+        <nav className="mx-auto mt-4 flex max-w-3xl items-center justify-center gap-1 text-sm" aria-label={t("nav.feed")}>
           {(["foryou", "top"] as const).map((k) => (
             <button
               key={k}
@@ -126,12 +126,11 @@ function Feed() {
               onClick={() => setParams({ tab: k === "top" ? "top" : null })}
               aria-pressed={tab === k}
               className={cn(
-                "relative pb-1.5 transition-colors",
-                tab === k ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+                "h-9 rounded-full px-4 transition-colors",
+                tab === k ? "bg-ink text-white" : "text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground",
               )}
             >
               {k === "foryou" ? t("feed.forYou") : t("feed.topRated")}
-              {tab === k && <span className="absolute inset-x-0 -bottom-px h-px bg-foreground" aria-hidden />}
             </button>
           ))}
         </nav>
@@ -152,7 +151,7 @@ function Feed() {
         </Masonry>
       ) : (
         <div className="mx-auto mt-20 flex max-w-sm flex-col items-center gap-2 text-center">
-          <p className="font-serif text-2xl">{t("feed.empty")}</p>
+          <p className="font-heading tracking-[-0.025em] text-2xl">{t("feed.empty")}</p>
           <p className="text-sm text-text-secondary">
             {t("feed.emptyHint")}
           </p>

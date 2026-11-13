@@ -445,7 +445,7 @@ function ReviewsSheet({ vendor, onClose }: { vendor: Vendor; onClose: () => void
         aria-label={t("reviews.title")}
         className="absolute inset-x-0 bottom-0 z-20 flex max-h-[80%] min-h-[55%] animate-in flex-col rounded-t-2xl bg-card text-foreground duration-200 slide-in-from-bottom"
       >
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3">
           <h3 className="text-sm font-medium">{t("reviews.title")}</h3>
           <button
             type="button"
@@ -461,7 +461,7 @@ function ReviewsSheet({ vendor, onClose }: { vendor: Vendor; onClose: () => void
           <ReviewSummary vendor={vendor} reviews={reviews} className="pb-2" />
           <ReviewList reviews={reviews} limit={5} />
         </div>
-        <div className="border-t border-border px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+        <div className="px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
           <ReviewComposer vendor={vendor} compact />
         </div>
       </div>
@@ -494,7 +494,7 @@ function CommentsSheet({ post, vendor, onClose }: { post: Post; vendor: Vendor; 
         aria-label={t("feed.comments")}
         className="absolute inset-x-0 bottom-0 z-20 flex max-h-[72%] min-h-[45%] animate-in flex-col rounded-t-2xl bg-card text-foreground duration-200 slide-in-from-bottom"
       >
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3">
           <h3 className="flex items-baseline gap-2 text-sm font-medium">
             {t("feed.comments")}
             {list.length > 0 && <span className="text-xs font-normal text-muted-foreground tabular-nums">{list.length}</span>}
@@ -541,7 +541,7 @@ function CommentsSheet({ post, vendor, onClose }: { post: Post; vendor: Vendor; 
           ))}
         </ul>
 
-        <div className="border-t border-border px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+        <div className="px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
           {allowed ? (
             <form onSubmit={submit} className="flex items-center gap-2">
               <input
@@ -550,7 +550,7 @@ function CommentsSheet({ post, vendor, onClose }: { post: Post; vendor: Vendor; 
                 maxLength={500}
                 placeholder={t("feed.commentPlaceholder")}
                 aria-label={t("feed.commentPlaceholder")}
-                className="h-10 min-w-0 flex-1 rounded-xl border border-border bg-background px-3.5 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/50"
+                className="h-10 min-w-0 flex-1 rounded-xl bg-background px-3.5 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/50"
               />
               <button
                 type="submit"

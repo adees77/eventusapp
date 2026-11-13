@@ -71,7 +71,7 @@ function ChatVendorCard({ h, date, qty, index }: { h: VendorHit; date: string | 
 
   return (
     <article
-      className="flex w-[78%] shrink-0 snap-start animate-rise flex-col overflow-hidden rounded-2xl border border-border bg-card sm:w-auto"
+      className="flex w-[78%] shrink-0 snap-start animate-rise flex-col overflow-hidden rounded-2xl bg-card sm:w-auto"
       style={{ animationDelay: `${index * 50}ms` }}
     >
       <Link href={`/vendors/${h.slug}`} className="relative block aspect-[16/10] bg-muted">
@@ -130,7 +130,7 @@ function AltDates({ alts, onPick }: { alts: AlternativeDate[]; onPick: (text: st
           key={a.date}
           type="button"
           onClick={() => onPick(locale === "ru" ? `Давайте ${date(a.date, "d MMMM")}` : `Let's do ${date(a.date, "MMMM d")}`)}
-          className="h-8 rounded-lg border border-border bg-card px-3 text-sm text-text-secondary transition-colors hover:bg-muted hover:text-foreground"
+          className="h-8 rounded-lg bg-card px-3 text-sm text-text-secondary transition-colors hover:bg-muted hover:text-foreground"
         >
           {date(a.date, "d MMMM, EEEEEE")}
           <span className="ml-2 text-muted-foreground tabular-nums">{a.vendors}</span>
@@ -142,7 +142,7 @@ function AltDates({ alts, onPick }: { alts: AlternativeDate[]; onPick: (text: st
 
 function AvailabilityList({ a }: { a: AvailabilityResult }) {
   return (
-    <ul className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-card">
+    <ul className="flex flex-col divide-y divide-border rounded-2xl bg-card">
       {a.offers.map((o) => (
         <li key={o.offer_id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
           <span className="truncate">{o.title}</span>

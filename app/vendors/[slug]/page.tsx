@@ -87,7 +87,7 @@ function VendorProfile() {
   if (!vendor || !can.viewVendor(actor, vendor)) {
     return (
       <div className="mx-auto flex max-w-sm flex-1 flex-col items-center justify-center gap-4 px-4 py-24 text-center">
-        <p className="font-serif text-2xl">{t("vendor.notFound")}</p>
+        <p className="font-heading tracking-[-0.025em] text-2xl">{t("vendor.notFound")}</p>
         <LinkButton href="/vendors" variant="outline">
           {t("nav.catalog")}
         </LinkButton>
@@ -130,7 +130,7 @@ function VendorProfile() {
         {/* Profile header, social style */}
         <header className="flex flex-col gap-6 md:flex-row md:items-center md:gap-10">
           <div className="flex items-center gap-5 md:block">
-            <div className="relative size-20 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-border md:size-36">
+            <div className="relative size-20 shrink-0 overflow-hidden rounded-full bg-muted md:size-36">
               {vendor.cover ? (
                 <Image src={vendor.cover} alt="" fill loading="eager" sizes="144px" className="object-cover" />
               ) : (
@@ -139,7 +139,7 @@ function VendorProfile() {
             </div>
             <div className="min-w-0 md:hidden">
               <div className="flex items-center gap-1.5">
-                <h1 className="truncate font-serif text-3xl leading-tight font-normal">{vendor.name}</h1>
+                <h1 className="truncate font-heading tracking-[-0.025em] text-3xl leading-tight font-normal">{vendor.name}</h1>
                 {vendor.verified && <VerifiedSeal />}
               </div>
               <p className="text-sm text-text-secondary">
@@ -149,7 +149,7 @@ function VendorProfile() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="hidden items-center gap-2 md:flex">
-              <h1 className="font-serif text-4xl leading-tight font-normal">{vendor.name}</h1>
+              <h1 className="font-heading tracking-[-0.025em] text-4xl leading-tight font-normal">{vendor.name}</h1>
               {vendor.verified && <VerifiedSeal withLabel />}
             </div>
             <dl className="flex gap-8 md:mt-3">
@@ -210,10 +210,10 @@ function VendorProfile() {
         </header>
 
         {vendor.hidden && (
-          <p className="mt-4 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-text-secondary">{t("vendor.hidden")}</p>
+          <p className="mt-4 rounded-lg bg-muted px-3 py-2 text-sm text-text-secondary">{t("vendor.hidden")}</p>
         )}
 
-        <nav className="mt-8 flex justify-center gap-8 border-t border-border text-sm md:gap-12" aria-label={vendor.name}>
+        <nav className="no-scrollbar mt-8 flex justify-start gap-1 overflow-x-auto text-sm md:justify-center" aria-label={vendor.name}>
           {TABS.map((k) => (
             <button
               key={k}
@@ -221,12 +221,12 @@ function VendorProfile() {
               onClick={() => setTab(k)}
               aria-pressed={tab === k}
               className={cn(
-                "relative -mt-px border-t py-3.5 transition-colors",
-                tab === k ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
+                "h-9 shrink-0 rounded-full px-4 transition-colors",
+                tab === k ? "bg-ink text-white" : "text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground",
               )}
             >
               {t(TAB_LABEL[k])}
-              {k === "reviews" && reviews.length > 0 && <span className="ml-1.5 text-muted-foreground tabular-nums">{reviews.length}</span>}
+              {k === "reviews" && reviews.length > 0 && <span className={cn("ml-1.5 tabular-nums", tab === k ? "text-sun" : "text-muted-foreground")}>{reviews.length}</span>}
             </button>
           ))}
         </nav>
@@ -295,7 +295,7 @@ function VendorProfile() {
         <div className="container-app grid max-w-5xl gap-10 py-2 md:grid-cols-[300px_minmax(0,1fr)]">
           <aside className="flex flex-col gap-6 md:sticky md:top-24 md:self-start">
             <ReviewSummary vendor={vendor} reviews={reviews} />
-            <div className="rounded-2xl border border-border bg-card p-4">
+            <div className="rounded-2xl bg-card p-4">
               <ReviewComposer vendor={vendor} />
             </div>
           </aside>
@@ -336,7 +336,7 @@ function VendorProfile() {
                   placeholder={t("avail.pickDate")}
                 />
               </div>
-              <ul className="mt-4 flex flex-col divide-y divide-border rounded-2xl border border-border bg-card">
+              <ul className="mt-4 flex flex-col divide-y divide-border rounded-2xl bg-card">
                 {offers.map((o) => {
                   const a = date ? getAvailability(db, o, date) : null;
                   return (
@@ -392,7 +392,7 @@ function VendorProfile() {
 
           {/* Aside: availability */}
           <aside className="lg:pt-6">
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-soft lg:sticky lg:top-24">
+            <div className="rounded-2xl bg-card p-5 shadow-soft lg:sticky lg:top-24">
               <div className="flex items-baseline justify-between gap-2">
                 <h2 className="text-base font-medium">{t("vendor.calendar")}</h2>
                 <span className="text-sm text-muted-foreground tabular-nums">
@@ -452,7 +452,7 @@ function VendorProfile() {
       {/* Mobile booking bar */}
       <div
         className={cn(
-          "fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+60px)] z-30 border-t border-border bg-card/95 px-4 py-3 backdrop-blur lg:hidden",
+          "fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+60px)] z-30 bg-card/95 shadow-[0_-8px_24px_rgb(13_26_47/0.08)] px-4 py-3 backdrop-blur lg:hidden",
           (tab !== "services" || isOwner) && "hidden",
         )}
       >

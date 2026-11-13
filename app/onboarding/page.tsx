@@ -358,7 +358,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="flex h-dvh flex-col">
-      <header className="shrink-0 border-b border-border">
+      <header className="shrink-0">
         <div className="mx-auto flex h-14 w-full max-w-3xl items-center gap-3 px-4">
           <button
             type="button"
@@ -389,7 +389,7 @@ export default function OnboardingPage() {
       {intro ? (
         <div className="flex flex-1 flex-col overflow-y-auto">
           <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 py-8">
-            <div className="mx-auto mb-8 flex rounded-xl border border-border bg-card p-1" role="tablist" aria-label={t("onboarding.q.role")}>
+            <div className="mx-auto mb-8 flex rounded-xl bg-card p-1" role="tablist" aria-label={t("onboarding.q.role")}>
               {(["client", "vendor"] as const).map((r) => (
                 <button
                   key={r}
@@ -590,7 +590,7 @@ function replay(running: Answers, e: LogEntry, final: Answers): Answers {
 function BotRow({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex animate-rise gap-3">
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-card">
+      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-card">
         <LogoMark className="h-2.5 w-auto" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-2 pt-1">{children}</div>

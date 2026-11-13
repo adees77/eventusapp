@@ -103,7 +103,7 @@ export function DealCard({ booking, className }: { booking: Booking; className?:
             : t("escrow.explainPending");
 
   return (
-    <section className={cn("rounded-2xl border border-border bg-card p-4", className)} aria-label={t("escrow.title")}>
+    <section className={cn("rounded-2xl bg-card p-4", className)} aria-label={t("escrow.title")}>
       <div className="flex items-start gap-3">
         <span
           className={cn(
@@ -266,7 +266,7 @@ export function EscrowSteps({ className }: { className?: string }) {
     <ol className={cn("grid gap-4 sm:grid-cols-3", className)}>
       {steps.map(([title, text], i) => (
         <li key={title} className="flex gap-3 sm:flex-col sm:gap-2">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-gold/60 font-serif text-sm text-gold-foreground tabular-nums">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-sun font-heading text-sm text-sun-foreground tabular-nums">
             {i + 1}
           </span>
           <div>

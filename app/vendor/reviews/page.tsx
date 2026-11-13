@@ -31,7 +31,7 @@ export default function VendorReviews() {
           note={t("vcab.reviewsTotal", { n: num(vendor.reviewsCount) })}
           tone="gold"
         />
-        <div className="flex flex-col justify-center gap-1.5 rounded-2xl border border-border bg-card p-5">
+        <div className="flex flex-col justify-center gap-1.5 rounded-2xl bg-card p-5">
           {dist.map(({ n, c }) => (
             <div key={n} className="grid grid-cols-[1.5rem_1fr_2rem] items-center gap-3 text-xs tabular-nums">
               <span className="text-muted-foreground">{n}</span>
@@ -49,7 +49,7 @@ export default function VendorReviews() {
       {reviews.length ? (
         <ul className="flex flex-col gap-3">
           {reviews.map((r) => (
-            <li key={r.id} className="rounded-2xl border border-border bg-card p-5">
+            <li key={r.id} className="rounded-2xl bg-card p-5">
               <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="font-medium">{r.author}</span>
                 <span className="text-xs text-muted-foreground">{date(r.date, "d MMM yyyy")}</span>

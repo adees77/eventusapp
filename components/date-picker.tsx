@@ -31,7 +31,7 @@ export function DatePicker({
             <button
               type="button"
               className={cn(
-                "flex h-10 w-full items-center gap-2 rounded-lg border border-input bg-card pr-3 pl-3 text-left text-sm transition-colors hover:bg-muted/50",
+                "flex h-10 w-full items-center gap-2 rounded-lg bg-card pr-3 pl-3 text-left text-sm transition-colors hover:bg-muted/50",
                 value && clearable && "pr-9",
               )}
             />

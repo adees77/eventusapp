@@ -147,7 +147,7 @@ export function ReviewComposer({ vendor, compact }: { vendor: Vendor; compact?: 
         rows={compact ? 2 : 3}
         maxLength={1000}
         placeholder={t("cabinet.reviewPlaceholder")}
-        className="w-full resize-none rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/50"
+        className="w-full resize-none rounded-xl bg-background px-3.5 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:border-primary/50"
       />
       <button
         type="submit"

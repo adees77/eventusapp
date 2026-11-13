@@ -51,7 +51,7 @@ function Welcome() {
                 onClick={() => setLocale(l)}
                 aria-pressed={l === locale}
                 className={cn(
-                  "h-8 rounded-md px-2.5 text-xs uppercase transition-colors",
+                  "h-8 rounded-full px-3 text-xs uppercase transition-colors",
                   l === locale ? "bg-secondary font-medium text-secondary-foreground" : "text-muted-foreground hover:bg-muted",
                 )}
               >
@@ -64,7 +64,7 @@ function Welcome() {
         <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-12">
           {!pending && (
             <div className="animate-rise">
-              <h1 className="font-serif text-[34px] leading-[1.05] tracking-[-0.01em] [text-wrap:balance] md:text-5xl">
+              <h1 className="font-heading tracking-[-0.025em] text-[34px] leading-[1.05] [text-wrap:balance] md:text-5xl">
                 {t(asVendor ? "auth.vendorTitle" : "auth.title")}
               </h1>
               <p className="mt-4 text-md leading-relaxed text-text-secondary">{t(asVendor ? "auth.vendorSubtitle" : "auth.subtitle")}</p>
@@ -99,12 +99,12 @@ function Welcome() {
                   signInDemo();
                   router.replace("/");
                 }}
-                className="mt-10 w-fit border-b border-border pb-0.5 text-sm text-text-secondary transition-colors hover:border-foreground hover:text-foreground"
+                className="mt-10 w-fit text-sm text-primary underline-offset-4 transition-colors hover:underline"
               >
                 {t("auth.demoLink")}
               </button>
               {/* seeded test accounts: quick entry for demos and QA */}
-              <div className="mt-8 border-t border-border pt-5">
+              <div className="mt-8 rounded-3xl bg-cream p-4">
                 <p className="text-xs text-muted-foreground">{t("auth.testAccounts")}</p>
                 <ul className="mt-2 flex flex-col gap-1">
                   {TEST_ACCOUNTS.map((a) => (
@@ -130,9 +130,16 @@ function Welcome() {
       </div>
 
       <div className="relative hidden p-3 lg:block">
-        <div className="relative h-full overflow-hidden rounded-2xl">
-          <Image src={unsplash(PHOTOS.halls[0], 1400, 1600)} alt="" fill priority sizes="55vw" className="object-cover" />
-          <div className="absolute inset-4 rounded-xl border border-white/40" aria-hidden />
+        <div className="surface-ink relative flex h-full flex-col justify-between overflow-hidden rounded-[32px] p-12">
+          <Image src={unsplash(PHOTOS.halls[0], 1400, 1600)} alt="" fill priority sizes="55vw" className="object-cover opacity-25 mix-blend-luminosity" />
+          <div className="absolute inset-0 bg-gradient-to-b from-ink/30 via-ink/60 to-ink" aria-hidden />
+          <p className="display relative max-w-md text-4xl xl:text-5xl">
+            {t("landing.titleA")} <span className="text-white/55">{t("landing.titleB")}</span>
+          </p>
+          <div className="relative flex max-w-md flex-col gap-3">
+            <p className="ml-auto max-w-[85%] rounded-3xl rounded-br-lg bg-primary px-4 py-3 text-sm leading-relaxed">{t("landing.chatUser")}</p>
+            <p className="max-w-[90%] rounded-3xl rounded-bl-lg bg-white px-4 py-3 text-sm leading-relaxed text-foreground">{t("landing.chatBot2")}</p>
+          </div>
         </div>
       </div>
     </div>

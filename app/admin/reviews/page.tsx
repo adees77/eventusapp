@@ -31,7 +31,7 @@ export default function AdminReviews() {
           { value: "hidden", label: `${t("admin.hidden")} · ${db.reviews.filter((r) => r.hidden).length}` },
         ]}
       />
-      <ul className="divide-y divide-border rounded-2xl border border-border bg-card">
+      <ul className="divide-y divide-border rounded-2xl bg-card">
         {list.map((r) => (
           <li key={r.id} className={cn("flex flex-col gap-1.5 px-5 py-4 sm:flex-row sm:items-start sm:gap-6", r.hidden && "opacity-60")}>
             <div className="min-w-0 flex-1">

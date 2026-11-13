@@ -40,7 +40,7 @@ export function Monogram({ name, className }: { name: string; className?: string
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-xl bg-secondary font-serif text-secondary-foreground",
+        "flex shrink-0 items-center justify-center rounded-xl bg-secondary font-heading tracking-[-0.025em] text-secondary-foreground",
         className,
       )}
       aria-hidden

@@ -97,10 +97,10 @@ export default function EventsPage() {
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
           <div className="flex min-w-0 flex-col gap-6">
             {/* Event */}
-            <section className="rounded-2xl border border-border bg-card p-6">
+            <section className="rounded-2xl bg-card p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="font-serif text-3xl font-normal md:text-4xl">{event.title}</h2>
+                  <h2 className="font-heading tracking-[-0.025em] text-3xl font-normal md:text-4xl">{event.title}</h2>
                   <p className="mt-1 text-sm text-text-secondary tabular-nums">
                     {date(event.date, "d MMMM yyyy, EEEE")} · {l(CITIES[event.city])} · {tn("common.guests", event.guests)}
                   </p>

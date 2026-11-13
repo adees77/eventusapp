@@ -57,7 +57,7 @@ export function SummaryCard({
   const heading = answers.role === "vendor" ? answers.bizName : eventTitle(answers, t);
 
   return (
-    <div className="w-full max-w-md animate-rise rounded-2xl border border-border bg-[var(--paper)] p-3 shadow-lift">
+    <div className="w-full max-w-md animate-rise rounded-2xl bg-[var(--paper)] p-3 shadow-lift">
       <div className="rounded-md border border-gold/50 px-5 pt-7 pb-5 sm:px-7">
         <div className="flex flex-col items-center text-center">
           <LogoMark className="h-2.5 w-auto text-gold" title="" />

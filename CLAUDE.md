@@ -9,13 +9,14 @@
 - Большие файлы никогда не читать целиком: `messages/{ru,en}.json` (1240 строк), `lib/data/seed/vendors.ts` (1360), `lib/data/actions.ts` (1000), `lib/data/specs.ts` (940), `lib/data/seed/specs.ts`, `lib/data/types.ts` (460), `README.md`.
 - Не открывать: `package-lock.json`, `tsconfig.tsbuildinfo`, `.next/`, `public/brand/logo-original.png`, `.claude/worktrees/`.
 - Next-доки (`node_modules/next/dist/docs/`) — только grep по конкретному API, не читать подряд.
-- Проверка: `npm run typecheck` и `npm test` (быстро). `npm run build` — только по просьбе.
+- Проверка: `npm run typecheck`, `npm test`, линт — `npx eslint app components lib config` (`npm run lint` цепляет чужие `.claude/worktrees`). `npm run build` — только по просьбе.
 - Dev-сервер: часто уже запущен на :3000 из другой сессии — переиспользуй через preview url, второй `next dev` не запускай. Конфиги в `.claude/launch.json` (`eventus-dev` :3000, `eventus-product` :3021).
 
 ## Карта
 ```
 app/                 маршруты (все страницы — client components поверх локального стора)
-  page.tsx           лендинг            assistant/      чат с ИИ (вендоров редиректит в /vendor)
+  page.tsx           лендинг (секции-функции: Hero…Footer; пакеты считают бюджет по ценам каталога)
+  assistant/         чат с ИИ (вендоров редиректит в /vendor; `?q=` предзаполняет запрос)
   vendors/           лента-соцсеть + [slug] профиль      book/[offerId], checkout/[bookingId]
   messages/[id]      чат клиент↔вендор  dashboard/*     кабинет клиента (events, bookings, payments, saved, profile)
   vendor/*           кабинет вендора (services, calendar, bookings, posts, details, finance, reviews, profile)
@@ -52,7 +53,11 @@ supabase/schema.sql  будущая схема + RLS (сейчас не испо
 - Ключи ИИ только на сервере. Порядок провайдеров: DeepSeek → Claude → mock (`AI_PROVIDER` форсит).
 
 ## Дизайн (не нарушать)
-Голубой/белый, мягкое золото **только** для «проверен», рейтинга, демо-плашки. Минимализм-премиум, без AI-slop (градиенты, блёстки, эмодзи, пилюли кроме иконок-кружков). Шрифты: Golos Text 400 (UI), Cormorant (display), Marck Script (только приглашения). Контейнер `container-app` 1280. Фирменная деталь — точки «свободно N из M».
+Язык референса «Secureon» (ноя 2026), перенесённый на праздники. Палитра (`config/brand.ts` → токены Tailwind): тёплый белый фон `bg-background`, белые `bg-card` и бежевые `bg-cream` блоки, синий `primary`, тёмно-синий `ink` (`surface-ink` = фон+голубое свечение: hero, подвал, тёмные карточки), жёлтый `sun` — главные CTA (`<Button variant="sun">`), золото — рейтинг/«проверен».
+- **Блоки без обводок** (просьба пользователя): никаких `border border-border`/`ring-1` у карточек, секций, полей; разделение фоном. Поля — заливка `bg-foreground/[0.045]`. Тонкие линии допустимы только между строками таблиц/списков.
+- Кнопки и табы — пилюли (`rounded-full`); активный пункт навигации/таба — `bg-ink text-white` (счётчик `text-sun`). Карточки `rounded-3xl`/`rounded-[28px]`.
+- Заголовки — гротеск Golos (`display` utility или `font-heading`), не антиква. Cormorant (`font-serif`) и Marck Script — только внутри приглашений.
+- Без AI-slop: никаких эмодзи, блёсток, фиолетовых градиентов. Вместо фото-заглушек — макеты нашего UI (чат, бронь, сделка). Фирменная деталь — точки «свободно N из M». Контейнер `container-app` 1280.
 
 ## Известные грабли
 - Вкладки на localhost:3000 делят localStorage; вкладка со старым кодом может затереть запись — перезагрузи её.

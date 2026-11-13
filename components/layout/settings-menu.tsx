@@ -67,7 +67,7 @@ export function SettingsMenu() {
             <button
               type="button"
               aria-label={t("roles.switchTitle")}
-              className="flex h-9 items-center gap-2 rounded-lg border border-border bg-card pr-2 pl-1 text-sm transition-colors hover:bg-muted"
+              className="flex h-9 items-center gap-2 rounded-lg bg-card pr-2 pl-1 text-sm transition-colors hover:bg-muted"
             />
           }
         >

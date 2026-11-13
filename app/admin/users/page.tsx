@@ -45,7 +45,7 @@ export default function AdminUsers() {
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("admin.search")} className={cn(inputClass, "pl-9")} />
       </label>
-      <ul className="divide-y divide-border rounded-2xl border border-border bg-card">
+      <ul className="divide-y divide-border rounded-2xl bg-card">
         {users.map((u) => (
           <li key={u.id} className={cn("flex flex-wrap items-center gap-3 px-4 py-3", u.blocked && "bg-muted/40")}>
             <Monogram name={u.name || "?"} className="size-9 rounded-full text-sm" />

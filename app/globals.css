@@ -10,7 +10,12 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-golos);
   --font-serif: var(--font-cormorant);
-  --font-heading: var(--font-cormorant);
+  --font-heading: var(--font-golos);
+  --color-cream: var(--cream);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-sun: var(--sun);
+  --color-sun-foreground: var(--sun-foreground);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -52,7 +57,7 @@
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 0.875rem;
   /* invitation paper — used only by the event card */
   --paper: #fdfcf8;
 }
@@ -160,6 +165,24 @@
   @media (width >= 80rem) {
     padding-inline: 2rem;
   }
+}
+
+/* Deep navy block with a soft blue glow — hero, footer, dark cards */
+@utility surface-ink {
+  color: #fff;
+  background-color: var(--ink);
+  background-image:
+    radial-gradient(60% 55% at 50% 0%, color-mix(in srgb, var(--primary) 55%, transparent) 0%, transparent 70%),
+    linear-gradient(180deg, var(--ink-soft) 0%, var(--ink) 60%);
+}
+
+/* Big grotesque display headline (reference: tight, light, large) */
+@utility display {
+  font-family: var(--font-golos);
+  font-weight: 400;
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+  text-wrap: balance;
 }
 
 @layer utilities {

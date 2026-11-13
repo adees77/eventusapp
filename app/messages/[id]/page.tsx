@@ -113,7 +113,7 @@ export default function ThreadPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center gap-3 border-b border-border px-3 py-3 lg:px-5">
+      <header className="flex items-center gap-3 px-3 py-3 lg:px-5">
         <Link
           href="/messages"
           className="flex size-9 items-center justify-center rounded-lg text-text-secondary hover:bg-muted lg:hidden"
@@ -137,7 +137,7 @@ export default function ThreadPage() {
       </header>
 
       {booking && offer && (
-        <div className="flex items-center gap-3 border-b border-border bg-background/60 px-3 py-2.5 lg:px-5 xl:hidden">
+        <div className="flex items-center gap-3 bg-background/60 px-3 py-2.5 lg:px-5 xl:hidden">
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm">{l(offer.title)}</div>
             <EscrowBadge booking={booking} />
@@ -201,7 +201,7 @@ export default function ThreadPage() {
 
           {can.sendMessage(actor, db, conv) && (
             <form
-              className="flex items-end gap-2 border-t border-border p-3 lg:px-5"
+              className="flex items-end gap-2 p-3 lg:px-5"
               onSubmit={(e) => {
                 e.preventDefault();
                 send();
@@ -220,7 +220,7 @@ export default function ThreadPage() {
                 maxLength={4000}
                 placeholder={t("messages.placeholder")}
                 aria-label={t("messages.placeholder")}
-                className="max-h-32 min-h-11 flex-1 resize-none rounded-[22px] border border-input bg-background px-4 py-2.5 text-[16px] outline-none md:text-md placeholder:text-muted-foreground focus-visible:border-ring"
+                className="max-h-32 min-h-11 flex-1 resize-none rounded-[22px] bg-background px-4 py-2.5 text-[16px] outline-none md:text-md placeholder:text-muted-foreground focus-visible:border-ring"
               />
               <button
                 type="submit"
@@ -234,7 +234,7 @@ export default function ThreadPage() {
           )}
         </div>
         {booking && offer && (
-          <aside className="hidden w-[340px] shrink-0 flex-col gap-3 overflow-y-auto border-l border-border p-4 xl:flex">{dealPanel}</aside>
+          <aside className="hidden w-[340px] shrink-0 flex-col gap-3 overflow-y-auto p-4 xl:flex">{dealPanel}</aside>
         )}
       </div>
       {booking && offer && (

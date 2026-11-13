@@ -46,7 +46,7 @@ export function CabinetShell({
 
   return (
     <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col lg:flex-row">
-      <aside className="hidden w-64 shrink-0 border-r border-border lg:block">
+      <aside className="hidden w-64 shrink-0 lg:block">
         <div className="sticky top-16 flex h-[calc(100dvh-4rem)] flex-col overflow-y-auto px-4 py-6">
           {head && <div className="mb-6 px-2">{head}</div>}
           <nav className="flex flex-col gap-6">
@@ -63,15 +63,15 @@ export function CabinetShell({
                           href={it.href}
                           aria-current={on ? "page" : undefined}
                           className={cn(
-                            "flex h-9 items-center gap-3 rounded-lg px-3 text-sm transition-colors",
+                            "flex h-10 items-center gap-3 rounded-full px-4 text-sm transition-colors",
                             on
-                              ? "bg-card text-foreground shadow-[inset_0_0_0_1px_var(--border)]"
-                              : "text-text-secondary hover:bg-muted hover:text-foreground",
+                              ? "bg-ink text-white"
+                              : "text-text-secondary hover:bg-foreground/[0.05] hover:text-foreground",
                           )}
                         >
-                          <Icon className={cn("size-4 shrink-0", on ? "text-primary" : "text-muted-foreground")} strokeWidth={1.5} />
+                          <Icon className={cn("size-4 shrink-0", on ? "text-sun" : "text-muted-foreground")} strokeWidth={1.5} />
                           <span className="flex-1 truncate">{t(it.label)}</span>
-                          {!!it.badge && <span className="text-xs text-primary tabular-nums">{it.badge}</span>}
+                          {!!it.badge && <span className={cn("text-xs tabular-nums", on ? "text-sun" : "text-primary")}>{it.badge}</span>}
                         </Link>
                       </li>
                     );
@@ -85,7 +85,7 @@ export function CabinetShell({
       </aside>
 
       <nav
-        className="no-scrollbar sticky top-14 z-20 flex gap-1 overflow-x-auto border-b border-border bg-background px-4 lg:hidden"
+        className="no-scrollbar sticky top-14 z-20 flex gap-1 overflow-x-auto bg-background/90 px-4 py-2 backdrop-blur-md lg:hidden"
         aria-label="cabinet"
       >
         {flat.map((it) => {
@@ -96,13 +96,12 @@ export function CabinetShell({
               href={it.href}
               aria-current={on ? "page" : undefined}
               className={cn(
-                "relative flex h-11 shrink-0 items-center gap-1.5 px-2.5 text-sm",
-                on ? "text-foreground" : "text-muted-foreground",
+                "flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm",
+                on ? "bg-ink text-white" : "text-muted-foreground",
               )}
             >
               {t(it.label)}
               {!!it.badge && <span className="text-xs text-primary tabular-nums">{it.badge}</span>}
-              {on && <span className="absolute inset-x-2.5 -bottom-px h-0.5 rounded-full bg-primary" aria-hidden />}
             </Link>
           );
         })}
@@ -128,7 +127,7 @@ export function Kpi({
   tone?: "gold" | "primary";
 }) {
   return (
-    <div className="flex flex-col rounded-2xl border border-border bg-card p-4 md:p-5">
+    <div className="flex flex-col rounded-3xl bg-card p-4 md:p-6">
       <div className="flex items-center gap-1.5 text-sm text-text-secondary">
         {tone && <span className={cn("size-1.5 rounded-full", tone === "gold" ? "bg-gold" : "bg-primary")} aria-hidden />}
         {label}

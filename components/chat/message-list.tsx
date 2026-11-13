@@ -110,7 +110,7 @@ export function MessageList({
 function AssistantRow({ children, showAvatar }: { children: React.ReactNode; showAvatar?: boolean }) {
   return (
     <div className="flex gap-3">
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-card">
+      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-card">
         {showAvatar && <LogoMark className="h-2.5 w-auto" />}
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-4 pt-1">{children}</div>

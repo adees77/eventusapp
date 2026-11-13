@@ -32,6 +32,11 @@ export default function AssistantPage() {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
+  // a landing package link prefills the request: /assistant?q=…
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q) setInput(q); // eslint-disable-line react-hooks/set-state-in-effect -- one-time read of the URL
+  }, []);
   const thread = threads.find((th) => th.id === threadId) ?? null;
   const { send, stop, status, live, tool, mode, busy } = useChat(thread?.id ?? null, setThreadId);
 
@@ -80,7 +85,7 @@ export default function AssistantPage() {
 
   return (
     <div className="mx-auto flex h-[calc(100dvh-56px-80px)] w-full max-w-7xl lg:h-[calc(100dvh-64px)] lg:pl-4 xl:pl-6">
-      <aside className="hidden w-60 shrink-0 border-r border-border py-6 pr-4 lg:block">{history}</aside>
+      <aside className="hidden w-60 shrink-0 py-6 pr-4 lg:block">{history}</aside>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="left" className="w-72 p-4 pt-12">

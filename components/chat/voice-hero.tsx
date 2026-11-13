@@ -53,7 +53,7 @@ export function VoiceHero({
 
   return (
     <div className={cn("flex flex-col items-center text-center", className)}>
-      <h1 className="max-w-md font-serif text-[30px] leading-[1.08] tracking-[-0.01em] [text-wrap:balance] md:text-5xl">{title}</h1>
+      <h1 className="display max-w-lg text-[30px] md:text-5xl">{title}</h1>
       {subtitle && (
         <p className="mt-2.5 max-w-sm text-[14px] leading-relaxed text-text-secondary md:mt-3 md:max-w-md md:text-md">{subtitle}</p>
       )}
@@ -61,11 +61,11 @@ export function VoiceHero({
       <div className="relative mt-6 flex size-32 items-center justify-center md:mt-12 md:size-40">
         {listening && (
           <>
-            <span className="absolute inset-0 animate-[mic-ring_1.8s_ease-out_infinite] rounded-full bg-primary/15" aria-hidden />
-            <span className="absolute inset-0 animate-[mic-ring_1.8s_ease-out_0.6s_infinite] rounded-full bg-primary/10" aria-hidden />
+            <span className="absolute inset-0 animate-[mic-ring_1.8s_ease-out_infinite] rounded-full bg-sun/30" aria-hidden />
+            <span className="absolute inset-0 animate-[mic-ring_1.8s_ease-out_0.6s_infinite] rounded-full bg-sun/20" aria-hidden />
           </>
         )}
-        <span className={cn("absolute inset-4 rounded-full transition-colors", listening ? "bg-primary/10" : "bg-secondary")} aria-hidden />
+        <span className={cn("absolute inset-4 rounded-full transition-colors", listening ? "bg-sun/25" : "bg-sun/20")} aria-hidden />
         <button
           type="button"
           onClick={toggle}
@@ -73,8 +73,8 @@ export function VoiceHero({
           aria-pressed={listening}
           aria-label={listening ? t("voice.stop") : t("voice.start")}
           className={cn(
-            "relative flex size-20 items-center justify-center rounded-full md:size-24 text-primary-foreground shadow-[0_10px_30px_rgb(42_95_165/0.35)] transition-[transform,background-color] active:scale-[0.96] disabled:opacity-50",
-            listening ? "bg-primary-hover" : "bg-primary hover:bg-primary-hover",
+            "relative flex size-20 items-center justify-center rounded-full md:size-24 text-sun-foreground shadow-[0_12px_36px_rgb(242_201_76/0.55)] transition-[transform,background-color] active:scale-[0.96] disabled:opacity-50",
+            listening ? "bg-[color-mix(in_oklch,var(--sun),black_8%)]" : "bg-sun hover:bg-[color-mix(in_oklch,var(--sun),black_6%)]",
             !speech.supported && "opacity-60",
           )}
         >
@@ -98,7 +98,7 @@ export function VoiceHero({
                 type="button"
                 disabled={disabled}
                 onClick={() => onSend(ex)}
-                className="w-[min(72vw,260px)] shrink-0 rounded-xl border border-border bg-card px-3.5 py-2.5 text-left text-sm leading-snug text-text-secondary md:w-auto md:max-w-[280px] transition-colors hover:bg-muted hover:text-foreground"
+                className="w-[min(72vw,260px)] shrink-0 rounded-2xl bg-card px-4 py-3 text-left text-sm leading-snug text-text-secondary md:w-auto md:max-w-[280px] transition-colors hover:bg-muted hover:text-foreground"
               >
                 {ex}
               </button>

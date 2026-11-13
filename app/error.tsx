@@ -11,12 +11,14 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
   }, [error]);
 
   return (
-    <div className="mx-auto flex max-w-sm flex-1 flex-col items-center justify-center px-4 py-24 text-center">
-      <h1 className="font-serif text-4xl font-normal">{t("common.error")}</h1>
-      <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
-      <Button className="mt-6" onClick={reset}>
+    <div className="flex flex-1 p-2 md:p-3">
+      <div className="surface-ink flex flex-1 flex-col items-center justify-center rounded-[28px] px-4 py-24 text-center md:rounded-[36px]">
+      <h1 className="font-heading tracking-[-0.025em] text-4xl font-normal md:text-5xl">{t("common.error")}</h1>
+      <p className="mt-2 text-sm text-white/60">{error.message}</p>
+      <Button variant="sun" className="mt-8 h-11 px-5" onClick={reset}>
         {t("common.retry")}
       </Button>
+      </div>
     </div>
   );
 }

@@ -24,7 +24,7 @@ export function BottomNav() {
   const on = (href: string) => (href === "/me" ? !!mySlug && pathname === `/vendors/${mySlug}` : isActive(pathname, href) && !(href === "/vendors" && !!mySlug && pathname === `/vendors/${mySlug}`));
 
   return (
-    <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background pt-2 lg:hidden print:hidden">
+    <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 bg-background/90 backdrop-blur-md shadow-[0_-8px_24px_rgb(13_26_47/0.06)] pt-2 lg:hidden print:hidden">
       <ul className="mx-auto flex max-w-md items-stretch justify-around">
         {items.map(({ href, label, icon: Icon, create }) => {
           if (create)

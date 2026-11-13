@@ -26,20 +26,28 @@ export const brand = {
     primary: "#2A5FA5",
     primaryHover: "#234F8A",
     primaryForeground: "#FFFFFF",
-    /** Page background — barely-blue white */
-    background: "#F5F7FA",
+    /** Page background — warm white */
+    background: "#F7F5F0",
     /** Cards, popovers */
     surface: "#FFFFFF",
+    /** Beige block surface — borderless cards sit on this or on white */
+    cream: "#F1ECE1",
     /** Soft blue surface — chips, selected states */
-    secondary: "#EAF0F7",
+    secondary: "#E6EEF8",
     secondaryForeground: "#1F3B63",
-    muted: "#ECEFF4",
-    mutedForeground: "#6B7487",
-    foreground: "#111827",
+    muted: "#EEEBE4",
+    mutedForeground: "#6E7381",
+    foreground: "#101828",
     /** Secondary text role */
-    secondaryText: "#4B5565",
-    border: "rgba(17, 24, 39, 0.09)",
-    /** Soft gold — used sparingly: verified, rating, premium, hairlines */
+    secondaryText: "#4A5263",
+    border: "rgba(16, 24, 40, 0.08)",
+    /** Deep navy — hero, footer, dark cards */
+    ink: "#0D1A2F",
+    inkSoft: "#16294A",
+    /** Sun yellow — main calls to action, highlights */
+    sun: "#F2C94C",
+    sunForeground: "#1B1606",
+    /** Soft gold — rating, verified */
     gold: "#C9A96E",
     goldSoft: "#F6F0E4",
     goldForeground: "#7A5F2E",
@@ -74,6 +82,11 @@ export function brandCssVariables(): string {
 --border:${c.border};
 --input:${c.border};
 --ring:${c.primary};
+--cream:${c.cream};
+--ink:${c.ink};
+--ink-soft:${c.inkSoft};
+--sun:${c.sun};
+--sun-foreground:${c.sunForeground};
 --gold:${c.gold};
 --gold-soft:${c.goldSoft};
 --gold-foreground:${c.goldForeground};

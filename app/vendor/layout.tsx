@@ -65,7 +65,7 @@ export default function VendorCabinetLayout({ children }: { children: React.Reac
           }
         >
           {vendor.hidden && (
-            <p className="mb-4 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-text-secondary">{t("vp.hiddenNotice")}</p>
+            <p className="mb-4 rounded-lg bg-muted px-3 py-2 text-sm text-text-secondary">{t("vp.hiddenNotice")}</p>
           )}
           {children}
         </CabinetShell>

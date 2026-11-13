@@ -50,7 +50,7 @@ function Book() {
   if (!offer || !vendor || !offer.active) {
     return (
       <div className="mx-auto flex max-w-sm flex-1 flex-col items-center justify-center gap-4 px-4 py-24 text-center">
-        <p className="font-serif text-2xl">{t("vendor.notFound")}</p>
+        <p className="font-heading tracking-[-0.025em] text-2xl">{t("vendor.notFound")}</p>
         <LinkButton href="/vendors" variant="outline">
           {t("nav.catalog")}
         </LinkButton>
@@ -95,14 +95,14 @@ function Book() {
         <ArrowLeft className="size-4" />
         {vendor.name}
       </button>
-      <h1 className="mt-4 font-serif text-[32px] leading-tight font-normal md:text-5xl">{t("booking.title")}</h1>
+      <h1 className="mt-4 font-heading tracking-[-0.025em] text-[32px] leading-tight font-normal md:text-5xl">{t("booking.title")}</h1>
       <p className="mt-1 text-md text-text-secondary">{l(offer.title)}</p>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px]">
         <div className="flex flex-col gap-8">
           <section>
             <h2 className="text-base font-medium">{t("booking.date")}</h2>
-            <div className="mt-3 rounded-2xl border border-border bg-card p-4 sm:p-5">
+            <div className="mt-3 rounded-2xl bg-card p-4 sm:p-5">
               <AvailabilityCalendar vendorId={vendor.id} offerId={offer.id} value={date} onChange={setDate} />
               <p className="mt-3 text-xs text-muted-foreground">{t("vendor.calendarHint")}</p>
             </div>
@@ -112,7 +112,7 @@ function Book() {
             <div>
               <h2 className="text-base font-medium">{t("booking.qty")}</h2>
               <div className="mt-3 flex items-center gap-3">
-                <div className="flex h-11 items-center rounded-lg border border-input bg-card">
+                <div className="flex h-11 items-center rounded-lg bg-card">
                   <button
                     type="button"
                     onClick={() => setQty(Math.max(1, safeQty - 1))}
@@ -169,7 +169,7 @@ function Book() {
               maxLength={500}
               rows={3}
               placeholder={t("booking.notePlaceholder")}
-              className="mt-3 w-full resize-none rounded-lg border border-input bg-card px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+              className="mt-3 w-full resize-none rounded-lg bg-card px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
             />
           </section>
         </div>

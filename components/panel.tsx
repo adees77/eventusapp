@@ -8,7 +8,7 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="font-serif text-[32px] leading-tight font-normal md:text-5xl">{title}</h1>
+        <h1 className="display text-[32px] md:text-[44px]">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-text-secondary">{subtitle}</p>}
       </div>
       {action}
@@ -28,7 +28,7 @@ export function Section({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-2xl border border-border bg-card p-4 md:p-5", className)}>
+    <section className={cn("rounded-3xl bg-card p-4 md:p-6", className)}>
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="text-base font-medium">{title}</h2>
         {action}
@@ -40,7 +40,7 @@ export function Section({
 
 export function Stat({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
+    <div className="rounded-3xl bg-card p-5 md:p-6">
       <div className="text-sm text-text-secondary">{label}</div>
       <div className="mt-2 text-3xl leading-none font-medium tabular-nums">{value}</div>
       {note && <div className="mt-2 text-xs text-muted-foreground">{note}</div>}
@@ -59,9 +59,9 @@ export function Field({ label, children, hint }: { label: string; children: Reac
 }
 
 export const inputClass =
-  "h-10 w-full rounded-lg border border-input bg-card px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30";
+  "h-10 w-full rounded-lg border border-transparent bg-foreground/[0.045] px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30";
 export const textareaClass =
-  "w-full resize-none rounded-lg border border-input bg-card px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30";
+  "w-full resize-none rounded-lg border border-transparent bg-foreground/[0.045] px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30";
 
 export function Segmented<T extends string>({
   value,
@@ -73,7 +73,7 @@ export function Segmented<T extends string>({
   options: { value: T; label: string }[];
 }) {
   return (
-    <div role="tablist" className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 md:mx-0 md:px-0">
+    <div role="tablist" className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto px-4 md:mx-0 md:px-0">
       {options.map((o) => (
         <button
           key={o.value}
@@ -82,12 +82,11 @@ export function Segmented<T extends string>({
           aria-selected={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            "relative h-11 shrink-0 px-3 text-sm transition-colors",
-            value === o.value ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+            "h-9 shrink-0 rounded-full px-4 text-sm transition-colors",
+            value === o.value ? "bg-ink text-white" : "text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground",
           )}
         >
           {o.label}
-          {value === o.value && <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-primary" />}
         </button>
       ))}
     </div>

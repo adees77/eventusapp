@@ -44,7 +44,7 @@ export function SpecSheet({ category, specs }: { category: CategoryId; specs: Ve
                 return (
                   <ul key={f.id} className="mb-5 grid gap-3 md:grid-cols-2">
                     {rows.map((r, i) => (
-                      <li key={i} className="rounded-xl border border-border bg-card p-4">
+                      <li key={i} className="rounded-xl bg-card p-4">
                         <div className="flex items-baseline justify-between gap-3">
                           <span className="font-medium">{String(r[f.titleField] ?? "—")}</span>
                           {f.item

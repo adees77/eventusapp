@@ -62,13 +62,15 @@ export default function ClientOverview() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header>
-        <p className="text-sm text-text-secondary">{t("cabinet.hello", { name: user?.name?.split(" ")[0] || t("roles.client") })}</p>
-        <h1 className="mt-1 font-serif text-[32px] leading-tight font-normal md:text-5xl">{event ? event.title : t("cabinet.overview")}</h1>
+      <header className="surface-ink relative overflow-hidden rounded-[28px] p-6 md:p-8">
+        <p className="text-sm text-white/60">{t("cabinet.hello", { name: user?.name?.split(" ")[0] || t("roles.client") })}</p>
+        <h1 className="display mt-2 text-[32px] md:text-5xl">{event ? event.title : t("cabinet.overview")}</h1>
         {event && (
-          <p className="mt-2 text-sm text-text-secondary tabular-nums">
+          <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/70 tabular-nums">
             {date(event.date, "d MMMM yyyy")} · {l(CITIES[event.city])} · {tn("common.guests", event.guests)}
-            {days >= 0 && <span className="text-primary"> · {tn("dashboard.daysLeft", days)}</span>}
+            {days >= 0 && (
+              <span className="rounded-full bg-sun px-3 py-1 text-xs font-medium text-sun-foreground">{tn("dashboard.daysLeft", days)}</span>
+            )}
           </p>
         )}
       </header>

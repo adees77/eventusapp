@@ -138,7 +138,7 @@ export default function VendorSetupPage() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
+      <header className="sticky top-0 z-20 bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4">
           <button
             type="button"
@@ -166,7 +166,7 @@ export default function VendorSetupPage() {
       <div className="mx-auto grid w-full max-w-6xl flex-1 gap-10 px-4 py-8 md:py-12 lg:grid-cols-[minmax(0,1fr)_340px]">
         <main className="flex max-w-xl flex-col">
           <p className="text-sm text-muted-foreground">{t("vsetup.kicker")}</p>
-          <h1 className="mt-2 font-serif text-[32px] leading-tight md:text-5xl">{t(`vsetup.${step}.title` as MessageKey)}</h1>
+          <h1 className="mt-2 font-heading tracking-[-0.025em] text-[32px] leading-tight md:text-5xl">{t(`vsetup.${step}.title` as MessageKey)}</h1>
           <p className="mt-3 text-md leading-relaxed text-text-secondary">{t(`vsetup.${step}.hint` as MessageKey)}</p>
 
           <ol className="mt-6 flex gap-4 text-sm" aria-label={t("vsetup.kicker")}>
@@ -242,7 +242,7 @@ export default function VendorSetupPage() {
                 <div className="grid gap-6">
                   <fieldset className="flex flex-col gap-1.5">
                     <legend className="mb-1.5 text-sm text-text-secondary">{t("vsetup.city")}</legend>
-                    <div className="flex rounded-lg border border-border p-0.5">
+                    <div className="flex rounded-lg p-0.5 bg-foreground/[0.045]">
                       {Object.entries(CITIES).map(([id, name]) => (
                         <button
                           key={id}

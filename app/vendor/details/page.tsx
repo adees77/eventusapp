@@ -49,7 +49,7 @@ export default function VendorDetails() {
         }
       />
       {changedElsewhere && dirty && (
-        <p className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-text-secondary">{t("vcab.detailsChangedElsewhere")}</p>
+        <p className="rounded-lg bg-muted px-3 py-2 text-sm text-text-secondary">{t("vcab.detailsChangedElsewhere")}</p>
       )}
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <Section title={t("vcab.detailsForm")}>

@@ -69,7 +69,7 @@ export default function AdminSettings() {
           {[...db.categories]
             .sort((a, b) => a.order - b.order)
             .map((c) => (
-              <li key={c.id} className="flex items-center gap-3 rounded-lg border border-border px-3 py-2.5 text-sm">
+              <li key={c.id} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm bg-foreground/[0.045]">
                 <CategoryIcon id={c.id} className="size-4 text-muted-foreground" />
                 <span className="flex-1">{l(c.name)}</span>
                 <span className="text-xs text-muted-foreground tabular-nums">{db.vendors.filter((v) => v.category === c.id).length}</span>

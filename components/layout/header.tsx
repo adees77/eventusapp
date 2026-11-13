@@ -27,7 +27,7 @@ export function Header() {
   const on = (href: string) => (href === "/me" ? onMine : isActive(pathname, href) && !(href === "/vendors" && onMine));
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background print:hidden">
+    <header className="sticky top-0 z-40 bg-background/85 backdrop-blur-md print:hidden">
       <div className="container-app flex h-14 items-center gap-4 md:h-16">
         <Link href={HOME_BY_ROLE[role]} className="shrink-0" aria-label="EVENTUS">
           <Logo />
@@ -39,13 +39,13 @@ export function Header() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex h-8 items-center whitespace-nowrap rounded-lg px-3 text-sm text-text-secondary transition-colors hover:bg-muted hover:text-foreground",
-                on(item.href) && "bg-card text-foreground shadow-[inset_0_0_0_1px_var(--border)]",
+                "flex h-9 items-center whitespace-nowrap rounded-full px-4 text-sm text-text-secondary transition-colors hover:bg-foreground/[0.05] hover:text-foreground",
+                on(item.href) && "bg-ink text-white hover:bg-ink hover:text-white",
               )}
             >
               {t(item.label)}
               {item.href === "/messages" && unread > 0 && (
-                <span className="ml-2 text-xs text-primary tabular-nums">
+                <span className={cn("ml-2 text-xs tabular-nums", on(item.href) ? "text-sun" : "text-primary")}>
                   {unread}
                 </span>
               )}

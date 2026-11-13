@@ -119,7 +119,7 @@ function Splash() {
       {/* CSS-only fallback: shows up only if the app hasn't started (old browser / JS blocked) */}
       <div className="splash-hint flex max-w-xs flex-col items-center gap-3 text-sm text-muted-foreground">
         <p>{t("common.splashHint")}</p>
-        <a href="" className="rounded-full border border-border px-4 py-1.5 text-foreground">
+        <a href="" className="rounded-full px-4 py-1.5 text-foreground bg-foreground/[0.045]">
           {t("common.reload")}
         </a>
       </div>

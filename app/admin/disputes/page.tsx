@@ -77,7 +77,7 @@ export default function AdminDisputes() {
                     {conv && (
                       <Link
                         href={`/messages/${conv.id}`}
-                        className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm hover:bg-muted"
+                        className="inline-flex h-9 items-center rounded-full bg-foreground/[0.05] px-4 text-sm hover:bg-foreground/[0.09]"
                       >
                         {t("acab.readChat")}
                       </Link>

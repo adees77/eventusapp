@@ -21,7 +21,7 @@ export function GoogleButton({ onSignIn }: { onSignIn: (input: { name: string; e
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-border bg-card text-md text-foreground transition-colors hover:bg-muted active:translate-y-px"
+        className="flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-card text-md text-foreground transition-colors hover:bg-muted active:translate-y-px"
       >
         <GoogleMark className="size-[18px]" />
         {t("auth.google")}

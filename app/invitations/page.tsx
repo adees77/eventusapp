@@ -68,7 +68,7 @@ export default function InvitationsPage() {
               onClick={() => start()}
               className="group flex aspect-[5/7] w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card text-sm text-text-secondary transition-colors hover:border-primary/40 hover:text-foreground"
             >
-              <span className="flex size-10 items-center justify-center rounded-full border border-border transition-colors group-hover:border-primary/40 group-hover:text-primary">
+              <span className="flex size-10 items-center justify-center rounded-full transition-colors group-hover:border-primary/40 group-hover:text-primary bg-foreground/[0.045]">
                 <Plus className="size-4" strokeWidth={1.5} />
               </span>
               {t("invitations.blank")}

@@ -50,7 +50,7 @@ function Editor() {
   if (!inv || !can.manageInvitation(actor, inv.ownerId)) {
     return (
       <div className="mx-auto flex max-w-sm flex-1 flex-col items-center justify-center gap-3 px-4 py-24 text-center">
-        <p className="font-serif text-2xl">{t("invitations.notFound")}</p>
+        <p className="font-heading tracking-[-0.025em] text-2xl">{t("invitations.notFound")}</p>
         <Link href="/invitations" className="text-sm text-primary">
           {t("invitations.back")}
         </Link>
@@ -72,7 +72,7 @@ function Editor() {
 
   return (
     <div className="flex h-[calc(100dvh-56px-64px)] flex-col lg:h-[calc(100dvh-64px)]">
-      <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background px-2 md:px-4">
+      <header className="flex h-14 shrink-0 items-center gap-2 bg-background px-2 md:px-4">
         <Link
           href="/invitations"
           className="flex size-9 items-center justify-center rounded-lg text-text-secondary hover:bg-muted"
@@ -134,7 +134,7 @@ function Editor() {
           </DropdownMenu>
         </div>
       </header>
-      <nav className="no-scrollbar flex h-11 shrink-0 gap-1 overflow-x-auto border-b border-border px-2 md:hidden">
+      <nav className="no-scrollbar flex h-11 shrink-0 gap-1 overflow-x-auto px-2 md:hidden">
         {TABS.map((k) => (
           <TabBtn key={k} on={tab === k} onClick={() => setTab(k)}>
             {t(`inv.tabs.${k}`)}

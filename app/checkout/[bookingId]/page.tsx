@@ -39,7 +39,7 @@ export default function CheckoutPage() {
   if (!booking || !offer || !vendor || booking.clientId !== actor.id) {
     return (
       <div className="mx-auto flex max-w-sm flex-1 flex-col items-center justify-center gap-4 px-4 py-24 text-center">
-        <p className="font-serif text-2xl">{t("checkout.notFound")}</p>
+        <p className="font-heading tracking-[-0.025em] text-2xl">{t("checkout.notFound")}</p>
         <LinkButton href="/dashboard" variant="outline">
           {t("nav.dashboard")}
         </LinkButton>
@@ -88,13 +88,13 @@ export default function CheckoutPage() {
           <span className="flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <Check className="size-6" strokeWidth={2} />
           </span>
-          <h1 className="mt-6 font-serif text-[32px] leading-tight font-normal md:text-4xl">{t("checkout.success")}</h1>
+          <h1 className="mt-6 font-heading tracking-[-0.025em] text-[32px] leading-tight font-normal md:text-4xl">{t("checkout.success")}</h1>
           <p className="mt-2 text-md text-text-secondary">{t("checkout.successHint")}</p>
           <p className="mt-6 text-2xl font-medium tabular-nums">{money(booking.prepayAmount)}</p>
         </div>
       ) : (
         <>
-          <h1 className="mt-8 font-serif text-[32px] leading-tight font-normal md:text-4xl">{t("checkout.title")}</h1>
+          <h1 className="mt-8 font-heading tracking-[-0.025em] text-[32px] leading-tight font-normal md:text-4xl">{t("checkout.title")}</h1>
           <div className="mt-6">
             <BookingSummary
               vendor={vendor}
@@ -144,7 +144,7 @@ export default function CheckoutPage() {
                 </div>
               </fieldset>
 
-              <div className="mt-8 rounded-2xl border border-border bg-card p-5">
+              <div className="mt-8 rounded-2xl bg-card p-5">
                 <h2 className="text-sm font-medium">{t("escrow.title")}</h2>
                 <EscrowSteps className="mt-4" />
                 <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">{t("escrow.refundPolicy")}</p>

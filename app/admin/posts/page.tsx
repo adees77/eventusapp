@@ -33,7 +33,7 @@ export default function AdminPosts() {
       />
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
         {posts.map((p) => (
-          <li key={p.id} className={cn("overflow-hidden rounded-2xl border border-border bg-card", p.hidden && "opacity-60")}>
+          <li key={p.id} className={cn("overflow-hidden rounded-2xl bg-card", p.hidden && "opacity-60")}>
             <div className="relative aspect-square bg-muted">
               <Image src={p.photos[0]} alt="" fill sizes="240px" className="object-cover" />
             </div>
