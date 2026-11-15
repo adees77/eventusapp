@@ -8,42 +8,34 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { BookingSummary } from "@/components/booking/booking-summary";
 import { StatusBadge } from "@/components/booking/status-badge";
-import { useCounterpart } from "@/components/messages/conversation-list";
 import { DealCard, EscrowBadge } from "@/components/booking/deal-card";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Monogram } from "@/components/vendor/badges";
-import { demoConfig } from "@/config/demo";
+import { demoFeature } from "@/lib/demo/mode";
 import { markRead, sendAutoReply, sendMessage } from "@/lib/data/actions";
-import { can } from "@/lib/data/policies";
-import { offerById, vendorById } from "@/lib/data/queries";
-import { useDB } from "@/lib/data/store";
+import { useThread } from "@/lib/data/views/messaging";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { routes } from "@/lib/routes";
 
 export default function ThreadPage() {
   const { id } = useParams<{ id: string }>();
   const { t, l, list, date: fmt } = useI18n();
   const actor = useActor();
-  const db = useDB((d) => d);
-  const conv = db.conversations.find((c) => c.id === id);
-  const messages = db.messages.filter((m) => m.conversationId === id).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  const booking = conv?.bookingId ? db.bookings.find((b) => b.id === conv.bookingId) : undefined;
-  const offer = booking ? offerById(db, booking.offerId) : undefined;
-  const vendor = conv ? vendorById(db, conv.vendorId) : undefined;
-  const nameOf = useCounterpart();
+  const { conversation: conv, messages, booking, offer, vendor, name, canSend } = useThread(actor, id);
   const [text, setText] = useState("");
   const [typing, setTyping] = useState(false);
   const [dealOpen, setDealOpen] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
-  const allowed = conv && can.viewConversation(actor, db, conv);
+  const allowed = !!conv;
   const lastAt = messages[messages.length - 1]?.createdAt;
 
   useEffect(() => {
     if (conv && allowed && lastAt && conv.readAt[actor.id] !== lastAt && (conv.readAt[actor.id] ?? "") < lastAt) {
-      markRead(actor.id, conv.id);
+      markRead(conv.id);
     }
   }, [conv, allowed, lastAt, actor.id]);
 
@@ -55,14 +47,13 @@ export default function ThreadPage() {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center text-sm text-text-secondary">
         {t("messages.notFound")}
-        <Link href="/messages" className="text-primary hover:underline">
+        <Link href={routes.inbox} className="text-primary hover:underline">
           {t("messages.title")}
         </Link>
       </div>
     );
   }
 
-  const name = nameOf(conv);
   const isVendor = actor.role === "vendor";
   const dealPanel = booking && offer && (
     <>
@@ -79,7 +70,7 @@ export default function ThreadPage() {
       <div className="flex items-center justify-between px-1">
         <StatusBadge status={booking.status} />
         {booking.status === "pending" && actor.id === booking.clientId && (
-          <Link href={`/checkout/${booking.id}`} className="text-sm text-primary hover:underline">
+          <Link href={routes.checkout(booking.id)} className="text-sm text-primary hover:underline">
             {t("escrow.pay")}
           </Link>
         )}
@@ -93,14 +84,14 @@ export default function ThreadPage() {
     const clean = text.trim();
     if (!clean) return;
     try {
-      sendMessage(actor, conv!.id, clean);
+      sendMessage(conv!.id, clean);
       setText("");
     } catch {
       toast.error(t("common.error"));
       return;
     }
     // DEMO: vendor answers on its own so a solo presenter sees a live chat
-    if (actor.role === "client" && demoConfig.vendorAutoReply) {
+    if (actor.role === "client" && demoFeature("vendorAutoReply")) {
       const vendorCount = messages.filter((m) => m.senderId === vendor!.ownerId).length;
       const replies = list("messages.autoReplies");
       setTimeout(() => setTyping(true), 600);
@@ -115,7 +106,7 @@ export default function ThreadPage() {
     <div className="flex h-full flex-col">
       <header className="flex items-center gap-3 px-3 py-3 lg:px-5">
         <Link
-          href="/messages"
+          href={routes.inbox}
           className="flex size-9 items-center justify-center rounded-lg text-text-secondary hover:bg-muted lg:hidden"
           aria-label={t("common.back")}
         >
@@ -126,7 +117,7 @@ export default function ThreadPage() {
           {isVendor ? (
             <div className="truncate text-sm font-medium">{name}</div>
           ) : (
-            <Link href={`/vendors/${vendor.slug}`} className="truncate text-sm font-medium hover:underline">
+            <Link href={routes.vendor(vendor.slug)} className="truncate text-sm font-medium hover:underline">
               {name}
             </Link>
           )}
@@ -199,7 +190,7 @@ export default function ThreadPage() {
             <div ref={endRef} />
           </div>
 
-          {can.sendMessage(actor, db, conv) && (
+          {canSend && (
             <form
               className="flex items-end gap-2 p-3 lg:px-5"
               onSubmit={(e) => {

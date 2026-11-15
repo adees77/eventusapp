@@ -6,7 +6,7 @@ import { Suspense, useEffect } from "react";
 import { LogoMark } from "@/components/brand/logo";
 import { InvitationPage } from "@/components/invitation/page/invitation-page";
 import { recordInvitationView } from "@/lib/data/actions";
-import { useDB } from "@/lib/data/store";
+import { useInvitation } from "@/lib/data/views/client";
 import { useI18n } from "@/lib/i18n";
 
 /** Public guest page: the invitation as a standalone web page. No app navigation. */
@@ -22,7 +22,7 @@ function Guest() {
   const { id } = useParams<{ id: string }>();
   const params = useSearchParams();
   const { t } = useI18n();
-  const inv = useDB((db) => db.invitations.find((i) => i.id === id));
+  const inv = useInvitation(id);
   const guestId = params.get("g") ?? undefined;
   const guest = inv?.guests.find((g) => g.id === guestId);
   const found = !!inv;

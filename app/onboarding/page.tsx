@@ -12,9 +12,10 @@ import { VoiceHero } from "@/components/chat/voice-hero";
 import { MonthCalendar } from "@/components/month-calendar";
 import { SummaryCard } from "@/components/onboarding/summary-card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { completeClientOnboarding, createPost, registerOwnVendor, upsertOffer } from "@/lib/data/actions";
+import { completeClientOnboarding, signUpVendor } from "@/lib/data/actions";
 import { CITIES } from "@/lib/data/seed/catalog";
-import { useDB } from "@/lib/data/store";
+import { useCategories } from "@/lib/data/views/catalog";
+import { useUser } from "@/lib/data/views/users";
 import type { CategoryId } from "@/lib/data/types";
 import { useI18n, type MessageKey } from "@/lib/i18n";
 import { type Draft, type LogEntry, useOnboardingDraft } from "@/lib/onboarding/draft";
@@ -39,6 +40,7 @@ import {
 import { useActor, useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { eventTitle } from "@/components/onboarding/labels";
+import { routes } from "@/lib/routes";
 
 type Bubble = { from: "bot"; lines: string[]; key: string } | { from: "user"; text: string; key: string };
 
@@ -59,8 +61,8 @@ export default function OnboardingPage() {
   const { t, tn, l, date, money, locale, list } = useI18n();
   const router = useRouter();
   const actor = useActor();
-  const user = useDB((db) => db.users.find((u) => u.id === actor.id));
-  const categories = useDB((db) => db.categories);
+  const user = useUser(actor.id);
+  const categories = useCategories();
   const stored = useOnboardingDraft((s) => s.drafts[actor.id]);
   const saveDraft = useOnboardingDraft((s) => s.set);
   const clearDraft = useOnboardingDraft((s) => s.clear);
@@ -75,7 +77,7 @@ export default function OnboardingPage() {
   // once the story or the role step says «vendor», the rest happens in the vendor form (prefilled from the draft)
   const isVendor = answers.role === "vendor";
   useEffect(() => {
-    if (isVendor) router.replace("/onboarding/vendor");
+    if (isVendor) router.replace(routes.onboardingVendor);
   }, [isVendor, router]);
   const step = currentStep(answers);
   const def = STEPS[step];
@@ -303,33 +305,24 @@ export default function OnboardingPage() {
     setFinishing(true);
     try {
       if (answers.role === "vendor") {
-        const vendor = registerOwnVendor(actor, {
+        // one atomic write: profile, first service and first post, so the profile and the feed are not empty from day one
+        signUpVendor({
           ownerName: answers.name ?? user?.name ?? "",
           name: answers.bizName!,
           category: answers.category!,
           city: answers.city!,
           phone: answers.phone ?? undefined,
           tagline: answers.tagline!,
+          specs: {},
+          photos: [],
+          offer: { title: answers.offerTitle!, price: answers.offerPrice!, unit: { ru: "услуга", en: "service" } },
         });
-        const owner = { id: actor.id, role: "vendor" as const };
-        // first service and first post, so the profile and the feed are not empty from day one
-        const offerId = upsertOffer(owner, {
-          vendorId: vendor.id,
-          title: { ru: answers.offerTitle!, en: answers.offerTitle! },
-          description: { ru: answers.tagline!, en: answers.tagline! },
-          price: answers.offerPrice!,
-          unit: { ru: "услуга", en: "service" },
-          totalUnits: 1,
-          photos: vendor.portfolio.slice(0, 2),
-          active: true,
-        });
-        createPost(owner, { vendorId: vendor.id, photos: vendor.portfolio.slice(0, 3), caption: answers.tagline!, offerId });
         useSession.getState().setRole("vendor", actor.id);
         toast.success(t("onboarding.doneVendor"));
         clearDraft(actor.id);
-        router.replace("/vendor");
+        router.replace(routes.vendorHome);
       } else {
-        completeClientOnboarding(actor, {
+        completeClientOnboarding({
           name: answers.name ?? user?.name ?? "",
           city: answers.city!,
           event: { title: eventTitle(answers, t), date: answers.date!, guests: answers.guests!, budget: answers.budget ?? 0 },
@@ -338,7 +331,7 @@ export default function OnboardingPage() {
         useSession.getState().setRole("client", actor.id);
         toast.success(t("onboarding.doneClient"));
         clearDraft(actor.id);
-        router.replace("/dashboard");
+        router.replace(routes.dashboard);
       }
     } catch (err) {
       console.error(err);
@@ -398,7 +391,7 @@ export default function OnboardingPage() {
                   aria-selected={introRole === r}
                   disabled={!!thinking}
                   // a vendor fills in a form of their own instead of chatting with the assistant
-                  onClick={() => (r === "vendor" ? router.push("/onboarding/vendor") : setIntroRole(r))}
+                  onClick={() => (r === "vendor" ? router.push(routes.onboardingVendor) : setIntroRole(r))}
                   className={cn(
                     "h-9 rounded-lg px-4 text-sm transition-colors",
                     introRole === r ? "bg-secondary text-secondary-foreground" : "text-text-secondary hover:text-foreground",

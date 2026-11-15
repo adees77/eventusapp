@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { updateInvitation } from "@/lib/data/actions";
-import type { Actor } from "@/lib/data/policies";
 import type { Invitation, InvitationDesign } from "@/lib/data/types";
 
 const LIMIT = 80;
@@ -14,7 +13,7 @@ const COALESCE_MS = 900;
  * once (autosave); history lives in memory for the editing session.
  * Stacks are refs (mutated only in event handlers); their sizes are mirrored in state.
  */
-export function useDesignHistory(actor: Actor, inv: Invitation) {
+export function useDesignHistory(inv: Invitation) {
   const past = useRef<InvitationDesign[]>([]);
   const future = useRef<InvitationDesign[]>([]);
   const last = useRef<{ key: string; at: number } | null>(null);
@@ -29,10 +28,10 @@ export function useDesignHistory(actor: Actor, inv: Invitation) {
   const save = useCallback(
     (d: InvitationDesign) => {
       current.current = d;
-      updateInvitation(actor, inv.id, { design: d });
+      updateInvitation(inv.id, { design: d });
       setCounts({ undo: past.current.length, redo: future.current.length });
     },
-    [actor, inv.id],
+    [inv.id],
   );
 
   const apply = useCallback(

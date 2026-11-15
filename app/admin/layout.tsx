@@ -3,38 +3,37 @@
 import { BadgeCheck, Flag, Gavel, Images, LayoutDashboard, Receipt, Settings, Star, Store, Users, Wallet } from "lucide-react";
 import { CabinetShell, RoleGate, type CabinetGroup } from "@/components/layout/cabinet-shell";
 import { LogoMark } from "@/components/brand/logo";
-import { useDB } from "@/lib/data/store";
+import { useAdminCounters } from "@/lib/data/views/admin";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
+import { routes } from "@/lib/routes";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
   const actor = useActor();
-  const disputes = useDB((db) => db.bookings.filter((b) => b.escrow?.state === "disputed").length);
-  const waiting = useDB((db) => db.vendors.filter((v) => v.verification?.state === "pending").length);
-  const complaints = useDB((db) => new Set(db.complaints.filter((c) => c.status === "open").map((c) => c.targetId)).size);
+  const { disputes, waiting, complaints } = useAdminCounters();
   const groups: CabinetGroup[] = [
-    { items: [{ href: "/admin", label: "cabinet.overview", icon: LayoutDashboard, exact: true }] },
+    { items: [{ href: routes.admin, label: "cabinet.overview", icon: LayoutDashboard, exact: true }] },
     {
       title: "acab.groupOps",
       items: [
-        { href: "/admin/disputes", label: "acab.disputes", icon: Gavel, badge: disputes },
-        { href: "/admin/bookings", label: "cabinet.bookings", icon: Receipt },
-        { href: "/admin/finance", label: "vcab.finance", icon: Wallet },
+        { href: routes.adminDisputes, label: "acab.disputes", icon: Gavel, badge: disputes },
+        { href: routes.adminBookings, label: "cabinet.bookings", icon: Receipt },
+        { href: routes.adminFinance, label: "vcab.finance", icon: Wallet },
       ],
     },
     {
       title: "acab.groupModeration",
       items: [
-        { href: "/admin/verification", label: "mod.verification", icon: BadgeCheck, badge: waiting },
-        { href: "/admin/complaints", label: "mod.complaints", icon: Flag, badge: complaints },
-        { href: "/admin/vendors", label: "acab.vendors", icon: Store },
-        { href: "/admin/users", label: "acab.users", icon: Users },
-        { href: "/admin/posts", label: "profile.tabPosts", icon: Images },
-        { href: "/admin/reviews", label: "profile.tabReviews", icon: Star },
+        { href: routes.adminVerification, label: "mod.verification", icon: BadgeCheck, badge: waiting },
+        { href: routes.adminComplaints, label: "mod.complaints", icon: Flag, badge: complaints },
+        { href: routes.adminVendors, label: "acab.vendors", icon: Store },
+        { href: routes.adminUsers, label: "acab.users", icon: Users },
+        { href: routes.adminPosts, label: "profile.tabPosts", icon: Images },
+        { href: routes.adminReviews, label: "profile.tabReviews", icon: Star },
       ],
     },
-    { items: [{ href: "/admin/settings", label: "acab.settings", icon: Settings }] },
+    { items: [{ href: routes.adminSettings, label: "acab.settings", icon: Settings }] },
   ];
   return (
     <RoleGate ok={actor.role === "admin"}>

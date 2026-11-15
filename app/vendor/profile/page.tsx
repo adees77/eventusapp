@@ -2,7 +2,7 @@
 
 import { PageHeader } from "@/components/panel";
 import { VendorDocuments } from "@/components/vendor-panel/documents";
-import { VendorProfileForm } from "@/components/vendor-panel/sections";
+import { VendorProfileForm } from "@/components/vendor-panel/profile-form";
 import { useMyVendor } from "@/components/vendor-panel/use-my-vendor";
 import { useI18n } from "@/lib/i18n";
 

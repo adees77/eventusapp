@@ -5,21 +5,22 @@ import { toast } from "sonner";
 import { CategoryIcon } from "@/components/category-icon";
 import { Field, PageHeader, Section, inputClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
-import { DOC_KINDS, updateSettings } from "@/lib/data/actions";
-import { getDB, useDataStore, useDB } from "@/lib/data/store";
+import { updateSettings } from "@/lib/data/actions";
+import { DOC_KINDS } from "@/lib/data/policies";
+import { useDataStore } from "@/lib/data/store";
+import { readPlatformSettings, useCategories, useCategoryVendorCounts } from "@/lib/data/views/catalog";
 import { useI18n } from "@/lib/i18n";
-import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 export default function AdminSettings() {
   const { t, l } = useI18n();
-  const actor = useActor();
-  const db = useDB((d) => d);
-  const [s, setS] = useState(() => getDB().settings);
+  const categories = useCategories();
+  const vendorCounts = useCategoryVendorCounts();
+  const [s, setS] = useState(readPlatformSettings);
   const save = (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettings(actor, s);
-    setS(getDB().settings);
+    updateSettings(s);
+    setS(readPlatformSettings());
     toast.success(t("common.saved"));
   };
   const saveBtn = (
@@ -148,13 +149,11 @@ export default function AdminSettings() {
       </Section>
       <Section title={t("feed.categories")}>
         <ul className="grid gap-2 sm:grid-cols-2">
-          {[...db.categories]
-            .sort((a, b) => a.order - b.order)
-            .map((c) => (
+          {categories.map((c) => (
               <li key={c.id} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm bg-foreground/[0.045]">
                 <CategoryIcon id={c.id} className="size-4 text-muted-foreground" />
                 <span className="flex-1">{l(c.name)}</span>
-                <span className="text-xs text-muted-foreground tabular-nums">{db.vendors.filter((v) => v.category === c.id).length}</span>
+                <span className="text-xs text-muted-foreground tabular-nums">{vendorCounts[c.id]}</span>
               </li>
             ))}
         </ul>

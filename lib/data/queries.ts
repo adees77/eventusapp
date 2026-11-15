@@ -93,11 +93,7 @@ export function searchVendors(db: DB, f: VendorFilters, actor: Actor | null = nu
   return results;
 }
 
-export const vendorBySlug = (db: DB, slug: string) => db.vendors.find((v) => v.slug === slug);
-export const vendorById = (db: DB, id: string) => db.vendors.find((v) => v.id === id);
 export const vendorOfOwner = (db: DB, ownerId: string) => db.vendors.find((v) => v.ownerId === ownerId);
-export const offerById = (db: DB, id: string) => db.offers.find((o) => o.id === id);
-export const userName = (db: DB, id: string) => db.users.find((u) => u.id === id)?.name ?? "";
 
 export function conversationsFor(db: DB, actor: Actor): Conversation[] {
   return db.conversations
@@ -122,7 +118,3 @@ export function unreadCount(db: DB, actor: Actor) {
   return conversationsFor(db, actor).filter((c) => isUnread(db, c, actor.id)).length;
 }
 
-/** Bookings visible to a vendor owner, newest first */
-export function vendorBookings(db: DB, vendorId: string) {
-  return db.bookings.filter((b) => b.vendorId === vendorId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}

@@ -7,7 +7,7 @@ import { CategoryIcon } from "@/components/category-icon";
 import { DatePicker } from "@/components/date-picker";
 import { Button } from "@/components/ui/button";
 import { CITIES } from "@/lib/data/seed/catalog";
-import { useDB } from "@/lib/data/store";
+import { useCategories } from "@/lib/data/views/catalog";
 import type { CategoryId } from "@/lib/data/types";
 import { useFeedPrefs } from "@/lib/feed-prefs";
 import { useI18n } from "@/lib/i18n";
@@ -42,7 +42,7 @@ export function FeedSearch({
   count: number;
 }) {
   const { t, tn, l, money, date } = useI18n();
-  const categories = useDB((db) => [...db.categories].sort((a, b) => a.order - b.order));
+  const categories = useCategories();
   const { recent, remember, forget } = useFeedPrefs();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value.query);

@@ -18,31 +18,27 @@ import { Monogram, VerifiedSeal } from "@/components/vendor/badges";
 import { createVendor, updateVendor } from "@/lib/data/actions";
 import { CATEGORY_PHOTOS, PHOTOS, unsplash } from "@/lib/data/seed/photos";
 import { CITIES } from "@/lib/data/seed/catalog";
-import { useDB } from "@/lib/data/store";
+import { useAdminVendors, type AdminVendorFilter } from "@/lib/data/views/admin";
+import { useCategories } from "@/lib/data/views/catalog";
 import type { CategoryId, Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
-import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { routes } from "@/lib/routes";
 
 export default function AdminVendors() {
   const { t, tn, l } = useI18n();
-  const actor = useActor();
-  const db = useDB((d) => d);
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Vendor | "new" | null>(null);
-  const [f, setF] = useState<"all" | "unverified" | "hidden">("all");
-
-  const vendors = db.vendors
-    .filter((v) => !q || `${v.name} ${v.slug}`.toLowerCase().includes(q.toLowerCase()))
-    .filter((v) => (f === "unverified" ? !v.verified : f === "hidden" ? v.hidden : true))
-    .sort((a, b) => a.name.localeCompare(b.name));
-  const catName = (id: CategoryId) => l(db.categories.find((c) => c.id === id)?.name);
+  const [f, setF] = useState<AdminVendorFilter>("all");
+  const { rows, total, unverified, hidden } = useAdminVendors(q, f);
+  const categories = useCategories();
+  const catName = (id: CategoryId) => l(categories.find((c) => c.id === id)?.name);
 
   return (
     <div>
       <PageHeader
         title={t("admin.title")}
-        subtitle={tn("admin.count", db.vendors.length)}
+        subtitle={tn("admin.count", total)}
         action={
           <Button className="h-10 px-4" onClick={() => setEditing("new")}>
             <Plus />
@@ -56,9 +52,9 @@ export default function AdminVendors() {
           value={f}
           onChange={setF}
           options={[
-            { value: "all", label: `${t("common.all")} · ${db.vendors.length}` },
-            { value: "unverified", label: `${t("acab.unverified")} · ${db.vendors.filter((v) => !v.verified).length}` },
-            { value: "hidden", label: `${t("admin.hidden")} · ${db.vendors.filter((v) => v.hidden).length}` },
+            { value: "all", label: `${t("common.all")} · ${total}` },
+            { value: "unverified", label: `${t("acab.unverified")} · ${unverified}` },
+            { value: "hidden", label: `${t("admin.hidden")} · ${hidden}` },
           ]}
         />
       </div>
@@ -79,8 +75,7 @@ export default function AdminVendors() {
           <span />
         </div>
         <ul className="divide-y divide-border">
-          {vendors.map((v) => {
-            const offers = db.offers.filter((o) => o.vendorId === v.id && o.active).length;
+          {rows.map(({ vendor: v, activeOffers: offers }) => {
             return (
               <li
                 key={v.id}
@@ -94,7 +89,7 @@ export default function AdminVendors() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <Link
-                        href={`/vendors/${v.slug}`}
+                        href={routes.vendor(v.slug)}
                         className={cn("truncate text-sm font-medium hover:underline", v.hidden && "text-muted-foreground")}
                       >
                         {v.name}
@@ -128,10 +123,10 @@ export default function AdminVendors() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuItem onClick={() => setEditing(v)}>{t("admin.edit")}</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => updateVendor(actor, v.id, { hidden: !v.hidden })}>
+                    <DropdownMenuItem onClick={() => updateVendor(v.id, { hidden: !v.hidden })}>
                       {v.hidden ? t("admin.show") : t("admin.hide")}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => updateVendor(actor, v.id, { verified: !v.verified })}>
+                    <DropdownMenuItem onClick={() => updateVendor(v.id, { verified: !v.verified })}>
                       {v.verified ? t("admin.unverify") : t("admin.verify")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -162,8 +157,7 @@ export default function AdminVendors() {
 
 function VendorForm({ initial, onDone }: { initial: Vendor | null; onDone: () => void }) {
   const { t, l, locale } = useI18n();
-  const actor = useActor();
-  const db = useDB((d) => d);
+  const categories = useCategories();
   const [name, setName] = useState(initial?.name ?? "");
   const [owner, setOwner] = useState("");
   const [category, setCategory] = useState<CategoryId>(initial?.category ?? "cars");
@@ -179,10 +173,10 @@ function VendorForm({ initial, onDone }: { initial: Vendor | null; onDone: () =>
         if (!valid) return;
         const tl = { ru: tagline.trim(), en: tagline.trim() };
         if (initial) {
-          updateVendor(actor, initial.id, { name: name.trim(), category, city, tagline: { ...initial.tagline, [locale]: tagline.trim() } });
+          updateVendor(initial.id, { name: name.trim(), category, city, tagline: { ...initial.tagline, [locale]: tagline.trim() } });
           toast.success(t("common.saved"));
         } else {
-          createVendor(actor, {
+          createVendor({
             name,
             owner,
             category,
@@ -206,7 +200,7 @@ function VendorForm({ initial, onDone }: { initial: Vendor | null; onDone: () =>
       <div className="grid grid-cols-2 gap-3">
         <Field label={t("admin.category")}>
           <NativeSelect value={category} onChange={(e) => setCategory(e.target.value as CategoryId)}>
-            {db.categories.map((c) => (
+            {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {l(c.name)}
               </option>

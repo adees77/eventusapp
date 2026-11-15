@@ -4,26 +4,17 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Monogram } from "@/components/vendor/badges";
-import { conversationsFor, isUnread, lastMessage, userName, vendorById } from "@/lib/data/queries";
-import { useDB } from "@/lib/data/store";
+import { useInbox } from "@/lib/data/views/messaging";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
-
-export function useCounterpart() {
-  const actor = useActor();
-  const db = useDB((d) => d);
-  return (c: { clientId: string; vendorId: string }) =>
-    actor.role === "vendor" ? userName(db, c.clientId) : (vendorById(db, c.vendorId)?.name ?? "");
-}
+import { routes } from "@/lib/routes";
 
 export function ConversationList() {
   const { t, date } = useI18n();
   const actor = useActor();
   const pathname = usePathname();
-  const db = useDB((d) => d);
-  const convs = conversationsFor(db, actor);
-  const nameOf = useCounterpart();
+  const convs = useInbox(actor);
 
   if (!convs.length) {
     return (
@@ -35,11 +26,8 @@ export function ConversationList() {
 
   return (
     <ul className="flex flex-col">
-      {convs.map((c) => {
-        const last = lastMessage(db, c.id);
-        const unread = isUnread(db, c, actor.id);
-        const name = nameOf(c);
-        const active = pathname === `/messages/${c.id}`;
+      {convs.map(({ conversation: c, name, last, unread }) => {
+        const active = pathname === routes.chat(c.id);
         const preview = last ? (last.system ? t(`messages.system.${last.text}` as never) : last.text) : "";
         const today = format(new Date(), "yyyy-MM-dd");
         const lastDay = last ? format(new Date(last.createdAt), "yyyy-MM-dd") : "";
@@ -47,7 +35,7 @@ export function ConversationList() {
         return (
           <li key={c.id}>
             <Link
-              href={`/messages/${c.id}`}
+              href={routes.chat(c.id)}
               className={cn(
                 "flex items-center gap-3 px-4 py-3 transition-colors",
                 active ? "bg-secondary" : "hover:bg-muted/60",

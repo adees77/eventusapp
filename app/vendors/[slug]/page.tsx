@@ -1,36 +1,32 @@
 "use client";
 
-import { ArrowLeft, BarChart3, Clock, Heart, Layers, MessageCircle, Pencil, Plus, ShieldCheck, Users, Flag } from "lucide-react";
-import Link from "next/link";
+import { ArrowLeft, BarChart3, Heart, MessageCircle, Pencil, Flag } from "lucide-react";
 import Image from "next/image";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { AvailDots } from "@/components/avail-dots";
-import { DatePicker } from "@/components/date-picker";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
-import { NativeSelect } from "@/components/ui/native-select";
-import { AvailabilityCalendar } from "@/components/vendor/availability-calendar";
 import { Monogram, VerifiedSeal } from "@/components/vendor/badges";
 import { PostDialog } from "@/components/feed/post-dialog";
 import { ReportForm } from "@/components/feed/report-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ensureConversation, toggleFavorite, trackView } from "@/lib/data/actions";
-import { ordersDone } from "@/lib/data/feed";
-import { specFacts, specsProgress } from "@/lib/data/specs";
-import { ReviewComposer, ReviewList, ReviewSummary } from "@/components/vendor/reviews";
-import { SpecSheet } from "@/components/vendor/spec-sheet";
-import { getAvailability } from "@/lib/data/availability";
+import { specFacts } from "@/lib/data/specs";
 import { can } from "@/lib/data/policies";
-import { activeOffers, vendorBySlug } from "@/lib/data/queries";
 import { CITIES } from "@/lib/data/seed/catalog";
-import { useDB } from "@/lib/data/store";
+import { useVendorReviews } from "@/lib/data/views/feed";
+import { useVendorProfile } from "@/lib/data/views/vendor";
+import { DetailsTab } from "@/components/vendor-profile/details-tab";
+import { PostsTab } from "@/components/vendor-profile/posts-tab";
+import { ReviewsTab } from "@/components/vendor-profile/reviews-tab";
+import { ServicesTab } from "@/components/vendor-profile/services-tab";
 import type { Offer } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { usePlanner } from "@/lib/planner";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { routes } from "@/lib/routes";
 
 const TABS = ["posts", "details", "services", "reviews"] as const;
 const TAB_LABEL = {
@@ -56,28 +52,14 @@ function VendorProfile() {
   const planner = usePlanner();
   const date = planner.date;
 
-  const vendor = useDB((db) => vendorBySlug(db, slug));
-  // the owner also sees switched-off services, so they can be edited and switched back on
-  const offers = useDB((db) =>
-    !vendor ? [] : vendor.ownerId === actor.id ? db.offers.filter((o) => o.vendorId === vendor.id) : activeOffers(db, vendor.id),
-  );
-  const reviews = useDB((db) =>
-    db.reviews.filter((r) => r.vendorId === vendor?.id && !r.hidden).sort((a, b) => b.date.localeCompare(a.date)),
-  );
-  const category = useDB((db) => db.categories.find((c) => c.id === vendor?.category));
-  const fav = useDB((db) => db.favorites.some((f) => f.userId === actor.id && f.vendorId === vendor?.id));
-  const db = useDB((d) => d);
-  const [calendarOffer, setCalendarOffer] = useState<string | null>(null);
+  const { vendor, offers, category, favorite: fav, posts, orders } = useVendorProfile(slug, actor.id);
+  const reviews = useVendorReviews(vendor?.id);
   const params = useSearchParams();
   const tab = TABS.find((k) => k === params.get("tab")) ?? "posts";
   const setTab = (k: (typeof TABS)[number]) =>
-    router.replace(`/vendors/${slug}${k === "posts" ? "" : `?tab=${k}`}`, { scroll: false });
+    router.replace(routes.vendor(slug, k), { scroll: false });
   const [openPost, setOpenPost] = useState<string | null>(null);
   const [reporting, setReporting] = useState(false);
-  const posts = useDB((d) =>
-    d.posts.filter((p) => p.vendorId === vendor?.id && !p.hidden).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-  );
-  const orders = useDB((d) => (vendor ? ordersDone(d, vendor) : 0));
 
   const tracked = useRef<string | null>(null);
   useEffect(() => {
@@ -91,7 +73,7 @@ function VendorProfile() {
     return (
       <div className="mx-auto flex max-w-sm flex-1 flex-col items-center justify-center gap-4 px-4 py-24 text-center">
         <p className="font-heading tracking-[-0.025em] text-2xl">{t("vendor.notFound")}</p>
-        <LinkButton href="/vendors" variant="outline">
+        <LinkButton href={routes.feed} variant="outline">
           {t("nav.catalog")}
         </LinkButton>
       </div>
@@ -106,23 +88,23 @@ function VendorProfile() {
 
   function book(offer: Offer) {
     if (!isClient) return toast(t("vendor.onlyClients"));
-    router.push(`/book/${offer.id}${date ? `?date=${date}` : ""}`);
+    router.push(routes.book(offer.id, { date }));
   }
 
   function write() {
     if (!isClient) return toast(t("vendor.onlyClients"));
-    const id = ensureConversation(actor, vendor!.id);
-    router.push(`/messages/${id}`);
+    const id = ensureConversation(vendor!.id);
+    router.push(routes.chat(id));
   }
 
   const actions = () =>
     isOwner ? (
       <>
-        <LinkButton href="/vendor/profile" variant="outline" className="h-10 px-4">
+        <LinkButton href={routes.vendorProfile} variant="outline" className="h-10 px-4">
           <Pencil strokeWidth={1.75} />
           {t("owner.editProfile")}
         </LinkButton>
-        <LinkButton href="/vendor" variant="outline" className="h-10 px-4">
+        <LinkButton href={routes.vendorHome} variant="outline" className="h-10 px-4">
           <BarChart3 strokeWidth={1.75} />
           {t("owner.stats")}
         </LinkButton>
@@ -140,7 +122,7 @@ function VendorProfile() {
           <Button
             variant="outline"
             className="size-10 px-0"
-            onClick={() => toggleFavorite(actor, vendor.id)}
+            onClick={() => toggleFavorite(vendor.id)}
             aria-pressed={fav}
             aria-label={fav ? t("vendor.favorited") : t("vendor.favorite")}
           >
@@ -260,221 +242,13 @@ function VendorProfile() {
         </nav>
       </div>
 
-      {tab === "posts" && (
-        <div className="container-app">
-          {posts.length || isOwner ? (
-            <ul className="-mx-4 grid grid-cols-3 gap-0.5 sm:mx-0">
-              {isOwner && (
-                <li>
-                  <Link
-                    href="/create/post"
-                    className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-2 bg-cream text-sm text-text-secondary transition-colors hover:bg-secondary hover:text-primary"
-                  >
-                    <Plus className="size-6" strokeWidth={1.5} />
-                    {t("vcab.newPost")}
-                  </Link>
-                </li>
-              )}
-              {posts.map((p) => (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    onClick={() => setOpenPost(p.id)}
-                    className="group relative block aspect-[4/5] w-full overflow-hidden bg-muted"
-                  >
-                    <Image
-                      src={p.photos[0]}
-                      alt=""
-                      fill
-                      sizes="(min-width: 1280px) 400px, 33vw"
-                      className="object-cover"
-                    />
-                    <span className="pointer-events-none absolute inset-0 bg-black/25 opacity-0 transition-opacity group-hover:opacity-100" />
-                    {p.photos.length > 1 && <Layers className="absolute top-2 right-2 size-4 text-white drop-shadow" strokeWidth={1.75} />}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="py-16 text-center text-sm text-text-secondary">{t("profile.noPosts")}</p>
-          )}
-        </div>
-      )}
+      {tab === "posts" && <PostsTab posts={posts} isOwner={isOwner} onOpen={setOpenPost} />}
 
-      {tab === "details" && (
-        <div className="container-app py-2">
-          {isOwner && (
-            <div className="mb-6 flex justify-end">
-              <LinkButton href="/vendor/details" variant="outline" className="h-9 px-4">
-                <Pencil strokeWidth={1.75} />
-                {t("owner.editDetails")}
-              </LinkButton>
-            </div>
-          )}
-          {/* any filled field counts — specFacts only covers the few fields shown in the feed */}
-          {specsProgress(vendor.category, vendor.specs) > 0 ? (
-            <SpecSheet category={vendor.category} specs={vendor.specs} />
-          ) : (
-            <p className="py-16 text-center text-sm text-text-secondary">{isOwner ? t("owner.noDetails") : t("profile.noDetails")}</p>
-          )}
-        </div>
-      )}
+      {tab === "details" && <DetailsTab vendor={vendor} isOwner={isOwner} />}
 
-      {tab === "reviews" && (
-        <div className="container-app grid max-w-5xl gap-10 py-2 md:grid-cols-[300px_minmax(0,1fr)]">
-          <aside className="flex flex-col gap-6 md:sticky md:top-24 md:self-start">
-            <ReviewSummary vendor={vendor} reviews={reviews} />
-            <div className="rounded-2xl bg-card p-4">
-              <ReviewComposer vendor={vendor} />
-            </div>
-          </aside>
-          <ReviewList reviews={reviews} vendor={vendor} />
-        </div>
-      )}
+      {tab === "reviews" && <ReviewsTab vendor={vendor} reviews={reviews} />}
 
-      {tab === "services" && (
-        <div className="container-app grid gap-12 lg:grid-cols-[1fr_360px]">
-          <div className="min-w-0">
-            <dl className="mt-2 flex flex-wrap gap-x-6 gap-y-2 text-sm text-text-secondary">
-              {vendor.yearsOnMarket > 0 && <div>{tn("vendor.years", vendor.yearsOnMarket)}</div>}
-              <div className="inline-flex items-center gap-1.5">
-                <Clock className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                {t("vendor.response", { n: vendor.responseMinutes })}
-              </div>
-              <div>{t("vendor.prepay", { p: vendor.prepayPercent })}</div>
-              <div className="inline-flex items-center gap-1.5">
-                <ShieldCheck className="size-3.5 text-muted-foreground" strokeWidth={1.5} />
-                {t("escrow.title")}
-              </div>
-            </dl>
-
-            {/* Offers */}
-            <section className="mt-8" id="offers">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <h2 className="text-lg font-medium">{t("vendor.offers")}</h2>
-                {isOwner && (
-                  <LinkButton href="/create/service" className="h-9 px-4">
-                    <Plus />
-                    {t("vp.addOffer")}
-                  </LinkButton>
-                )}
-                <DatePicker
-                  value={date}
-                  onChange={(d) => planner.set({ date: d })}
-                  className="w-full sm:w-60"
-                  placeholder={t("avail.pickDate")}
-                />
-              </div>
-              <ul className="mt-4 flex flex-col divide-y divide-border rounded-2xl bg-card">
-                {offers.map((o) => {
-                  const a = date ? getAvailability(db, o, date) : null;
-                  return (
-                    <li key={o.id} className="flex flex-col gap-4 p-4 sm:flex-row sm:p-5">
-                      <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden rounded-xl bg-muted sm:w-40">
-                        {o.photos[0] && <Image src={o.photos[0]} alt="" fill sizes="160px" className="object-cover" />}
-                      </div>
-                      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                        <div className="flex items-start justify-between gap-3">
-                          <h3 className="text-md font-medium">{l(o.title)}</h3>
-                          {!o.active ? (
-                            <span className="shrink-0 rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">{t("owner.offerOff")}</span>
-                          ) : (
-                            o.premium && <span className="shrink-0 text-xs text-gold-foreground">{t("vendor.premium")}</span>
-                          )}
-                        </div>
-                        <p className="text-sm text-text-secondary">{l(o.description)}</p>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                          {o.capacity && (
-                            <span className="inline-flex items-center gap-1">
-                              <Users className="size-3.5" strokeWidth={1.5} />
-                              {t("vendor.capacity", { n: o.capacity })}
-                            </span>
-                          )}
-                          {!a && <span>{t("vendor.inStock", { n: o.totalUnits })}</span>}
-                        </div>
-                        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-2">
-                          <div className="flex flex-col gap-1">
-                            <span className="tabular-nums">
-                              <span className="font-medium">{money(o.price)}</span>
-                              <span className="text-sm text-muted-foreground"> / {l(o.unit)}</span>
-                            </span>
-                            {a && <AvailDots a={a} size="sm" />}
-                          </div>
-                          {isOwner ? (
-                            <LinkButton href={`/create/service?id=${o.id}`} variant="outline" className="h-10 px-4">
-                              <Pencil strokeWidth={1.75} />
-                              {t("common.edit")}
-                            </LinkButton>
-                          ) : (
-                            <Button className="h-10 px-5" disabled={a?.free === 0} onClick={() => book(o)}>
-                              {t("vendor.book")}
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          </div>
-
-          {/* Aside: availability */}
-          <aside className="lg:pt-6">
-            <div className="rounded-2xl bg-card p-5 shadow-soft lg:sticky lg:top-24">
-              <div className="flex items-baseline justify-between gap-2">
-                <h2 className="text-base font-medium">{t("vendor.calendar")}</h2>
-                <span className="text-sm text-muted-foreground tabular-nums">
-                  {t("common.from")} {money(minPrice)}
-                </span>
-              </div>
-              {offers.length > 1 && (
-                <NativeSelect
-                  className="mt-4 w-full"
-                  value={calendarOffer ?? ""}
-                  onChange={(e) => setCalendarOffer(e.target.value || null)}
-                  aria-label={t("vendor.calendarFor")}
-                >
-                  <option value="">{t("vendor.allOffers")}</option>
-                  {offers.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {l(o.title)}
-                    </option>
-                  ))}
-                </NativeSelect>
-              )}
-              <div className="mt-4">
-                <AvailabilityCalendar
-                  vendorId={vendor.id}
-                  offerId={calendarOffer ?? (offers.length === 1 ? offers[0].id : null)}
-                  value={date}
-                  onChange={(d) => planner.set({ date: d })}
-                />
-              </div>
-              <p className="mt-3 text-xs text-muted-foreground">{t("vendor.calendarHint")}</p>
-              {date && (
-                <div className="mt-4 border-t border-border pt-4 text-sm">
-                  <div className="text-text-secondary">{t("vendor.selectedDate", { date: fmtDate(date, "d MMMM, EEEE") })}</div>
-                  <ul className="mt-2 flex flex-col gap-2">
-                    {offers.map((o) => (
-                      <li key={o.id} className="flex items-center justify-between gap-3">
-                        <span className="truncate text-sm">{l(o.title)}</span>
-                        <AvailDots a={getAvailability(db, o, date)} size="sm" showLabel={false} />
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              <Button
-                className="mt-5 h-11 w-full text-md"
-                onClick={() => document.getElementById("offers")?.scrollIntoView({ behavior: "smooth" })}
-              >
-                {t("vendor.book")}
-              </Button>
-            </div>
-          </aside>
-        </div>
-      )}
+      {tab === "services" && <ServicesTab vendor={vendor} offers={offers} isOwner={isOwner} onBook={book} />}
 
       <PostDialog postId={openPost} order={posts.map((p) => p.id)} onOpenChange={(o) => !o && setOpenPost(null)} />
 

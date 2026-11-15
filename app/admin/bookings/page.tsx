@@ -6,22 +6,18 @@ import { useState } from "react";
 import { EscrowBadge } from "@/components/booking/deal-card";
 import { StatusBadge } from "@/components/booking/status-badge";
 import { PageHeader, inputClass } from "@/components/panel";
-import { useDB } from "@/lib/data/store";
+import { useAdminBookings } from "@/lib/data/views/admin";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { routes } from "@/lib/routes";
 
 export default function AdminBookings() {
   const { t, l, money, date } = useI18n();
-  const db = useDB((d) => d);
   const [q, setQ] = useState("");
-  const name = (id: string) => db.users.find((u) => u.id === id)?.name ?? "—";
-  const rows = db.bookings
-    .map((b) => ({ b, v: db.vendors.find((x) => x.id === b.vendorId), o: db.offers.find((x) => x.id === b.offerId) }))
-    .filter(({ b, v }) => !q || `${v?.name} ${name(b.clientId)} ${b.id}`.toLowerCase().includes(q.toLowerCase()))
-    .sort((a, b) => b.b.createdAt.localeCompare(a.b.createdAt));
+  const { rows, total } = useAdminBookings(q);
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={t("cabinet.bookings")} subtitle={t("acab.bookingsCount", { n: db.bookings.length })} />
+      <PageHeader title={t("cabinet.bookings")} subtitle={t("acab.bookingsCount", { n: total })} />
       <label className="relative block max-w-sm">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" strokeWidth={1.5} />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("admin.search")} className={cn(inputClass, "pl-9")} />
@@ -39,16 +35,15 @@ export default function AdminBookings() {
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ b, v, o }) => {
-              const conv = db.conversations.find((c) => c.bookingId === b.id);
+            {rows.map(({ booking: b, vendorName, offerTitle, clientName, conversationId }) => {
               return (
                 <tr key={b.id} className="border-b border-border last:border-0">
                   <td className="px-4 py-3 text-text-secondary tabular-nums">{date(b.date, "d MMM yyyy")}</td>
                   <td className="px-4 py-3">
-                    <div>{v?.name}</div>
-                    <div className="max-w-56 truncate text-xs text-muted-foreground">{l(o?.title)}</div>
+                    <div>{vendorName}</div>
+                    <div className="max-w-56 truncate text-xs text-muted-foreground">{l(offerTitle)}</div>
                   </td>
-                  <td className="px-4 py-3 text-text-secondary">{name(b.clientId)}</td>
+                  <td className="px-4 py-3 text-text-secondary">{clientName || "—"}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-0.5">
                       <StatusBadge status={b.status} />
@@ -57,8 +52,8 @@ export default function AdminBookings() {
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">{money(b.total)}</td>
                   <td className="px-4 py-3 text-right">
-                    {conv && (
-                      <Link href={`/messages/${conv.id}`} className="text-primary hover:underline">
+                    {conversationId && (
+                      <Link href={routes.chat(conversationId)} className="text-primary hover:underline">
                         {t("dashboard.chat")}
                       </Link>
                     )}

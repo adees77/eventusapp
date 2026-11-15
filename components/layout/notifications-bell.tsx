@@ -5,7 +5,7 @@ import { Bell, BellRing, CheckCheck, Gavel, Heart, Lock, Mail, MessageCircle, Re
 import { useRouter } from "next/navigation";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { markNotificationsRead } from "@/lib/data/actions";
-import { useDB } from "@/lib/data/store";
+import { useMyNotifications } from "@/lib/data/views/messaging";
 import type { NotificationKind } from "@/lib/data/types";
 import { DATE_LOCALES, useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
@@ -30,7 +30,7 @@ export function NotificationsBell() {
   const { t, l, locale } = useI18n();
   const actor = useActor();
   const router = useRouter();
-  const list = useDB((db) => db.notifications.filter((n) => n.userId === actor.id).slice(0, 12));
+  const list = useMyNotifications(actor.id);
   const unread = list.filter((n) => !n.read).length;
 
   return (
@@ -57,7 +57,7 @@ export function NotificationsBell() {
           {unread > 0 && (
             <button
               type="button"
-              onClick={() => markNotificationsRead(actor)}
+              onClick={() => markNotificationsRead()}
               className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
             >
               <CheckCheck className="size-3.5" />
@@ -73,7 +73,7 @@ export function NotificationsBell() {
                 <DropdownMenuItem
                   key={n.id}
                   onClick={() => {
-                    markNotificationsRead(actor, [n.id]);
+                    markNotificationsRead([n.id]);
                     if (n.href) router.push(n.href);
                   }}
                   className="mx-1 flex items-start gap-3 rounded-lg px-3 py-2.5"

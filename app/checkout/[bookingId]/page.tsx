@@ -8,12 +8,12 @@ import { EscrowSteps } from "@/components/booking/deal-card";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { AvailabilityError, markBookingPrepaid } from "@/lib/data/actions";
-import { offerById, vendorById } from "@/lib/data/queries";
-import { useDB } from "@/lib/data/store";
+import { useCheckout } from "@/lib/data/views/bookings";
 import { useI18n } from "@/lib/i18n";
 import { getPaymentProvider, type PaymentMethod } from "@/lib/payments/provider";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { routes } from "@/lib/routes";
 
 const METHODS: { id: PaymentMethod; icon: typeof CreditCard }[] = [
   { id: "card", icon: CreditCard },
@@ -28,10 +28,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { t, money, l } = useI18n();
   const actor = useActor();
-  const db = useDB((d) => d);
-  const booking = db.bookings.find((b) => b.id === bookingId);
-  const offer = booking ? offerById(db, booking.offerId) : undefined;
-  const vendor = booking ? vendorById(db, booking.vendorId) : undefined;
+  const { booking, offer, vendor, conversationId } = useCheckout(actor.id, bookingId);
   const [method, setMethod] = useState<PaymentMethod>("card");
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +37,7 @@ export default function CheckoutPage() {
     return (
       <div className="mx-auto flex max-w-sm flex-1 flex-col items-center justify-center gap-4 px-4 py-24 text-center">
         <p className="font-heading tracking-[-0.025em] text-2xl">{t("checkout.notFound")}</p>
-        <LinkButton href="/dashboard" variant="outline">
+        <LinkButton href={routes.dashboard} variant="outline">
           {t("nav.dashboard")}
         </LinkButton>
       </div>
@@ -48,7 +45,6 @@ export default function CheckoutPage() {
   }
 
   const alreadyPaid = booking.status !== "pending" && phase !== "success";
-  const conversationId = db.conversations.find((c) => c.bookingId === booking.id)?.id;
 
   async function pay() {
     setPhase("processing");
@@ -67,9 +63,9 @@ export default function CheckoutPage() {
         return;
       }
       if (res.status !== "succeeded") throw new Error(res.error ?? "failed");
-      const convId = markBookingPrepaid(actor, booking!.id, res.reference);
+      const convId = markBookingPrepaid(booking!.id, res.reference);
       setPhase("success");
-      setTimeout(() => router.push(`/messages/${convId}`), 1600);
+      setTimeout(() => router.push(routes.chat(convId)), 1600);
     } catch (err) {
       setPhase("failed");
       setError(err instanceof AvailabilityError ? t("checkout.unavailable") : t("common.error"));
@@ -111,7 +107,7 @@ export default function CheckoutPage() {
             <div className="mt-6 flex flex-col gap-3">
               <p className="text-sm text-text-secondary">{t("checkout.alreadyPaid")}</p>
               {conversationId && (
-                <LinkButton href={`/messages/${conversationId}`} className="h-11">
+                <LinkButton href={routes.chat(conversationId)} className="h-11">
                   {t("checkout.toChat")}
                 </LinkButton>
               )}

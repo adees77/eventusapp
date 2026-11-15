@@ -8,6 +8,7 @@ import type { Invitation } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { InvitationThumb } from "../thumb";
 import { guestLink, shareText } from "./guests-panel";
+import { routes } from "@/lib/routes";
 
 export function SharePanel({ inv }: { inv: Invitation }) {
   const { t } = useI18n();
@@ -63,11 +64,11 @@ export function SharePanel({ inv }: { inv: Invitation }) {
         </Section>
         <Section title={t("inv.preview")}>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" className="h-10 px-4" onClick={() => window.open(`/i/${inv.id}`, "_blank")}>
+            <Button variant="outline" className="h-10 px-4" onClick={() => window.open(routes.publicInvitation(inv.id), "_blank")}>
               <ExternalLink />
               {t("inv.openPage")}
             </Button>
-            <Button variant="outline" className="h-10 px-4" onClick={() => window.open(`/i/${inv.id}?print=1`, "_blank")}>
+            <Button variant="outline" className="h-10 px-4" onClick={() => window.open(routes.printInvitation(inv.id), "_blank")}>
               <Printer />
               {t("inv.printPdf")}
             </Button>

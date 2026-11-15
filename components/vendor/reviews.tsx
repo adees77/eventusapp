@@ -7,21 +7,16 @@ import { ReportForm } from "@/components/feed/report-form";
 import { textareaClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { leaveReview, replyToReview } from "@/lib/data/actions";
-import { hadDealWith, ordersDone, reviewableBooking } from "@/lib/data/feed";
-import { useDB } from "@/lib/data/store";
+import { useOrdersDone, useReviewEligibility } from "@/lib/data/views/feed";
 import type { Review, Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
-export function useVendorReviews(vendorId: string) {
-  return useDB((db) => db.reviews.filter((r) => r.vendorId === vendorId && !r.hidden).sort((a, b) => b.date.localeCompare(a.date)));
-}
-
 /** Big rating, review count, completed orders and the 5→1 star distribution */
 export function ReviewSummary({ vendor, reviews, className }: { vendor: Vendor; reviews: Review[]; className?: string }) {
   const { t, num, tn } = useI18n();
-  const orders = useDB((db) => ordersDone(db, vendor));
+  const orders = useOrdersDone(vendor);
   const dist = [5, 4, 3, 2, 1].map((s) => ({ s, n: reviews.filter((r) => Math.round(r.rating) === s).length }));
   const max = Math.max(1, ...dist.map((d) => d.n));
   return (
@@ -123,7 +118,7 @@ export function ReviewList({ reviews, limit, vendor }: { reviews: Review[]; limi
                 className="mt-1 flex flex-col gap-2"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  replyToReview(actor, r.id, draft);
+                  replyToReview(r.id, draft);
                   setOpen(null);
                   toast.success(t("common.saved"));
                 }}
@@ -170,8 +165,7 @@ export function ReviewList({ reviews, limit, vendor }: { reviews: Review[]; limi
 export function ReviewComposer({ vendor, compact }: { vendor: Vendor; compact?: boolean }) {
   const { t } = useI18n();
   const actor = useActor();
-  const booking = useDB((db) => (actor.role === "client" ? reviewableBooking(db, actor.id, vendor.id) : undefined));
-  const reviewed = useDB((db) => actor.role === "client" && hadDealWith(db, actor.id, vendor.id));
+  const { booking, hadDeal: reviewed } = useReviewEligibility(actor, vendor.id);
   const [rating, setRating] = useState(0);
   const [text, setText] = useState("");
 
@@ -187,7 +181,7 @@ export function ReviewComposer({ vendor, compact }: { vendor: Vendor; compact?: 
     e.preventDefault();
     if (!rating || !text.trim()) return;
     try {
-      leaveReview(actor, booking!.id, rating, text);
+      leaveReview(booking!.id, rating, text);
       toast.success(t("cabinet.reviewThanks"));
       setText("");
       setRating(0);

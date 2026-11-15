@@ -8,19 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useMyVendor } from "@/components/vendor-panel/use-my-vendor";
 import { requestPayout } from "@/lib/data/actions";
-import { useDB } from "@/lib/data/store";
+import { useVendorFinance } from "@/lib/data/views/vendor";
 import { useI18n } from "@/lib/i18n";
-import { vendorBalance } from "@/lib/payments/escrow";
-import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 export default function VendorFinance() {
   const { t, money, date } = useI18n();
-  const actor = useActor();
   const vendor = useMyVendor();
-  const db = useDB((d) => d);
-  const bal = vendorBalance(vendor.id, db.bookings, db.transactions);
-  const tx = db.transactions.filter((x) => x.vendorId === vendor.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const { balance: bal, feePercent, rows } = useVendorFinance(vendor.id);
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
 
@@ -48,10 +43,10 @@ export default function VendorFinance() {
         <Kpi label={t("vcab.available")} value={money(bal.available)} note={t("vcab.availableNote")} />
         <Kpi label={t("cabinet.frozen")} value={money(bal.held)} note={t("vcab.frozenNote")} tone="primary" />
         <Kpi label={t("vcab.earned")} value={money(bal.earned)} note={t("vcab.earnedNote")} />
-        <Kpi label={t("vcab.fees")} value={money(bal.fees)} note={t("escrow.fee", { p: db.settings.feePercent })} />
+        <Kpi label={t("vcab.fees")} value={money(bal.fees)} note={t("escrow.fee", { p: feePercent })} />
       </div>
       <Section title={t("cabinet.history")}>
-        {tx.length ? (
+        {rows.length ? (
           <div className="-mx-5 overflow-x-auto">
             <table className="w-full min-w-[560px] text-sm">
               <thead>
@@ -63,11 +58,11 @@ export default function VendorFinance() {
                 </tr>
               </thead>
               <tbody>
-                {tx.map((x) => (
+                {rows.map(({ tx: x, clientName }) => (
                   <tr key={x.id} className="border-b border-border last:border-0">
                     <td className="px-5 py-3 text-text-secondary tabular-nums">{date(x.createdAt.slice(0, 10), "d MMM yyyy")}</td>
                     <td className="px-5 py-3">{t(`cabinet.tx.${x.kind}`)}</td>
-                    <td className="px-5 py-3 text-text-secondary">{db.users.find((u) => u.id === x.clientId)?.name ?? "—"}</td>
+                    <td className="px-5 py-3 text-text-secondary">{clientName || "—"}</td>
                     <td
                       className={cn(
                         "px-5 py-3 text-right tabular-nums",
@@ -113,7 +108,7 @@ export default function VendorFinance() {
               disabled={!(Number(amount) > 0)}
               onClick={() => {
                 try {
-                  const sum = requestPayout(actor, vendor.id, Number(amount));
+                  const sum = requestPayout(vendor.id, Number(amount));
                   toast.success(t("vcab.withdrawn", { amount: money(sum) }));
                   setOpen(false);
                 } catch {

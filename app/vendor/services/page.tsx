@@ -1,7 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/panel";
-import { VendorOffers } from "@/components/vendor-panel/sections";
+import { VendorOffers } from "@/components/vendor-panel/offers";
 import { useMyVendor } from "@/components/vendor-panel/use-my-vendor";
 import { useI18n } from "@/lib/i18n";
 

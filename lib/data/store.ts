@@ -1,29 +1,37 @@
 "use client";
 
 /**
- * Mock data store (zustand + localStorage).
+ * Local data store (zustand + localStorage), one database per data mode (lib/demo/mode.ts):
+ * the demo sandbox and the live database of real sign-ups never mix.
  *
- * The whole DB snapshot lives in the browser so the demo works without a
- * backend (and on Vercel). Tabs stay in sync through the `storage` event,
- * which gives us "realtime" between a client tab and a vendor tab.
+ * The whole DB snapshot lives in the browser so the app works without a backend
+ * (and on Vercel). Tabs stay in sync through the `storage` event, which gives us
+ * "realtime" between a client tab and a vendor tab.
  *
- * To move to Supabase: keep the action signatures, replace bodies with
- * supabase-js calls, and drop the persist middleware.
+ * To move to Supabase: live mode reads/writes Supabase through lib/data/views and
+ * lib/data/actions; this store stays for the demo only.
  */
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { safeStorage } from "@/lib/utils";
-import { demoConfig } from "@/config/demo";
+import { getMode, MODE_STORAGE_KEY, type DataMode } from "@/lib/demo/mode";
 import { designFromLegacy } from "@/lib/invitations/design";
-import { buildSeed, TEST_ACCOUNTS } from "./seed";
+import { buildLiveSeed, buildSeed, SEED_VERSION, TEST_ACCOUNTS } from "./seed";
 import { SEED_SPECS_VERSION } from "./seed/specs";
 import type { DB, Transaction } from "./types";
+
+/** localStorage key of each mode's database */
+export const DB_STORAGE_KEYS: Record<DataMode, string> = { demo: "eventus-db-v1", live: "eventus-live-v1" };
+const seedFor = (mode: DataMode) => (mode === "demo" ? buildSeed() : buildLiveSeed());
+/** A stored snapshot we can keep (v2 → v3 is additive and upgraded by migrate) */
+const usable = (db: DB | undefined): db is DB => !!db && (db.version === SEED_VERSION || db.version === 2);
 
 interface DataState {
   db: DB | null;
   hydrated: boolean;
   /** Apply a pure update to the DB */
   update: (fn: (db: DB) => DB) => void;
+  /** Re-seed the current mode's database (the demo «reset») */
   resetDemo: () => void;
 }
 
@@ -63,20 +71,18 @@ export const useDataStore = create<DataState>()(
           if (!s.db) return s;
           return { db: fn(s.db) };
         }),
-      resetDemo: () => set({ db: buildSeed() }),
+      resetDemo: () => set({ db: seedFor(getMode()) }),
     }),
     {
-      name: demoConfig.storageKey,
+      name: DB_STORAGE_KEYS[getMode()],
       storage: createJSONStorage(localStore),
       partialize: (s) => ({ db: s.db }),
       onRehydrateStorage: () => (state, error) => {
-        // v2 → v3 is additive: upgrade in place so sign-ups and edits survive
-        const v = state?.db?.version;
-        const stale = !state?.db || (v !== demoConfig.seedVersion && v !== 2);
+        const db = state?.db ?? undefined;
         // Sync storage hydrates inside create(), before useDataStore is assigned → defer.
         queueMicrotask(() =>
           useDataStore.setState({
-            db: error || stale ? buildSeed() : migrate(state!.db!),
+            db: error || !usable(db) ? seedFor(getMode()) : migrate(db),
             hydrated: true,
           }),
         );
@@ -144,7 +150,7 @@ export function migrate(input: DB): DB {
     const s = seed();
     db = {
       ...db,
-      version: demoConfig.seedVersion,
+      version: SEED_VERSION,
       posts: db.posts ?? s.posts.filter((p) => db.vendors.some((v) => v.id === p.vendorId)),
       likes: db.likes ?? [],
       saved: db.saved ?? [],
@@ -232,10 +238,29 @@ export function getDB(): DB {
   return db;
 }
 
+/**
+ * Switch to the other mode's database right away (sign-in, «Посмотреть демо», leaving the demo).
+ * Synchronous on purpose: the caller binds the session to a user of the new database next.
+ */
+export function switchDataMode(mode: DataMode) {
+  const key = DB_STORAGE_KEYS[mode];
+  if (useDataStore.persist.getOptions().name === key) return;
+  useDataStore.persist.setOptions({ name: key });
+  let stored: DB | undefined;
+  try {
+    stored = (JSON.parse(safeStorage("localStorage").getItem(key) ?? "null") as { state?: { db?: DB } } | null)?.state?.db;
+  } catch {
+    stored = undefined;
+  }
+  useDataStore.setState({ db: usable(stored) ? migrate(stored) : seedFor(mode), hydrated: true });
+}
+
 /** Cross-tab sync: another tab wrote to localStorage → take its snapshot here, without writing it back */
 if (typeof window !== "undefined") {
   window.addEventListener("storage", (e) => {
-    if (e.key !== demoConfig.storageKey) return;
+    // another tab entered or left the demo: this tab shares the sign-in, so start over in the new mode
+    if (e.key === MODE_STORAGE_KEY) return window.location.reload();
+    if (e.key !== useDataStore.persist.getOptions().name) return;
     // storage was cleared elsewhere (site data, DevTools): keeping the old DB would resurrect it on our next write
     if (!e.newValue) return window.location.reload();
     let db: DB | undefined;
@@ -246,9 +271,9 @@ if (typeof window !== "undefined") {
     }
     if (!db) return;
     // another tab already runs a newer build: reload to get it instead of overwriting its data with our older schema
-    if (db.version > demoConfig.seedVersion) return window.location.reload();
+    if (db.version > SEED_VERSION) return window.location.reload();
     // an older tab still on v1 data — nothing safe to take from it
-    if (db.version !== demoConfig.seedVersion && db.version !== 2) return;
+    if (!usable(db)) return;
     const next = migrate(db);
     // the snapshot is already stored; write only if our migration changed it, so storage matches what we show
     applyingRemote = next === db;

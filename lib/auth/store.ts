@@ -1,17 +1,18 @@
 "use client";
 
 /**
- * Demo authentication. Google and email sign-in are imitated in the browser:
- * there is no OAuth round-trip and no email is sent. The account itself is a
- * normal `User` row in the mock DB, so the rest of the app (policies, chats,
- * bookings) works unchanged. To go live, swap these actions for Supabase Auth
- * (signInWithOAuth / signInWithOtp) and keep the same shape.
+ * Sign-in. Google and email sign-in are imitated in the browser: there is no OAuth
+ * round-trip and no email is sent. They open the LIVE database (lib/demo/mode.ts);
+ * «Посмотреть демо» and the seeded test accounts open the DEMO database instead.
+ * The account is a normal `User` row, so policies, chats and bookings work unchanged.
+ * To go live, swap these actions for Supabase Auth (signInWithOAuth / signInWithOtp).
  */
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { upsertAuthUser } from "@/lib/data/actions";
 import { getDB } from "@/lib/data/store";
 import { DEMO_CLIENT_ID, TEST_ACCOUNTS } from "@/lib/data/seed";
+import { enterMode } from "@/lib/demo/switch";
 import { useSession } from "@/lib/session";
 import { safeStorage } from "@/lib/utils";
 import { checkCode, createCode, type PendingCode, type VerifyResult } from "./otp";
@@ -19,16 +20,13 @@ import { checkCode, createCode, type PendingCode, type VerifyResult } from "./ot
 interface AuthState {
   /** Signed-in account; null → /welcome */
   userId: string | null;
-  /** Entered through «посмотреть демо» without an account */
-  demo: boolean;
   pending: PendingCode | null;
   signInWithGoogle: (input: { name: string; email: string }) => void;
   requestEmailCode: (email: string) => PendingCode;
   verifyEmailCode: (code: string) => VerifyResult;
   cancelEmailCode: () => void;
-  signInDemo: () => void;
-  /** Quick entry into a seeded test account (see TEST_ACCOUNTS) without the email code */
-  signInTestAccount: (userId: string) => void;
+  /** Open the demo, as the demo client or as one of the seeded TEST_ACCOUNTS */
+  signInDemo: (userId?: string) => void;
   signOut: () => void;
 }
 
@@ -41,11 +39,11 @@ export const useAuth = create<AuthState>()(
   persist(
     (set, get) => ({
       userId: null,
-      demo: false,
       pending: null,
       signInWithGoogle: ({ name, email }) => {
+        enterMode("live");
         const user = upsertAuthUser({ email, name, provider: "google" });
-        set({ userId: user.id, demo: false, pending: null });
+        set({ userId: user.id, pending: null });
         bindSession(user.id);
       },
       requestEmailCode: (email) => {
@@ -60,31 +58,31 @@ export const useAuth = create<AuthState>()(
           set({ pending: res.pending });
           return res.result;
         }
+        enterMode("live");
         const user = upsertAuthUser({ email: pending!.email, provider: "email" });
-        set({ userId: user.id, demo: false, pending: null });
+        set({ userId: user.id, pending: null });
         bindSession(user.id);
         return "ok";
       },
       cancelEmailCode: () => set({ pending: null }),
-      signInDemo: () => {
-        set({ userId: DEMO_CLIENT_ID, demo: true, pending: null });
-        bindSession(DEMO_CLIENT_ID);
-      },
-      signInTestAccount: (userId) => {
-        if (!TEST_ACCOUNTS.some((a) => a.userId === userId) || !getDB().users.some((u) => u.id === userId)) return;
-        set({ userId, demo: false, pending: null });
+      signInDemo: (userId = DEMO_CLIENT_ID) => {
+        if (userId !== DEMO_CLIENT_ID && !TEST_ACCOUNTS.some((a) => a.userId === userId)) return;
+        enterMode("demo");
+        if (!getDB().users.some((u) => u.id === userId)) return;
+        set({ userId, pending: null });
         bindSession(userId);
       },
+      /** Leaving the demo ends in live mode too */
       signOut: () => {
-        set({ userId: null, demo: false, pending: null });
-        useSession.getState().setRole("client");
-        useSession.setState({ bound: false });
+        set({ userId: null, pending: null });
+        useSession.getState().reset();
+        enterMode("live");
       },
     }),
     {
       name: "eventus-auth",
       storage: createJSONStorage(() => safeStorage("localStorage")),
-      partialize: (s) => ({ userId: s.userId, demo: s.demo, pending: s.pending }),
+      partialize: (s) => ({ userId: s.userId, pending: s.pending }),
     },
   ),
 );

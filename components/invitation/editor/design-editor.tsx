@@ -46,7 +46,6 @@ import { PHOTOS, unsplash } from "@/lib/data/seed/photos";
 import type { BlockStyle, BlockType, FontKey, Invitation, InvitationBlock, InvitationDesign, InvitationTheme } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { BLOCK_TYPES, THEMES, blockId, duplicateBlock, moveBlock, newBlock } from "@/lib/invitations/design";
-import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { InvitationPage } from "../page/invitation-page";
 import { useDesignHistory } from "./use-design-history";
@@ -86,8 +85,7 @@ type Device = "phone" | "desktop";
 
 export function DesignEditor({ inv }: { inv: Invitation }) {
   const { t } = useI18n();
-  const actor = useActor();
-  const h = useDesignHistory(actor, inv);
+  const h = useDesignHistory(inv);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [device, setDevice] = useState<Device>("phone");
   const [zoom, setZoom] = useState(1);
@@ -437,8 +435,7 @@ function PageInspector({
   onTheme: (p: Partial<InvitationTheme>, key?: string) => void;
 }) {
   const { t } = useI18n();
-  const actor = useActor();
-  const set = (patch: Partial<Invitation>) => updateInvitation(actor, inv.id, patch);
+  const set = (patch: Partial<Invitation>) => updateInvitation(inv.id, patch);
   const th = design.theme;
   return (
     <div className="flex flex-col gap-6 p-4">

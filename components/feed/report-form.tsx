@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { reportContent } from "@/lib/data/actions";
 import type { ComplaintReason, ComplaintTarget } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
-import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 const REASONS: ComplaintReason[] = ["fraud", "fake", "offensive", "spam", "quality", "other"];
@@ -15,7 +14,6 @@ const REASONS: ComplaintReason[] = ["fraud", "fake", "offensive", "spam", "quali
 /** Pick a reason, add details, send: the report lands in /admin/complaints */
 export function ReportForm({ target, targetId, onDone }: { target: ComplaintTarget; targetId: string; onDone: () => void }) {
   const { t } = useI18n();
-  const actor = useActor();
   const [reason, setReason] = useState<ComplaintReason | null>(null);
   const [text, setText] = useState("");
   return (
@@ -24,7 +22,7 @@ export function ReportForm({ target, targetId, onDone }: { target: ComplaintTarg
       onSubmit={(e) => {
         e.preventDefault();
         if (!reason) return;
-        const ok = reportContent(actor, target, targetId, reason, text);
+        const ok = reportContent(target, targetId, reason, text);
         toast(ok ? t("mod.reportSent") : t("mod.reportDup"));
         onDone();
       }}

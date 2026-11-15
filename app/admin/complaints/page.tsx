@@ -7,43 +7,16 @@ import { toast } from "sonner";
 import { Empty, PageHeader, Section, Segmented } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { resolveComplaint } from "@/lib/data/actions";
-import { useDB } from "@/lib/data/store";
-import type { Complaint, DB } from "@/lib/data/types";
+import { useComplaints, type ComplaintTargetInfo } from "@/lib/data/views/moderation";
 import { useI18n } from "@/lib/i18n";
-import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
-
-/** What the report points at, with a link and whether it is hidden right now */
-function targetOf(db: DB, c: Complaint, l: (x: { ru: string; en: string } | undefined) => string) {
-  if (c.target === "vendor") {
-    const v = db.vendors.find((x) => x.id === c.targetId);
-    return { label: v?.name ?? "—", href: v ? `/vendors/${v.slug}` : undefined, hidden: !!v?.hidden, photo: v?.cover };
-  }
-  if (c.target === "post") {
-    const p = db.posts.find((x) => x.id === c.targetId);
-    return { label: p ? l(p.caption) : "—", href: p ? `/vendors?post=${p.id}` : undefined, hidden: !!p?.hidden, photo: p?.photos[0] };
-  }
-  const r = db.reviews.find((x) => x.id === c.targetId);
-  const v = db.vendors.find((x) => x.id === r?.vendorId);
-  return {
-    label: r ? `${r.author}: «${l(r.text)}»` : "—",
-    href: v ? `/vendors/${v.slug}?tab=reviews` : undefined,
-    hidden: !!r?.hidden,
-    photo: undefined,
-  };
-}
 
 export default function AdminComplaints() {
   const { t, l, date } = useI18n();
-  const actor = useActor();
-  const db = useDB((d) => d);
   const [f, setF] = useState<"open" | "closed">("open");
-  const open = db.complaints.filter((c) => c.status === "open");
-  // one card per reported thing: several people may report the same post
-  const list = (f === "open" ? open : db.complaints.filter((c) => c.status !== "open"))
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .filter((c, i, a) => f === "closed" || a.findIndex((x) => x.targetId === c.targetId) === i);
-  const name = (id: string) => db.users.find((u) => u.id === id)?.name ?? "—";
+  const { rows: list, openCount, closedCount } = useComplaints(f);
+  const label = (tg: ComplaintTargetInfo) =>
+    tg.vendorName ?? (tg.caption ? l(tg.caption) : tg.review ? `${tg.review.author}: «${l(tg.review.text)}»` : "—");
   const where = { vendor: t("mod.onVendor"), post: t("mod.onPost"), review: t("mod.onReview") };
 
   return (
@@ -53,16 +26,13 @@ export default function AdminComplaints() {
         value={f}
         onChange={setF}
         options={[
-          { value: "open", label: `${t("mod.open")} · ${open.length}` },
-          { value: "closed", label: `${t("mod.closed")} · ${db.complaints.length - open.length}` },
+          { value: "open", label: `${t("mod.open")} · ${openCount}` },
+          { value: "closed", label: `${t("mod.closed")} · ${closedCount}` },
         ]}
       />
       {list.length ? (
         <ul className="flex flex-col gap-3">
-          {list.map((c) => {
-            const tg = targetOf(db, c, l);
-            const same = open.filter((x) => x.targetId === c.targetId);
-            const vendor = db.vendors.find((v) => v.id === c.vendorId);
+          {list.map(({ complaint: c, target: tg, vendorName, reports }) => {
             return (
               <li key={c.id}>
                 <Section
@@ -84,16 +54,16 @@ export default function AdminComplaints() {
                     <div className="min-w-0 flex-1">
                       <div className="text-xs text-muted-foreground">
                         {where[c.target]}
-                        {c.target !== "vendor" && vendor ? ` · ${vendor.name}` : ""}
+                        {c.target !== "vendor" && vendorName ? ` · ${vendorName}` : ""}
                         {tg.hidden && c.status === "open" ? ` · ${t("mod.autoHidden")}` : ""}
                       </div>
-                      <p className="mt-0.5 line-clamp-2 text-sm">{tg.label}</p>
+                      <p className="mt-0.5 line-clamp-2 text-sm">{label(tg)}</p>
                     </div>
                   </div>
                   <div className="mt-3 flex flex-col gap-1 text-sm">
-                    {(f === "open" ? same : [c]).map((x) => (
+                    {reports.map(({ complaint: x, authorName }) => (
                       <p key={x.id} className="text-text-secondary">
-                        <span className="text-foreground">{t("mod.from", { who: name(x.authorId) })}</span>
+                        <span className="text-foreground">{t("mod.from", { who: authorName || "—" })}</span>
                         {x.reason !== c.reason ? ` · ${t(`mod.reason.${x.reason}`)}` : ""}
                         {x.text ? ` — ${x.text}` : ""}
                       </p>
@@ -114,7 +84,7 @@ export default function AdminComplaints() {
                           variant="destructive"
                           className="h-9 px-4"
                           onClick={() => {
-                            resolveComplaint(actor, c.id, true);
+                            resolveComplaint(c.id, true);
                             toast.success(t("mod.hiddenToast"));
                           }}
                         >
@@ -124,14 +94,14 @@ export default function AdminComplaints() {
                           variant="outline"
                           className="h-9 px-4"
                           onClick={() => {
-                            resolveComplaint(actor, c.id, false);
+                            resolveComplaint(c.id, false);
                             toast(t("mod.keptToast"));
                           }}
                         >
                           {t("mod.keepIt")}
                         </Button>
-                        {same.length > 1 && (
-                          <span className="text-xs text-muted-foreground">{t("mod.reportsOnTarget", { n: same.length })}</span>
+                        {reports.length > 1 && (
+                          <span className="text-xs text-muted-foreground">{t("mod.reportsOnTarget", { n: reports.length })}</span>
                         )}
                       </>
                     ) : (

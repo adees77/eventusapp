@@ -2,7 +2,7 @@
 
 import { LogoMark } from "@/components/brand/logo";
 import { CITIES } from "@/lib/data/seed/catalog";
-import { useDB } from "@/lib/data/store";
+import { useCategories } from "@/lib/data/views/catalog";
 import { useI18n } from "@/lib/i18n";
 import type { Answers, StepId } from "@/lib/onboarding/script";
 import { eventTitle } from "./labels";
@@ -20,7 +20,7 @@ export function SummaryCard({
   busy: boolean;
 }) {
   const { t, l, date, money, tn } = useI18n();
-  const categories = useDB((db) => db.categories);
+  const categories = useCategories();
   const cat = (id?: string) => l(categories.find((c) => c.id === id)?.name);
   const none = <span className="text-muted-foreground">{t("onboarding.summary.none")}</span>;
 

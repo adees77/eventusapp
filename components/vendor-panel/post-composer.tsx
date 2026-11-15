@@ -8,13 +8,11 @@ import { Field, textareaClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { createPost } from "@/lib/data/actions";
-import { activeOffers } from "@/lib/data/queries";
 import { CATEGORY_PHOTOS, PHOTOS, unsplash } from "@/lib/data/seed/photos";
-import { useDB } from "@/lib/data/store";
+import { useActiveOffers } from "@/lib/data/views/vendor";
 import type { Post, Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { readPhoto } from "@/lib/photos";
-import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 const RATIOS = [
@@ -27,8 +25,7 @@ const MAX = 6;
 /** New feed post: photos (from the device or the portfolio), caption, linked service, format, live preview */
 export function PostComposer({ vendor, onDone }: { vendor: Vendor; onDone: (post: Post) => void }) {
   const { t, l, money } = useI18n();
-  const actor = useActor();
-  const offers = useDB((db) => activeOffers(db, vendor.id));
+  const offers = useActiveOffers(vendor.id);
   const [uploads, setUploads] = useState<string[]>([]);
   const [picked, setPicked] = useState<string[]>([]);
   const [caption, setCaption] = useState("");
@@ -58,7 +55,7 @@ export function PostComposer({ vendor, onDone }: { vendor: Vendor; onDone: (post
       const id = src.match(/photo-([\w-]+)\?/)?.[1];
       return id ? unsplash(id, 900, Math.round(900 * ratio)) : src;
     });
-    const post = createPost(actor, { vendorId: vendor.id, photos, caption, offerId: offerId || undefined, ratio });
+    const post = createPost({ vendorId: vendor.id, photos, caption, offerId: offerId || undefined, ratio });
     toast.success(t("vcab.published"));
     onDone(post);
   }

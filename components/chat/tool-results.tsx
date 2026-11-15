@@ -11,6 +11,7 @@ import type { AlternativeDate, AvailabilityResult, SearchResult, VendorDetails, 
 import { useI18n } from "@/lib/i18n";
 import { usePlanner } from "@/lib/planner";
 import { useActor } from "@/lib/session";
+import { routes } from "@/lib/routes";
 
 /** Renders a tool_result as UI. Data comes only from our tools. */
 export function ToolResultView({ name, data, onQuickReply }: { name: string; data: unknown; onQuickReply: (text: string) => void }) {
@@ -60,12 +61,9 @@ function ChatVendorCard({ h, date, qty, index }: { h: VendorHit; date: string | 
     if (actor.role !== "client") return toast(t("vendor.onlyClients"));
     if (date) setPlanner({ date });
     if (offer) {
-      const params = new URLSearchParams();
-      if (date) params.set("date", date);
-      if (qty) params.set("qty", String(Math.min(qty, offer.free)));
-      router.push(`/book/${offer.offer_id}?${params}`);
+      router.push(routes.book(offer.offer_id, { date, qty: qty ? Math.min(qty, offer.free) : undefined }));
     } else {
-      router.push(`/vendors/${h.slug}#offers`);
+      router.push(routes.vendorOffers(h.slug));
     }
   }
 
@@ -74,12 +72,12 @@ function ChatVendorCard({ h, date, qty, index }: { h: VendorHit; date: string | 
       className="flex w-[78%] shrink-0 snap-start animate-rise flex-col overflow-hidden rounded-2xl bg-card sm:w-auto"
       style={{ animationDelay: `${index * 50}ms` }}
     >
-      <Link href={`/vendors/${h.slug}`} className="relative block aspect-[16/10] bg-muted">
+      <Link href={routes.vendor(h.slug)} className="relative block aspect-[16/10] bg-muted">
         {h.cover && <Image src={h.cover} alt="" fill sizes="(min-width: 640px) 320px, 78vw" className="object-cover" />}
       </Link>
       <div className="flex flex-1 flex-col gap-1.5 p-4">
         <div className="flex items-center gap-1.5">
-          <Link href={`/vendors/${h.slug}`} className="truncate text-md font-medium hover:underline">
+          <Link href={routes.vendor(h.slug)} className="truncate text-md font-medium hover:underline">
             {h.name}
           </Link>
           {h.verified && <VerifiedSeal />}
@@ -112,7 +110,7 @@ function ChatVendorCard({ h, date, qty, index }: { h: VendorHit; date: string | 
           >
             {t("chat.book")}
           </button>
-          <LinkButton href={`/vendors/${h.slug}`} variant="outline" className="h-10 px-3">
+          <LinkButton href={routes.vendor(h.slug)} variant="outline" className="h-10 px-3">
             {t("chat.profile")}
           </LinkButton>
         </div>

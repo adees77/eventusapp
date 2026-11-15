@@ -1,6 +1,5 @@
 "use client";
 
-import { format } from "date-fns";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,22 +9,20 @@ import { Kpi } from "@/components/layout/cabinet-shell";
 import { PageHeader, Segmented } from "@/components/panel";
 import { createInvitation } from "@/lib/data/actions";
 import { INVITATION_TEMPLATES, OCCASIONS, draftFromTemplate, type InvitationTemplate } from "@/lib/data/invitation-templates";
-import { useDB } from "@/lib/data/store";
+import { useMyInvitations, useNextEvent } from "@/lib/data/views/client";
 import type { InvitationOccasion } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { invitationStats } from "@/lib/invitations/design";
 import { useActor } from "@/lib/session";
+import { routes } from "@/lib/routes";
 
 export default function InvitationsPage() {
   const { t, l, locale, num } = useI18n();
   const actor = useActor();
   const router = useRouter();
   const [occasion, setOccasion] = useState<InvitationOccasion | "all">("all");
-  const today = format(new Date(), "yyyy-MM-dd");
-  const mine = useDB((db) => db.invitations.filter((i) => i.ownerId === actor.id).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
-  const event = useDB(
-    (db) => db.events.filter((e) => e.clientId === actor.id && e.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0],
-  );
+  const mine = useMyInvitations(actor.id);
+  const event = useNextEvent(actor.id);
 
   if (actor.role !== "client") {
     return (
@@ -36,8 +33,8 @@ export default function InvitationsPage() {
   }
 
   function start(tpl?: InvitationTemplate) {
-    const inv = createInvitation(actor, draftFromTemplate(tpl, locale, event));
-    router.push(`/invitations/${inv.id}`);
+    const inv = createInvitation(draftFromTemplate(tpl, locale, event));
+    router.push(routes.invitation(inv.id));
   }
 
   const all = mine.map(invitationStats);
@@ -78,7 +75,7 @@ export default function InvitationsPage() {
             const s = all[i];
             return (
               <li key={inv.id}>
-                <Link href={`/invitations/${inv.id}`} className="group block">
+                <Link href={routes.invitation(inv.id)} className="group block">
                   <InvitationThumb inv={inv} className="transition-transform duration-200 group-hover:-translate-y-0.5" />
                   <p className="mt-3 truncate text-sm">{inv.names || t(`invitations.occasions.${inv.occasion}`)}</p>
                   <p className="mt-0.5 text-xs text-text-secondary tabular-nums">

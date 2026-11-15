@@ -18,8 +18,8 @@ export function useFeedActions() {
     fn();
   };
   return {
-    like: (postId: string) => guard(() => toggleLike(actor, postId))(),
-    save: (postId: string) => guard(() => toggleSave(actor, postId))(),
+    like: (postId: string) => guard(() => toggleLike(postId))(),
+    save: (postId: string) => guard(() => toggleSave(postId))(),
   };
 }
 

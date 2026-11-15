@@ -1,6 +1,5 @@
 import { addDays, format, isBefore, setMonth, setDate, startOfDay, subDays, subHours } from "date-fns";
 import { SEED_SPECS, SEED_SPECS_VERSION } from "./specs";
-import { demoConfig } from "@/config/demo";
 import type { Booking, Conversation, DB, Escrow, EventItem, Message, Offer, Review, Transaction, User, Vendor } from "../types";
 import { designFromLegacy } from "@/lib/invitations/design";
 import { feeOf } from "@/lib/payments/escrow";
@@ -8,8 +7,11 @@ import { hash } from "../availability";
 import { CATEGORIES, REVIEW_AUTHORS, REVIEW_TEMPLATES } from "./catalog";
 import { PHOTOS, unsplash } from "./photos";
 import { buildComments, buildPosts } from "./posts";
-import { DEFAULT_SETTINGS, buildComplaints, buildDocuments } from "./moderation";
+import { DEFAULT_PREPAY_PERCENT, DEFAULT_SETTINGS, buildComplaints, buildDocuments } from "./moderation";
 import { SEED_VENDORS } from "./vendors";
+
+/** Bump when the seed shape changes: stored databases of an older version are re-seeded */
+export const SEED_VERSION = 3;
 
 export const DEMO_CLIENT_ID = "u-client";
 export const DEMO_ADMIN_ID = "u-admin";
@@ -94,7 +96,7 @@ export function buildSeed(now = new Date()): DB {
       reviewsCount: sv.reviews,
       verified: sv.verified,
       hidden: false,
-      prepayPercent: sv.prepay ?? demoConfig.defaultPrepayPercent,
+      prepayPercent: sv.prepay ?? DEFAULT_PREPAY_PERCENT,
       cover: unsplash(set[sv.cover ?? 0], 1600, 900),
       portfolio,
       phone: `+996 555 ${100 + (hash(sv.slug) % 900)} ${100 + ((hash(sv.slug) >>> 10) % 900)}`,
@@ -341,7 +343,7 @@ export function buildSeed(now = new Date()): DB {
   const papers = buildDocuments(vendors, now);
 
   return {
-    version: demoConfig.seedVersion,
+    version: SEED_VERSION,
     specsVersion: SEED_SPECS_VERSION,
     users,
     categories: CATEGORIES,
@@ -451,6 +453,32 @@ export function buildSeed(now = new Date()): DB {
         updatedAt: subDays(now, 3).toISOString(),
       },
     ],
+  };
+}
+
+/**
+ * The live database before Supabase: the vendor catalog (vendors, their owners, services,
+ * posts, reviews, papers) and the platform admin — but none of the demo's made-up clients
+ * and their bookings, chats, events, invitations, money or complaints.
+ */
+export function buildLiveSeed(): DB {
+  const demo = buildSeed();
+  const keepUser = new Set(demo.users.filter((u) => u.role !== "client").map((u) => u.id));
+  return {
+    ...demo,
+    users: demo.users.filter((u) => keepUser.has(u.id)),
+    bookings: [],
+    events: [],
+    conversations: [],
+    messages: [],
+    favorites: [],
+    likes: [],
+    saved: [],
+    follows: [],
+    transactions: [],
+    notifications: [],
+    complaints: [],
+    invitations: [],
   };
 }
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { format } from "date-fns";
 import { PanelLeft, SquarePen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -11,10 +10,11 @@ import { ThreadList } from "@/components/chat/thread-list";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useChatStore } from "@/lib/ai/chat-store";
 import { useChat } from "@/lib/ai/use-chat";
-import { useDB } from "@/lib/data/store";
+import { useNextEvent } from "@/lib/data/views/client";
 import type { CategoryId } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
+import { routes } from "@/lib/routes";
 
 const SUGGESTIONS: CategoryId[] = ["halls", "hosts", "photo"];
 
@@ -24,7 +24,7 @@ export default function AssistantPage() {
   const router = useRouter();
   // the assistant plans events for clients; a vendor works from their own panel
   useEffect(() => {
-    if (actor.role === "vendor") router.replace("/vendor");
+    if (actor.role === "vendor") router.replace(routes.vendorHome);
   }, [actor.role, router]);
   const allThreads = useChatStore((s) => s.threads);
   const removeThread = useChatStore((s) => s.remove);
@@ -40,10 +40,7 @@ export default function AssistantPage() {
   const thread = threads.find((th) => th.id === threadId) ?? null;
   const { send, stop, status, live, tool, mode, busy } = useChat(thread?.id ?? null, setThreadId);
 
-  const today = format(new Date(), "yyyy-MM-dd");
-  const event = useDB(
-    (db) => db.events.filter((e) => e.clientId === actor.id && e.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0],
-  );
+  const event = useNextEvent(actor.id);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const messages = thread?.messages ?? [];

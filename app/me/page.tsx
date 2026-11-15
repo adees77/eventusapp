@@ -3,9 +3,9 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { HOME_BY_ROLE } from "@/components/layout/nav-items";
-import { vendorOfOwner } from "@/lib/data/queries";
-import { useDB } from "@/lib/data/store";
+import { useOwnVendor } from "@/lib/data/views/vendor";
 import { useActor } from "@/lib/session";
+import { routes, type VendorTab } from "@/lib/routes";
 
 /** «Профиль» tab: a vendor sees their public page — the same one clients see — with owner controls */
 export default function MePage() {
@@ -20,10 +20,11 @@ function Me() {
   const router = useRouter();
   const params = useSearchParams();
   const actor = useActor();
-  const slug = useDB((db) => vendorOfOwner(db, actor.id)?.slug);
+  const slug = useOwnVendor()?.slug;
   useEffect(() => {
-    const tab = params.get("tab");
-    router.replace(slug ? `/vendors/${slug}${tab ? `?tab=${tab}` : ""}` : HOME_BY_ROLE[actor.role]);
+    // the vendor page ignores an unknown tab, so passing it through is safe
+    const tab = (params.get("tab") ?? undefined) as VendorTab | undefined;
+    router.replace(slug ? routes.vendor(slug, tab) : HOME_BY_ROLE[actor.role]);
   }, [slug, actor.role, params, router]);
   return null;
 }

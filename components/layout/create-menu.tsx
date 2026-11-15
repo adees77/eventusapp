@@ -6,12 +6,13 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useI18n, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { routes } from "@/lib/routes";
 
 const ACTIONS: { href: string; icon: LucideIcon; title: MessageKey; hint: MessageKey }[] = [
-  { href: "/create/post", icon: Images, title: "create.post", hint: "create.postHint" },
-  { href: "/create/service", icon: Tag, title: "create.service", hint: "create.serviceHint" },
-  { href: "/vendor/details", icon: ListChecks, title: "create.details", hint: "create.detailsHint" },
-  { href: "/vendor#calendar", icon: CalendarX2, title: "create.calendar", hint: "create.calendarHint" },
+  { href: routes.createPost, icon: Images, title: "create.post", hint: "create.postHint" },
+  { href: routes.createService, icon: Tag, title: "create.service", hint: "create.serviceHint" },
+  { href: routes.vendorDetails, icon: ListChecks, title: "create.details", hint: "create.detailsHint" },
+  { href: routes.vendorCalendar, icon: CalendarX2, title: "create.calendar", hint: "create.calendarHint" },
 ];
 
 /**

@@ -14,40 +14,29 @@ import { LinkButton } from "@/components/ui/link-button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { createEvent, setChecklist, updateEvent } from "@/lib/data/actions";
 import { CITIES } from "@/lib/data/seed/catalog";
-import { useDB } from "@/lib/data/store";
+import { useClientEvents, useEventBudget } from "@/lib/data/views/client";
 import type { EventItem } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { routes } from "@/lib/routes";
 
 export default function EventsPage() {
   const { t, tn, l, money, date } = useI18n();
   const actor = useActor();
-  const db = useDB((d) => d);
-  const events = db.events.filter((e) => e.clientId === actor.id).sort((a, b) => a.date.localeCompare(b.date));
+  const events = useClientEvents(actor.id);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const event = events.find((e) => e.id === selectedId) ?? events[0];
   const [editing, setEditing] = useState<EventItem | "new" | null>(null);
   const [newTask, setNewTask] = useState("");
 
-  const bookings = db.bookings.filter((b) => b.clientId === actor.id).sort((a, b) => a.date.localeCompare(b.date));
-  const eventBookings = event ? bookings.filter((b) => b.eventId === event.id && b.status !== "cancelled") : [];
-  const booked = eventBookings.reduce((s, b) => s + b.total, 0);
-  const prepaid = eventBookings.filter((b) => b.status !== "pending").reduce((s, b) => s + b.prepayAmount, 0);
-  const byCategory = db.categories
-    .map((c) => {
-      const list = eventBookings.filter((b) => db.vendors.find((v) => v.id === b.vendorId)?.category === c.id);
-      return { c, total: list.reduce((s, b) => s + b.total, 0), count: list.length };
-    })
-    .filter((x) => x.count > 0)
-    .sort((a, b) => b.total - a.total);
+  const { booked, prepaid, byCategory } = useEventBudget(actor.id, event?.id);
   const days = event ? differenceInCalendarDays(parseISO(event.date), new Date()) : 0;
   const share = event && event.budget ? Math.min(1, booked / event.budget) : 0;
 
   function toggleTask(id: string) {
     if (!event) return;
     setChecklist(
-      actor,
       event.id,
       event.checklist.map((c) => (c.id === id ? { ...c, done: !c.done } : c)),
     );
@@ -55,7 +44,7 @@ export default function EventsPage() {
 
   function addTask() {
     if (!event || !newTask.trim()) return;
-    setChecklist(actor, event.id, [
+    setChecklist(event.id, [
       ...event.checklist,
       {
         id: `c-${event.checklist.length + 1}-${event.checklist.map((c) => c.id).join("").length}`,
@@ -158,7 +147,7 @@ export default function EventsPage() {
                   ))}
                 </ul>
               ) : (
-                <Empty action={<LinkButton href="/vendors">{t("nav.feed")}</LinkButton>}>{t("dashboard.noBookings")}</Empty>
+                <Empty action={<LinkButton href={routes.feed}>{t("nav.feed")}</LinkButton>}>{t("dashboard.noBookings")}</Empty>
               )}
             </Section>
           </div>
@@ -185,7 +174,7 @@ export default function EventsPage() {
                     </span>
                     {c.category && !c.done && (
                       <Link
-                        href={`/vendors?category=${c.category}`}
+                        href={routes.feedWith({ category: c.category })}
                         className="flex items-center gap-1.5 text-xs text-primary hover:underline"
                         onClick={() => undefined}
                       >
@@ -224,11 +213,11 @@ export default function EventsPage() {
         onClose={() => setEditing(null)}
         onSave={(data) => {
           if (editing === "new") {
-            const e = createEvent(actor, data);
+            const e = createEvent(data);
             setSelectedId(e.id);
             toast.success(t("dashboard.eventCreated"));
           } else if (editing) {
-            updateEvent(actor, editing.id, data);
+            updateEvent(editing.id, data);
             toast.success(t("common.saved"));
           }
           setEditing(null);

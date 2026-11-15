@@ -117,9 +117,6 @@ export function viewerSequence(order: string[], openedId: string): string[] {
   return [...order.slice(i), ...order.slice(0, i)];
 }
 
-export function commentsOf(db: Pick<DB, "comments">, postId: string) {
-  return db.comments.filter((c) => c.postId === postId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-}
 
 /** Orders a vendor has done: history before EVENTUS plus deals completed on the platform */
 export function ordersDone(db: Pick<DB, "bookings">, vendor: Pick<Vendor, "id" | "ordersBase">) {
@@ -143,4 +140,18 @@ export function reviewableBooking(db: Pick<DB, "bookings" | "reviews">, clientId
 /** Has this client ever had a finished deal with the vendor (and so may comment and review) */
 export function hadDealWith(db: Pick<DB, "bookings">, clientId: string, vendorId: string) {
   return db.bookings.some((b) => b.clientId === clientId && b.vendorId === vendorId && isFinishedDeal(b));
+}
+
+/** Posts like this one (same category, nearby vendors first), for «show similar» in the viewer */
+export function similarPosts(db: DB, post: Post, exclude: Set<string>): string[] {
+  const vendor = db.vendors.find((v) => v.id === post.vendorId);
+  return db.posts
+    .filter((p) => !p.hidden && !exclude.has(p.id) && p.category === post.category)
+    .map((p) => {
+      const v = db.vendors.find((x) => x.id === p.vendorId);
+      const s = (v && vendor && v.city === vendor.city ? 2 : 0) + (p.vendorId !== post.vendorId ? 1 : 0) + Math.log10(likeCount(db, p) + 10);
+      return { id: p.id, s };
+    })
+    .sort((a, b) => b.s - a.s)
+    .map((x) => x.id);
 }

@@ -10,12 +10,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { NativeSelect } from "@/components/ui/native-select";
 import { useMyVendor } from "@/components/vendor-panel/use-my-vendor";
 import { createPost, deletePost } from "@/lib/data/actions";
-import { likeCount } from "@/lib/data/feed";
-import { activeOffers } from "@/lib/data/queries";
 import { PHOTOS, unsplash } from "@/lib/data/seed/photos";
-import { useDB } from "@/lib/data/store";
+import { useVendorPosts } from "@/lib/data/views/vendor";
 import { useI18n } from "@/lib/i18n";
-import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 const RATIOS = [
@@ -26,11 +23,8 @@ const RATIOS = [
 
 export default function VendorPosts() {
   const { t, l, num, date } = useI18n();
-  const actor = useActor();
   const vendor = useMyVendor();
-  const db = useDB((d) => d);
-  const posts = db.posts.filter((p) => p.vendorId === vendor.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const offers = activeOffers(db, vendor.id);
+  const { rows: posts, offers } = useVendorPosts(vendor.id);
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
   const [caption, setCaption] = useState("");
@@ -53,7 +47,7 @@ export default function VendorPosts() {
       const id = src.match(/photo-([\w-]+)\?/)?.[1];
       return id ? unsplash(id, 900, Math.round(900 * ratio)) : src;
     });
-    createPost(actor, { vendorId: vendor.id, photos, caption, offerId: offerId || undefined, ratio });
+    createPost({ vendorId: vendor.id, photos, caption, offerId: offerId || undefined, ratio });
     toast.success(t("vcab.published"));
     setOpen(false);
     setPicked([]);
@@ -75,14 +69,14 @@ export default function VendorPosts() {
       />
       {posts.length ? (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-          {posts.map((p) => (
+          {posts.map(({ post: p, likes }) => (
             <li key={p.id} className="group overflow-hidden rounded-2xl bg-card">
               <div className="relative aspect-[4/5] bg-muted">
                 <Image src={p.photos[0]} alt="" fill sizes="300px" className="object-cover" />
                 <button
                   type="button"
                   onClick={() => {
-                    deletePost(actor, p.id);
+                    deletePost(p.id);
                     toast(t("vcab.postDeleted"));
                   }}
                   className="absolute top-2 right-2 flex size-8 items-center justify-center rounded-full bg-card/90 text-muted-foreground opacity-0 shadow-soft transition-opacity group-hover:opacity-100 hover:text-destructive max-lg:opacity-100"
@@ -97,7 +91,7 @@ export default function VendorPosts() {
                   <span>{date(p.createdAt.slice(0, 10), "d MMM")}</span>
                   <span className="inline-flex items-center gap-1">
                     <Heart className="size-3" />
-                    {num(likeCount(db, p))}
+                    {num(likes)}
                   </span>
                 </div>
               </div>

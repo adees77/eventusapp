@@ -7,22 +7,23 @@ import { AvailDots } from "@/components/avail-dots";
 import { toggleFavorite } from "@/lib/data/actions";
 import type { VendorResult } from "@/lib/data/queries";
 import { CITIES } from "@/lib/data/seed/catalog";
-import { useDB } from "@/lib/data/store";
+import { useIsFavorite } from "@/lib/data/views/vendor";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { Rating, VerifiedSeal } from "./badges";
+import { routes } from "@/lib/routes";
 
 export function VendorCard({ r, date, priority }: { r: VendorResult; date?: string | null; priority?: boolean }) {
   const { t, l, money } = useI18n();
   const actor = useActor();
   const { vendor, minPrice, availability } = r;
-  const fav = useDB((db) => db.favorites.some((f) => f.userId === actor.id && f.vendorId === vendor.id));
+  const fav = useIsFavorite(actor.id, vendor.id);
   const cheapest = r.offers.find((o) => o.price === minPrice);
 
   return (
     <article className="group relative flex flex-col">
-      <Link href={`/vendors/${vendor.slug}`} className="flex flex-col gap-3 rounded-2xl outline-offset-4">
+      <Link href={routes.vendor(vendor.slug)} className="flex flex-col gap-3 rounded-2xl outline-offset-4">
         <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-muted">
           {vendor.cover && (
             <Image
@@ -61,7 +62,7 @@ export function VendorCard({ r, date, priority }: { r: VendorResult; date?: stri
       {actor.role === "client" && (
         <button
           type="button"
-          onClick={() => toggleFavorite(actor, vendor.id)}
+          onClick={() => toggleFavorite(vendor.id)}
           aria-pressed={fav}
           aria-label={fav ? t("vendor.favorited") : t("vendor.favorite")}
           className="absolute top-3 right-3 flex size-9 items-center justify-center rounded-full bg-card/90 text-foreground shadow-soft backdrop-blur transition-colors hover:bg-card active:scale-[0.97]"

@@ -10,12 +10,10 @@ import { updateVendor } from "@/lib/data/actions";
 import { sanitizeSpecs, specFacts, specsProgress } from "@/lib/data/specs";
 import type { VendorSpecs } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
-import { useActor } from "@/lib/session";
 
 /** Category details the vendor keeps up to date: fleet, hall area, languages, inventory… */
 export default function VendorDetails() {
   const { t, l } = useI18n();
-  const actor = useActor();
   const vendor = useMyVendor();
   const saved = JSON.stringify(sanitizeSpecs(vendor.category, vendor.specs ?? {}));
   // the draft remembers which saved version it started from: an untouched draft follows outside changes
@@ -32,7 +30,7 @@ export default function VendorDetails() {
 
   function save() {
     const next = sanitizeSpecs(vendor.category, specs);
-    updateVendor(actor, vendor.id, { specs: next });
+    updateVendor(vendor.id, { specs: next });
     setDraft({ base: JSON.stringify(next), specs: next });
     toast.success(t("common.saved"));
   }

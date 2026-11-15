@@ -7,23 +7,16 @@ import { EscrowBadge } from "@/components/booking/deal-card";
 import { Empty, PageHeader, Section, Segmented } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { resolveDispute } from "@/lib/data/actions";
-import { useDB } from "@/lib/data/store";
+import { useDisputes } from "@/lib/data/views/admin";
 import type { EscrowState } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
-import { useActor } from "@/lib/session";
+import { routes } from "@/lib/routes";
 
 export default function AdminDisputes() {
   const { t, l, money, date } = useI18n();
-  const actor = useActor();
-  const db = useDB((d) => d);
   const [f, setF] = useState<EscrowState | "all">("disputed");
-  const name = (id: string) => db.users.find((u) => u.id === id)?.name ?? "—";
-  const deals = db.bookings
-    .filter((b) => b.escrow && (f === "all" || b.escrow.state === f))
-    .sort((a, b) =>
-      (b.escrow?.dispute?.openedAt ?? b.escrow?.heldAt ?? "").localeCompare(a.escrow?.dispute?.openedAt ?? a.escrow?.heldAt ?? ""),
-    );
-  const count = (s: EscrowState) => db.bookings.filter((b) => b.escrow?.state === s).length;
+  const { rows: deals, counts } = useDisputes(f);
+  const count = (s: EscrowState) => counts[s];
 
   return (
     <div className="flex flex-col gap-6">
@@ -41,19 +34,16 @@ export default function AdminDisputes() {
       />
       {deals.length ? (
         <ul className="flex flex-col gap-3">
-          {deals.map((b) => {
-            const v = db.vendors.find((x) => x.id === b.vendorId);
-            const o = db.offers.find((x) => x.id === b.offerId);
-            const conv = db.conversations.find((c) => c.bookingId === b.id);
+          {deals.map(({ booking: b, vendorName, clientName, offerTitle, conversationId, disputeByName }) => {
             const e = b.escrow!;
             return (
               <li key={b.id}>
                 <Section
-                  title={`${v?.name ?? ""} ← ${name(b.clientId)}`}
+                  title={`${vendorName} ← ${clientName || "—"}`}
                   action={<span className="text-md font-medium tabular-nums">{money(e.amount)}</span>}
                 >
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-secondary">
-                    <span>{l(o?.title)}</span>
+                    <span>{l(offerTitle)}</span>
                     <span className="tabular-nums">{date(b.date, "d MMM yyyy")}</span>
                     <EscrowBadge booking={b} />
                     <span className="text-xs">
@@ -63,7 +53,7 @@ export default function AdminDisputes() {
                   {e.dispute && (
                     <blockquote className="mt-3 border-l-2 border-destructive/40 pl-3 text-sm">
                       <div className="text-xs text-muted-foreground">
-                        {t("acab.openedBy", { who: name(e.dispute.by), date: date(e.dispute.openedAt.slice(0, 10), "d MMM") })}
+                        {t("acab.openedBy", { who: disputeByName || "—", date: date(e.dispute.openedAt.slice(0, 10), "d MMM") })}
                       </div>
                       <p className="mt-0.5">{e.dispute.reason}</p>
                       {e.dispute.resolution && (
@@ -74,9 +64,9 @@ export default function AdminDisputes() {
                     </blockquote>
                   )}
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {conv && (
+                    {conversationId && (
                       <Link
-                        href={`/messages/${conv.id}`}
+                        href={routes.chat(conversationId)}
                         className="inline-flex h-9 items-center rounded-full bg-foreground/[0.05] px-4 text-sm hover:bg-foreground/[0.09]"
                       >
                         {t("acab.readChat")}
@@ -87,7 +77,7 @@ export default function AdminDisputes() {
                         <Button
                           className="h-9 px-4"
                           onClick={() => {
-                            resolveDispute(actor, b.id, "release");
+                            resolveDispute(b.id, "release");
                             toast.success(t("acab.releasedToast"));
                           }}
                         >
@@ -97,7 +87,7 @@ export default function AdminDisputes() {
                           variant="outline"
                           className="h-9 px-4"
                           onClick={() => {
-                            resolveDispute(actor, b.id, "refund");
+                            resolveDispute(b.id, "refund");
                             toast.success(t("acab.refundedToast"));
                           }}
                         >

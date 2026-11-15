@@ -11,11 +11,12 @@ import { useSession } from "@/lib/session";
 import { BottomNav } from "./bottom-nav";
 import { Header } from "./header";
 import { HOME_BY_ROLE } from "./nav-items";
+import { routes } from "@/lib/routes";
 
 /** Pages that render without the app chrome */
-const BARE = ["/welcome", "/onboarding"];
+const BARE = [routes.welcome, routes.onboarding];
 /** Pages open without an account (guest invitation links) */
-const PUBLIC = ["/welcome", "/i/"];
+const PUBLIC = [routes.welcome, routes.publicInvitationPrefix];
 
 const matches = (pathname: string, list: string[]) =>
   list.some((p) => pathname === p || pathname.startsWith(p.endsWith("/") ? p : `${p}/`));
@@ -52,12 +53,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     : !userId
       ? isPublic
         ? null
-        : "/welcome"
+        : routes.welcome
       : needsOnboarding
-        ? matches(pathname, ["/onboarding"])
+        ? matches(pathname, [routes.onboarding])
           ? null
           : onboardingStart(pathname)
-        : isLanding || pathname === "/welcome" || matches(pathname, ["/onboarding"])
+        : isLanding || pathname === routes.welcome || matches(pathname, [routes.onboarding])
           ? HOME_BY_ROLE[role]
           : null;
 
@@ -88,7 +89,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [t]);
 
   if (!ready || target) return <Splash />;
-  if (isLanding || matches(pathname, BARE) || pathname.startsWith("/i/")) return <>{children}</>;
+  if (isLanding || matches(pathname, BARE) || pathname.startsWith(routes.publicInvitationPrefix)) return <>{children}</>;
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -107,8 +108,8 @@ const noopSubscribe = () => () => {};
  * (welcome's own router.replace would otherwise lose the race to this one).
  */
 function onboardingStart(pathname: string) {
-  const asVendor = pathname === "/welcome" && new URLSearchParams(window.location.search).get("as") === "vendor";
-  return asVendor ? "/onboarding/vendor" : "/onboarding";
+  const asVendor = pathname === routes.welcome && new URLSearchParams(window.location.search).get("as") === "vendor";
+  return asVendor ? routes.onboardingVendor : routes.onboarding;
 }
 
 function Splash() {

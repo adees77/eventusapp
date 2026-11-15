@@ -9,56 +9,56 @@ import { Masonry, PostCard } from "@/components/feed/post-card";
 import { Kpi } from "@/components/layout/cabinet-shell";
 import { Empty, Section } from "@/components/panel";
 import { LinkButton } from "@/components/ui/link-button";
-import { searchPosts } from "@/lib/data/feed";
 import { CITIES } from "@/lib/data/seed/catalog";
-import { useDB } from "@/lib/data/store";
+import { useClientOverview } from "@/lib/data/views/client";
 import { useI18n } from "@/lib/i18n";
-import { invitationStats } from "@/lib/invitations/design";
-import { clientMoney, escrowOf } from "@/lib/payments/escrow";
+import { escrowOf } from "@/lib/payments/escrow";
 import { useActor } from "@/lib/session";
+import { routes } from "@/lib/routes";
 
 export default function ClientOverview() {
   const { t, tn, l, money, date } = useI18n();
   const actor = useActor();
   const router = useRouter();
-  const db = useDB((d) => d);
   const today = new Date().toISOString().slice(0, 10);
-  const user = db.users.find((u) => u.id === actor.id);
-  const events = db.events.filter((e) => e.clientId === actor.id).sort((a, b) => a.date.localeCompare(b.date));
-  const event = events.find((e) => e.date >= today) ?? events[0];
-  const bookings = db.bookings.filter((b) => b.clientId === actor.id).sort((a, b) => a.date.localeCompare(b.date));
-  const active = bookings.filter((b) => b.status !== "cancelled");
-  const money_ = clientMoney(actor.id, db.bookings);
-  const booked = event ? active.filter((b) => b.eventId === event.id).reduce((s, b) => s + b.total, 0) : 0;
+  const {
+    user,
+    event,
+    bookings,
+    active,
+    money: money_,
+    booked,
+    invitation: inv,
+    invitationStats: stats,
+    missingCategory: missing,
+    missingCategoryName,
+    ideas,
+  } = useClientOverview(actor);
   const done = event ? event.checklist.filter((c) => c.done).length : 0;
-  const inv = db.invitations.find((i) => i.ownerId === actor.id && (!event || i.eventId === event.id));
-  const stats = inv ? invitationStats(inv) : null;
   const days = event ? differenceInCalendarDays(parseISO(event.date), new Date()) : 0;
 
   const todo = [
     ...bookings
-      .filter((b) => b.status === "pending")
-      .map((b) => ({
+      .filter(({ booking: b }) => b.status === "pending")
+      .map(({ booking: b, vendorName }) => ({
         id: b.id,
         icon: CreditCard,
-        text: t("cabinet.todoPay", { vendor: db.vendors.find((v) => v.id === b.vendorId)?.name ?? "" }),
-        href: `/checkout/${b.id}`,
+        text: t("cabinet.todoPay", { vendor: vendorName }),
+        href: routes.checkout(b.id),
       })),
     ...bookings
-      .filter((b) => escrowOf(b).state === "held" && !b.escrow?.clientConfirmedAt)
-      .map((b) => ({
+      .filter(({ booking: b }) => escrowOf(b).state === "held" && !b.escrow?.clientConfirmedAt)
+      .map(({ booking: b, vendorName, conversationId }) => ({
         id: `c-${b.id}`,
         icon: Lock,
-        text: t("cabinet.todoConfirm", { vendor: db.vendors.find((v) => v.id === b.vendorId)?.name ?? "" }),
-        href: `/messages/${db.conversations.find((c) => c.bookingId === b.id)?.id ?? ""}`,
+        text: t("cabinet.todoConfirm", { vendor: vendorName }),
+        href: routes.chat(conversationId ?? ""),
       })),
     ...(stats && stats.guests - stats.sent > 0
-      ? [{ id: "inv", icon: Mail, text: tn("cabinet.todoInvite", stats.guests - stats.sent), href: `/invitations/${inv!.id}?tab=guests` }]
+      ? [{ id: "inv", icon: Mail, text: tn("cabinet.todoInvite", stats.guests - stats.sent), href: routes.invitation(inv!.id, "guests") }]
       : []),
   ];
 
-  const missing = event?.checklist.find((c) => !c.done && c.category)?.category;
-  const ideas = missing ? searchPosts(db, { category: missing }, actor).slice(0, 8) : [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -77,7 +77,7 @@ export default function ClientOverview() {
 
       {!event ? (
         <Section title={t("cabinet.events")}>
-          <Empty action={<LinkButton href="/dashboard/events">{t("dashboard.newEvent")}</LinkButton>}>{t("dashboard.noEvents")}</Empty>
+          <Empty action={<LinkButton href={routes.events}>{t("dashboard.newEvent")}</LinkButton>}>{t("dashboard.noEvents")}</Empty>
         </Section>
       ) : (
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -101,12 +101,12 @@ export default function ClientOverview() {
         <Section
           title={t("cabinet.upcoming")}
           action={
-            <Link href="/dashboard/bookings" className="text-sm text-primary hover:underline">
+            <Link href={routes.bookings} className="text-sm text-primary hover:underline">
               {t("cabinet.all")}
             </Link>
           }
         >
-          <ClientBookingList bookings={active.filter((b) => b.date >= today).slice(0, 4)} />
+          <ClientBookingList rows={active.filter((r) => r.booking.date >= today).slice(0, 4)} />
         </Section>
 
         <Section title={t("cabinet.attention")}>
@@ -134,15 +134,15 @@ export default function ClientOverview() {
         <section>
           <div className="mb-4 flex items-end justify-between gap-3">
             <h2 className="text-base font-medium">
-              {t("cabinet.ideasFor", { what: l(db.categories.find((c) => c.id === missing)?.name) })}
+              {t("cabinet.ideasFor", { what: l(missingCategoryName) })}
             </h2>
-            <Link href={`/vendors?category=${missing}`} className="text-sm text-primary hover:underline">
+            <Link href={routes.feedWith({ category: missing })} className="text-sm text-primary hover:underline">
               {t("cabinet.all")}
             </Link>
           </div>
           <Masonry className="2xl:grid-cols-4">
             {ideas.map((it) => (
-              <PostCard key={it.post.id} item={it} onOpen={(id) => router.push(`/vendors?post=${id}&category=${missing}`)} />
+              <PostCard key={it.post.id} item={it} onOpen={(id) => router.push(routes.feedWith({ post: id, category: missing }))} />
             ))}
           </Masonry>
         </section>

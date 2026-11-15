@@ -6,11 +6,12 @@ import { toast } from "sonner";
 import { Section } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { VerifiedSeal } from "@/components/vendor/badges";
-import { DOC_KINDS, missingDocs, removeDocument, requestVerification, uploadDocument } from "@/lib/data/actions";
-import { useDB } from "@/lib/data/store";
+import { removeDocument, requestVerification, uploadDocument } from "@/lib/data/actions";
+import { DOC_KINDS } from "@/lib/data/policies";
+import { usePlatformSettings } from "@/lib/data/views/catalog";
+import { useVendorDocs } from "@/lib/data/views/moderation";
 import type { DocKind, Vendor, VendorDocument } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
-import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 export function DocStatus({ status }: { status: VendorDocument["status"] }) {
@@ -32,11 +33,8 @@ export function DocStatus({ status }: { status: VendorDocument["status"] }) {
 /** Vendor side of verification: upload papers per kind, then send the request */
 export function VendorDocuments({ vendor }: { vendor: Vendor }) {
   const { t } = useI18n();
-  const actor = useActor();
-  const docs = useDB((d) => d.documents.filter((x) => x.vendorId === vendor.id));
-  const settings = useDB((d) => d.settings);
-  const missing = useDB((d) => missingDocs(d, vendor.id));
-  const required = settings.requiredDocs ?? [];
+  const { docs, missing, required } = useVendorDocs(vendor.id);
+  const settings = usePlatformSettings();
   const state = vendor.verified ? "verified" : vendor.verification?.state;
   const kinds = [...required, ...DOC_KINDS.filter((k) => !required.includes(k))];
   const hasRejected = docs.some((d) => d.status === "rejected" && required.includes(d.kind));
@@ -78,7 +76,7 @@ export function VendorDocuments({ vendor }: { vendor: Vendor }) {
             disabled={missing.length > 0 || hasRejected}
             className="h-10 px-5"
             onClick={() => {
-              requestVerification(actor, vendor.id);
+              requestVerification(vendor.id);
               toast.success(t("mod.vSent"));
             }}
           >
@@ -108,7 +106,6 @@ function DocSlot({
   locked: boolean;
 }) {
   const { t } = useI18n();
-  const actor = useActor();
   const input = useRef<HTMLInputElement>(null);
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-foreground/[0.035] px-4 py-3">
@@ -127,7 +124,7 @@ function DocSlot({
           {doc && (
             <button
               type="button"
-              onClick={() => removeDocument(actor, doc.id)}
+              onClick={() => removeDocument(doc.id)}
               aria-label={t("mod.vRemove")}
               title={t("mod.vRemove")}
               className="flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground"
@@ -146,7 +143,7 @@ function DocSlot({
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) uploadDocument(actor, vendorId, kind, f.name);
+              if (f) uploadDocument(vendorId, kind, f.name);
               e.target.value = "";
             }}
           />

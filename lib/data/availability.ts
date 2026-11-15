@@ -1,5 +1,5 @@
 import { getDay, getMonth, parseISO } from "date-fns";
-import { demoConfig } from "@/config/demo";
+import { demoFeature } from "@/lib/demo/mode";
 import type { Booking, DB, Offer } from "./types";
 
 /** Statuses that hold inventory */
@@ -27,10 +27,10 @@ export function hash(str: string): number {
 /**
  * DEMO ONLY: simulated "background" occupancy so calendars look alive
  * (other clients, offline sales). Weekends in wedding season are busier.
- * Disabled with demoConfig.baselineOccupancy = false. Not used in production.
+ * Demo only (demoConfig.features.baselineOccupancy): live calendars show real bookings and blocks.
  */
 export function baselineBlocked(offer: Offer, date: string): number {
-  if (!demoConfig.baselineOccupancy) return 0;
+  if (!demoFeature("baselineOccupancy")) return 0;
   const d = parseISO(date);
   const dow = getDay(d); // 0 Sun … 6 Sat
   const month = getMonth(d); // 0 Jan

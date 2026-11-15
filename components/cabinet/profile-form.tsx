@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { updateProfile } from "@/lib/data/actions";
 import { CITIES } from "@/lib/data/seed/catalog";
-import { getDB } from "@/lib/data/store";
+import { readUser } from "@/lib/data/views/users";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
 
@@ -15,7 +15,7 @@ import { useActor } from "@/lib/session";
 export function ProfileForm() {
   const { t, l } = useI18n();
   const actor = useActor();
-  const [user] = useState(() => getDB().users.find((u) => u.id === actor.id));
+  const [user] = useState(() => readUser(actor.id));
   const [name, setName] = useState(user?.name ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [city, setCity] = useState(user?.city ?? "bishkek");
@@ -25,7 +25,7 @@ export function ProfileForm() {
         className="grid gap-4 sm:grid-cols-2"
         onSubmit={(e) => {
           e.preventDefault();
-          updateProfile(actor, { name, phone, city });
+          updateProfile({ name, phone, city });
           toast.success(t("common.saved"));
         }}
       >

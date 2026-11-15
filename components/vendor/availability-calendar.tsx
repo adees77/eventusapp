@@ -2,9 +2,7 @@
 
 import { format } from "date-fns";
 import { MonthCalendar } from "@/components/month-calendar";
-import { getAvailability, getVendorAvailability } from "@/lib/data/availability";
-import { useDB } from "@/lib/data/store";
-import type { DB } from "@/lib/data/types";
+import { useAvailabilityLookup } from "@/lib/data/views/availability";
 import { cn } from "@/lib/utils";
 
 /** Month grid where each day shows how many units are free. */
@@ -19,10 +17,7 @@ export function AvailabilityCalendar({
   value: string | null;
   onChange: (iso: string) => void;
 }) {
-  const db = useDB((d) => d);
-  const offer = offerId ? db.offers.find((o) => o.id === offerId) : null;
-
-  const availOn = (iso: string) => (offer ? getAvailability(db, offer, iso) : getVendorAvailability(db as DB, vendorId, iso));
+  const availOn = useAvailabilityLookup({ offerId, vendorId });
 
   return (
     <MonthCalendar

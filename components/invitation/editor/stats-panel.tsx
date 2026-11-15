@@ -11,7 +11,6 @@ import { addGuests, removeGuest } from "@/lib/data/actions";
 import type { Invitation } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { guestStatus, guestsCsv, invitationStats, rsvpOfGuest, type GuestStatus } from "@/lib/invitations/design";
-import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { STATUS_TONE } from "./guests-panel";
 
@@ -161,7 +160,6 @@ const ORDER: GuestStatus[] = ["coming", "opened", "sent", "draft", "declined"];
 /** Everyone in one place: invited guests, answers through the common link, and guests added without an invitation */
 function GuestList({ inv, labels, onExport }: { inv: Invitation; labels: Record<GuestStatus, string>; onExport: () => void }) {
   const { t, num } = useI18n();
-  const actor = useActor();
   const [adding, setAdding] = useState(false);
   const [filter, setFilter] = useState<GuestStatus | "all">("all");
   const [name, setName] = useState("");
@@ -200,7 +198,7 @@ function GuestList({ inv, labels, onExport }: { inv: Invitation; labels: Record<
   function add(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    addGuests(actor, inv.id, [{ name, group: group || undefined, seats, direct: true }]);
+    addGuests(inv.id, [{ name, group: group || undefined, seats, direct: true }]);
     setName("");
     setSeats(1);
   }
@@ -298,7 +296,7 @@ function GuestList({ inv, labels, onExport }: { inv: Invitation; labels: Record<
                   {r.directId && (
                     <button
                       type="button"
-                      onClick={() => removeGuest(actor, inv.id, r.directId!)}
+                      onClick={() => removeGuest(inv.id, r.directId!)}
                       aria-label={t("inv.delete")}
                       title={t("inv.delete")}
                       className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"

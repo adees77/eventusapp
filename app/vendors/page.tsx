@@ -6,8 +6,7 @@ import { FeedSearch, type SearchState } from "@/components/feed/feed-search";
 import { Masonry, PostCard } from "@/components/feed/post-card";
 import { PostDialog } from "@/components/feed/post-dialog";
 import { Button } from "@/components/ui/button";
-import { searchPosts } from "@/lib/data/feed";
-import { useDB } from "@/lib/data/store";
+import { useFeed } from "@/lib/data/views/feed";
 import type { CategoryId } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { usePlanner } from "@/lib/planner";
@@ -43,9 +42,7 @@ function Feed() {
   };
   const postId = params.get("post");
 
-  const items = useDB((db) =>
-    searchPosts(
-      db,
+  const items = useFeed(
       {
         tab,
         query: state.query,
@@ -56,7 +53,6 @@ function Feed() {
         sort: state.sort,
       },
       actor,
-    ),
   );
 
   const setParams = useCallback(

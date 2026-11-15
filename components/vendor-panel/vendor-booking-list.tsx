@@ -6,34 +6,32 @@ import { Empty } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { setBookingStatus } from "@/lib/data/actions";
-import { useDB } from "@/lib/data/store";
-import type { Booking } from "@/lib/data/types";
+import type { BookingView } from "@/lib/data/views/_shared";
 import { useI18n } from "@/lib/i18n";
 import { escrowOf } from "@/lib/payments/escrow";
-import { useActor } from "@/lib/session";
+import { routes } from "@/lib/routes";
 
 /** Vendor bookings with the next action: confirm the deal in chat, mark as completed */
-export function VendorBookingList({ bookings }: { bookings: Booking[] }) {
+export function VendorBookingList({ rows }: { rows: BookingView[] }) {
   const { t } = useI18n();
-  const actor = useActor();
-  const db = useDB((d) => d);
   const today = new Date().toISOString().slice(0, 10);
-  if (!bookings.length) return <Empty>{t("vp.noIncoming")}</Empty>;
+  if (!rows.length) return <Empty>{t("vp.noIncoming")}</Empty>;
   return (
     <ul className="flex flex-col divide-y divide-border">
-      {bookings.map((b) => {
-        const conv = db.conversations.find((c) => c.bookingId === b.id);
+      {rows.map((row) => {
+        const { booking: b, conversationId } = row;
+        const conv = conversationId ? { id: conversationId } : undefined;
         const e = escrowOf(b);
         const needsMe = e.state === "held" && !e.vendorConfirmedAt;
         return (
           <BookingRow
             key={b.id}
-            b={b}
+            row={row}
             perspective="vendor"
             actions={
               <>
                 {needsMe && conv && (
-                  <LinkButton href={`/messages/${conv.id}`} className="h-9 px-4">
+                  <LinkButton href={routes.chat(conv.id)} className="h-9 px-4">
                     {t("escrow.confirm")}
                   </LinkButton>
                 )}
@@ -42,7 +40,7 @@ export function VendorBookingList({ bookings }: { bookings: Booking[] }) {
                     variant="outline"
                     className="h-9 px-4"
                     onClick={() => {
-                      setBookingStatus(actor, b.id, "completed");
+                      setBookingStatus(b.id, "completed");
                       toast.success(t("vcab.completedToast"));
                     }}
                   >
@@ -50,7 +48,7 @@ export function VendorBookingList({ bookings }: { bookings: Booking[] }) {
                   </Button>
                 )}
                 {conv && !needsMe && (
-                  <LinkButton href={`/messages/${conv.id}`} variant="outline" className="h-9 px-4">
+                  <LinkButton href={routes.chat(conv.id)} variant="outline" className="h-9 px-4">
                     {t("dashboard.chat")}
                   </LinkButton>
                 )}

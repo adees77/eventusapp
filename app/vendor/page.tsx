@@ -7,28 +7,24 @@ import { BarChart, LineChart } from "@/components/charts/charts";
 import { Kpi } from "@/components/layout/cabinet-shell";
 import { PageHeader, Section } from "@/components/panel";
 import { useMyVendor } from "@/components/vendor-panel/use-my-vendor";
-import { VendorCalendar } from "@/components/vendor-panel/sections";
+import { VendorCalendar } from "@/components/vendor-panel/calendar";
 import { VendorBookingList } from "@/components/vendor-panel/vendor-booking-list";
-import { likeCount, ordersDone } from "@/lib/data/feed";
 import { specsProgress } from "@/lib/data/specs";
-import { vendorBookings } from "@/lib/data/queries";
-import { useDB } from "@/lib/data/store";
+import { useVendorOverview } from "@/lib/data/views/vendor";
 import { useI18n } from "@/lib/i18n";
-import { escrowOf, vendorBalance } from "@/lib/payments/escrow";
+import { escrowOf } from "@/lib/payments/escrow";
+import { routes } from "@/lib/routes";
 
 export default function VendorOverview() {
   const { t, num, money, date, locale } = useI18n();
   const vendor = useMyVendor();
-  const db = useDB((d) => d);
+  const { bookings: rows, balance: bal, views, postsCount, likes, ordersDone, unanswered: reviews, activeOffers: offersCount, hasBlocks } =
+    useVendorOverview(vendor.id);
   const today = new Date();
   const todayIso = today.toISOString().slice(0, 10);
-  const bookings = vendorBookings(db, vendor.id);
-  const live = bookings.filter((b) => b.status !== "cancelled");
-  const bal = vendorBalance(vendor.id, db.bookings, db.transactions);
-  const views = db.stats.find((s) => s.vendorId === vendor.id)?.views ?? 0;
+  const liveRows = rows.filter((r) => r.booking.status !== "cancelled");
+  const live = liveRows.map((r) => r.booking);
   const conversion = views ? (live.length / views) * 100 : 0;
-  const posts = db.posts.filter((p) => p.vendorId === vendor.id);
-  const likes = posts.reduce((s, p) => s + likeCount(db, p), 0);
 
   // gross bookings value per week, last 12 weeks (by creation date)
   const weeks = eachWeekOfInterval({ start: subWeeks(today, 11), end: today }, { weekStartsOn: 1 });
@@ -50,47 +46,45 @@ export default function VendorOverview() {
     };
   });
 
-  const toConfirm = bookings.filter((b) => escrowOf(b).state === "held" && !b.escrow?.vendorConfirmedAt);
-  const reviews = db.reviews.filter((r) => r.vendorId === vendor.id && r.bookingId && !r.reply);
+  const toConfirm = rows.filter(({ booking: b }) => escrowOf(b).state === "held" && !b.escrow?.vendorConfirmedAt);
   const todo = [
-    ...toConfirm.map((b) => ({
+    ...toConfirm.map(({ booking: b, clientName, conversationId }) => ({
       id: b.id,
       icon: Lock,
-      text: t("vcab.todoConfirm", { client: db.users.find((u) => u.id === b.clientId)?.name ?? "", amount: money(escrowOf(b).amount) }),
-      href: `/messages/${db.conversations.find((c) => c.bookingId === b.id)?.id ?? ""}`,
+      text: t("vcab.todoConfirm", { client: clientName, amount: money(escrowOf(b).amount) }),
+      href: routes.chat(conversationId ?? ""),
     })),
-    ...bookings
-      .filter((b) => b.status === "pending")
-      .map((b) => ({
+    ...rows
+      .filter(({ booking: b }) => b.status === "pending")
+      .map(({ booking: b, clientName }) => ({
         id: `p-${b.id}`,
         icon: Receipt,
-        text: t("vcab.todoPending", { client: db.users.find((u) => u.id === b.clientId)?.name ?? "" }),
-        href: "/vendor/bookings",
+        text: t("vcab.todoPending", { client: clientName }),
+        href: routes.vendorBookings,
       })),
     ...reviews.map((r) => ({
       id: r.id,
       icon: MessageSquareReply,
       text: t("vcab.todoReview", { author: r.author }),
-      href: `/vendors/${vendor.slug}?tab=reviews`,
+      href: routes.vendor(vendor.slug, "reviews"),
     })),
   ];
 
-  const offersCount = db.offers.filter((o) => o.vendorId === vendor.id && o.active).length;
   const setup = [
     {
       done: specsProgress(vendor.category, vendor.specs) >= 0.6,
       text: t("vcab.setupDetails", { p: Math.round(specsProgress(vendor.category, vendor.specs) * 100) }),
-      href: "/vendor/details",
+      href: routes.vendorDetails,
     },
-    { done: offersCount > 0, text: t("vcab.setupOffer"), href: "/create/service" },
-    { done: posts.length >= 3, text: t("vcab.setupPosts", { n: posts.length }), href: "/create/post" },
-    { done: !!vendor.description.ru || !!vendor.description.en, text: t("vcab.setupAbout"), href: "/vendor/profile" },
+    { done: offersCount > 0, text: t("vcab.setupOffer"), href: routes.createService },
+    { done: postsCount >= 3, text: t("vcab.setupPosts", { n: postsCount }), href: routes.createPost },
+    { done: !!vendor.description.ru || !!vendor.description.en, text: t("vcab.setupAbout"), href: routes.vendorProfile },
     {
-      done: db.blocks.some((b) => db.offers.find((o) => o.id === b.offerId)?.vendorId === vendor.id),
+      done: hasBlocks,
       text: t("vcab.setupCalendar"),
-      href: "/vendor#calendar",
+      href: routes.vendorCalendar,
     },
-    { done: vendor.verified, text: t("vcab.setupVerify"), href: "/vendor/profile" },
+    { done: vendor.verified, text: t("vcab.setupVerify"), href: routes.vendorProfile },
   ];
   const setupLeft = setup.filter((x) => !x.done).length;
 
@@ -129,7 +123,7 @@ export default function VendorOverview() {
         <Kpi
           label={t("vp.views")}
           value={num(views)}
-          note={t("vcab.socialNote", { f: num(ordersDone(db, vendor)), l: num(likes) })}
+          note={t("vcab.socialNote", { f: num(ordersDone), l: num(likes) })}
           tone="gold"
         />
       </div>
@@ -168,12 +162,12 @@ export default function VendorOverview() {
         <Section
           title={t("cabinet.upcoming")}
           action={
-            <Link href="/vendor/bookings" className="text-sm text-primary hover:underline">
+            <Link href={routes.vendorBookings} className="text-sm text-primary hover:underline">
               {t("cabinet.all")}
             </Link>
           }
         >
-          <VendorBookingList bookings={live.filter((b) => b.date >= todayIso).slice(0, 5)} />
+          <VendorBookingList rows={liveRows.filter((r) => r.booking.date >= todayIso).slice(0, 5)} />
         </Section>
         <Section title={t("vcab.weekdayChart")}>
           <BarChart data={weekdays} height={140} />

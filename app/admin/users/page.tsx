@@ -7,26 +7,20 @@ import { PageHeader, Segmented, inputClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Monogram } from "@/components/vendor/badges";
 import { setUserBlocked } from "@/lib/data/actions";
-import { useDB } from "@/lib/data/store";
+import { useAdminUsers } from "@/lib/data/views/admin";
 import type { Role } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
-import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 export default function AdminUsers() {
   const { t, date } = useI18n();
-  const actor = useActor();
-  const db = useDB((d) => d);
   const [q, setQ] = useState("");
   const [role, setR] = useState<Role | "all">("all");
-  const users = db.users
-    .filter((u) => (role === "all" || u.role === role) && (!q || `${u.name} ${u.email ?? ""}`.toLowerCase().includes(q.toLowerCase())))
-    .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
-  const stats = (id: string) => db.bookings.filter((b) => b.clientId === id).length;
+  const { rows, total } = useAdminUsers(q, role);
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={t("acab.users")} subtitle={t("acab.usersCount", { n: db.users.length })} />
+      <PageHeader title={t("acab.users")} subtitle={t("acab.usersCount", { n: total })} />
       <Segmented
         value={role}
         onChange={setR}
@@ -42,7 +36,7 @@ export default function AdminUsers() {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("admin.search")} className={cn(inputClass, "pl-9")} />
       </label>
       <ul className="divide-y divide-border rounded-2xl bg-card">
-        {users.map((u) => (
+        {rows.map(({ user: u, bookings }) => (
           <li key={u.id} className={cn("flex flex-wrap items-center gap-3 px-4 py-3", u.blocked && "bg-muted/40")}>
             <Monogram name={u.name || "?"} className="size-9 rounded-full text-sm" />
             <div className="min-w-0 flex-1">
@@ -53,7 +47,7 @@ export default function AdminUsers() {
                 {t(`roles.${u.role}`)}
                 {u.email && ` · ${u.email}`}
                 {u.createdAt && ` · ${date(u.createdAt.slice(0, 10), "d MMM yyyy")}`}
-                {u.role === "client" && ` · ${t("acab.bookingsCount", { n: stats(u.id) })}`}
+                {u.role === "client" && ` · ${t("acab.bookingsCount", { n: bookings })}`}
               </div>
             </div>
             {u.role !== "admin" && (
@@ -62,7 +56,7 @@ export default function AdminUsers() {
                   variant="outline"
                   className="h-8 px-3 text-xs"
                   onClick={() => {
-                    setUserBlocked(actor, u.id, !u.blocked);
+                    setUserBlocked(u.id, !u.blocked);
                     toast(u.blocked ? t("acab.unblocked") : t("acab.blocked"));
                   }}
                 >

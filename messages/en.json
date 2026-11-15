@@ -59,7 +59,11 @@
   "demo": {
     "reset": "Reset demo",
     "resetConfirm": "Restore all data to the initial state? Bookings, messages and edits will be removed.",
-    "resetDone": "Demo data has been reset"
+    "resetDone": "Demo data has been reset",
+    "leave": "Leave the demo",
+    "try": "Try the demo",
+    "signUp": "Sign up",
+    "banner": "This is a demo: the data is made up, no real payments."
   },
   "home": {
     "titleEvent": "How can I help with the celebration?",
@@ -433,7 +437,7 @@
     "emailInvalid": "Check the email address",
     "codeTitle": "Code from the email",
     "codeSent": "We sent a 6-digit code to {email}",
-    "demoCode": "Demo mode: no email is sent, your code is {code}",
+    "demoCode": "Test sign-in: no email is sent, your code is {code}",
     "codeWrong": "Wrong code. Attempts left: {n}",
     "codeExpired": "The code has expired. Request a new one",
     "codeLocked": "Too many attempts. Request a new code",

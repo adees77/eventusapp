@@ -11,10 +11,12 @@ import { Field, inputClass, textareaClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Monogram } from "@/components/vendor/badges";
 import { signUpVendor } from "@/lib/data/actions";
-import { can } from "@/lib/data/policies";
+import {  } from "@/lib/data/policies";
 import { CITIES } from "@/lib/data/seed/catalog";
 import { CATEGORY_PHOTOS, PHOTOS, unsplash } from "@/lib/data/seed/photos";
-import { useDB } from "@/lib/data/store";
+import { useCategories } from "@/lib/data/views/catalog";
+import { useUser } from "@/lib/data/views/users";
+import { useOwnVendor } from "@/lib/data/views/vendor";
 import { specFacts, specsProgress } from "@/lib/data/specs";
 import type { CategoryId, VendorSpecs } from "@/lib/data/types";
 import { SpecsForm } from "@/components/vendor-panel/specs-form";
@@ -24,6 +26,7 @@ import { useOnboardingDraft } from "@/lib/onboarding/draft";
 import { useActor, useSession } from "@/lib/session";
 import { readPhoto } from "@/lib/photos";
 import { cn } from "@/lib/utils";
+import { routes } from "@/lib/routes";
 
 const STEPS = ["business", "details", "offer", "photos"] as const;
 type Step = (typeof STEPS)[number];
@@ -38,9 +41,9 @@ export default function VendorSetupPage() {
   const { t, l, money } = useI18n();
   const router = useRouter();
   const actor = useActor();
-  const user = useDB((db) => db.users.find((u) => u.id === actor.id));
-  const categories = useDB((db) => [...db.categories].sort((a, b) => a.order - b.order));
-  const hasVendor = useDB((db) => !can.registerOwnVendor(actor, db));
+  const user = useUser(actor.id);
+  const categories = useCategories();
+  const hasVendor = !!useOwnVendor();
   const onboarded = user ? !user.needsOnboarding : false;
   // what the user already told the assistant on the first screen, if anything
   const prefill = useOnboardingDraft((s) => s.drafts[actor.id]?.answers);
@@ -63,7 +66,7 @@ export default function VendorSetupPage() {
 
   useEffect(() => {
     // an onboarded vendor has nothing to fill in here; an interrupted sign-up stays and finishes below
-    if (hasVendor && onboarded && !busy) router.replace("/vendor");
+    if (hasVendor && onboarded && !busy) router.replace(routes.vendorHome);
   }, [hasVendor, onboarded, busy, router]);
 
   const stock = category ? PHOTOS[CATEGORY_PHOTOS[category]].slice(0, 9).map((id) => unsplash(id, 1080, 1350)) : [];
@@ -112,7 +115,7 @@ export default function VendorSetupPage() {
     setBusy(true);
     try {
       // one atomic write; it also finishes an earlier interrupted attempt by reusing its vendor
-      signUpVendor(actor, {
+      signUpVendor({
         ownerName: user?.name ?? bizName,
         name: bizName,
         category,
@@ -126,7 +129,7 @@ export default function VendorSetupPage() {
       useSession.getState().setRole("vendor", actor.id);
       clearDraft(actor.id);
       toast.success(t("onboarding.doneVendor"));
-      router.replace("/vendor");
+      router.replace(routes.vendorHome);
     } catch (err) {
       console.error("[vendor-setup] finish failed", err);
       toast.error(t("common.error"));
@@ -146,7 +149,7 @@ export default function VendorSetupPage() {
               if (idx > 0) return setStep(STEPS[idx - 1]);
               // forget the «vendor» answer, or the start screen would send us straight back here
               clearDraft(actor.id);
-              router.push("/onboarding");
+              router.push(routes.onboarding);
             }}
             aria-label={t("onboarding.back")}
             className="-ml-2 flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"

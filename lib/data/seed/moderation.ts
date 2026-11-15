@@ -1,10 +1,12 @@
 import { subDays, subHours } from "date-fns";
-import { demoConfig } from "@/config/demo";
 import type { Complaint, DocKind, PlatformSettings, Post, Review, Vendor, VendorDocument } from "../types";
+
+/** Prepayment percent for new vendors until the admin changes it in settings */
+export const DEFAULT_PREPAY_PERCENT = 30;
 
 export const DEFAULT_SETTINGS = (fee: number): PlatformSettings => ({
   feePercent: fee,
-  defaultPrepayPercent: demoConfig.defaultPrepayPercent,
+  defaultPrepayPercent: DEFAULT_PREPAY_PERCENT,
   autoReleaseDays: 3,
   requiredDocs: ["passport", "registration"],
   autoHideComplaints: 3,

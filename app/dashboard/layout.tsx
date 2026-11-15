@@ -3,37 +3,33 @@
 import { Bookmark, CalendarHeart, CreditCard, LayoutDashboard, Receipt, UserRound } from "lucide-react";
 import { CabinetShell, RoleGate, type CabinetGroup } from "@/components/layout/cabinet-shell";
 import { Monogram } from "@/components/vendor/badges";
-import { useDB } from "@/lib/data/store";
+import { useClientTodoCount } from "@/lib/data/views/client";
+import { useUser } from "@/lib/data/views/users";
 import { useI18n } from "@/lib/i18n";
-import { escrowOf } from "@/lib/payments/escrow";
 import { useActor } from "@/lib/session";
+import { routes } from "@/lib/routes";
 
 export default function ClientCabinetLayout({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
   const actor = useActor();
-  const name = useDB((db) => db.users.find((u) => u.id === actor.id)?.name ?? "");
+  const name = useUser(actor.id)?.name ?? "";
   // deals waiting for this client's confirmation or payment
-  const todo = useDB(
-    (db) =>
-      db.bookings.filter(
-        (b) => b.clientId === actor.id && (b.status === "pending" || (escrowOf(b).state === "held" && !b.escrow?.clientConfirmedAt)),
-      ).length,
-  );
+  const todo = useClientTodoCount(actor.id);
 
   const groups: CabinetGroup[] = [
     {
       items: [
-        { href: "/dashboard", label: "cabinet.overview", icon: LayoutDashboard, exact: true },
-        { href: "/dashboard/events", label: "cabinet.events", icon: CalendarHeart },
-        { href: "/dashboard/bookings", label: "cabinet.bookings", icon: Receipt, badge: todo },
-        { href: "/dashboard/payments", label: "cabinet.payments", icon: CreditCard },
+        { href: routes.dashboard, label: "cabinet.overview", icon: LayoutDashboard, exact: true },
+        { href: routes.events, label: "cabinet.events", icon: CalendarHeart },
+        { href: routes.bookings, label: "cabinet.bookings", icon: Receipt, badge: todo },
+        { href: routes.payments, label: "cabinet.payments", icon: CreditCard },
       ],
     },
     {
       title: "cabinet.groupMore",
       items: [
-        { href: "/dashboard/saved", label: "cabinet.saved", icon: Bookmark },
-        { href: "/dashboard/profile", label: "cabinet.profile", icon: UserRound },
+        { href: routes.saved, label: "cabinet.saved", icon: Bookmark },
+        { href: routes.profile, label: "cabinet.profile", icon: UserRound },
       ],
     },
   ];

@@ -8,26 +8,20 @@ import { Empty, PageHeader, Section, Segmented, inputClass } from "@/components/
 import { Button } from "@/components/ui/button";
 import { DocStatus } from "@/components/vendor-panel/documents";
 import { Monogram, VerifiedSeal } from "@/components/vendor/badges";
-import { decideVerification, missingDocs, reviewDocument } from "@/lib/data/actions";
+import { decideVerification, reviewDocument } from "@/lib/data/actions";
 import { CITIES } from "@/lib/data/seed/catalog";
-import { useDB } from "@/lib/data/store";
+import { useDocsRegistry, useVendorDocs, useVerificationQueue } from "@/lib/data/views/moderation";
 import type { Vendor, VendorDocument } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
-import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { routes } from "@/lib/routes";
 
 type Tab = "pending" | "rejected" | "docs";
 
 export default function AdminVerification() {
   const { t, l } = useI18n();
-  const db = useDB((d) => d);
   const [tab, setTab] = useState<Tab>("pending");
-  const byState = (s: "pending" | "rejected") =>
-    db.vendors
-      .filter((v) => v.verification?.state === s)
-      .sort((a, b) => (a.verification!.requestedAt ?? "").localeCompare(b.verification!.requestedAt ?? ""));
-  const pending = byState("pending");
-  const rejected = byState("rejected");
+  const { pending, rejected, docsCount } = useVerificationQueue();
   const shown = tab === "pending" ? pending : rejected;
 
   return (
@@ -39,7 +33,7 @@ export default function AdminVerification() {
         options={[
           { value: "pending", label: `${t("mod.queue")} · ${pending.length}` },
           { value: "rejected", label: `${t("mod.rejectedTab")} · ${rejected.length}` },
-          { value: "docs", label: `${t("mod.docsTab")} · ${db.documents.length}` },
+          { value: "docs", label: `${t("mod.docsTab")} · ${docsCount}` },
         ]}
       />
 
@@ -47,9 +41,9 @@ export default function AdminVerification() {
         <DocsRegistry />
       ) : shown.length ? (
         <ul className="flex flex-col gap-3">
-          {shown.map((v) => (
+          {shown.map(({ vendor: v, categoryName }) => (
             <li key={v.id}>
-              <VendorRequest vendor={v} catName={l(db.categories.find((c) => c.id === v.category)?.name)} city={l(CITIES[v.city])} />
+              <VendorRequest vendor={v} catName={l(categoryName)} city={l(CITIES[v.city])} />
             </li>
           ))}
         </ul>
@@ -62,12 +56,8 @@ export default function AdminVerification() {
 
 function VendorRequest({ vendor: v, catName, city }: { vendor: Vendor; catName: string; city: string }) {
   const { t, date } = useI18n();
-  const actor = useActor();
-  const docs = useDB((d) => d.documents.filter((x) => x.vendorId === v.id));
-  const required = useDB((d) => d.settings.requiredDocs ?? []);
-  const missing = useDB((d) => missingDocs(d, v.id));
+  const { docs, required, blockers } = useVendorDocs(v.id);
   const [note, setNote] = useState("");
-  const blockers = [...missing, ...docs.filter((x) => x.status === "rejected" && required.includes(x.kind)).map((x) => x.kind)];
 
   return (
     <Section
@@ -75,7 +65,7 @@ function VendorRequest({ vendor: v, catName, city }: { vendor: Vendor; catName: 
         <span className="flex items-center gap-3">
           <Monogram name={v.name} className="size-10 rounded-full text-sm" />
           <span className="min-w-0">
-            <Link href={`/vendors/${v.slug}`} className="block truncate hover:underline">
+            <Link href={routes.vendor(v.slug)} className="block truncate hover:underline">
               {v.name}
             </Link>
             <span className="block text-xs font-normal text-muted-foreground">
@@ -113,7 +103,7 @@ function VendorRequest({ vendor: v, catName, city }: { vendor: Vendor; catName: 
             variant="outline"
             className="h-10 px-4"
             onClick={() => {
-              decideVerification(actor, v.id, false, note);
+              decideVerification(v.id, false, note);
               toast(t("mod.declinedToast"));
             }}
           >
@@ -123,7 +113,7 @@ function VendorRequest({ vendor: v, catName, city }: { vendor: Vendor; catName: 
             className="h-10 px-4"
             disabled={blockers.length > 0}
             onClick={() => {
-              decideVerification(actor, v.id, true);
+              decideVerification(v.id, true);
               toast.success(t("mod.approvedToast"));
             }}
           >
@@ -138,7 +128,6 @@ function VendorRequest({ vendor: v, catName, city }: { vendor: Vendor; catName: 
 
 function DocRow({ doc: d, required }: { doc: VendorDocument; required: boolean }) {
   const { t, date } = useI18n();
-  const actor = useActor();
   const [rejecting, setRejecting] = useState(false);
   const [note, setNote] = useState("");
   return (
@@ -160,7 +149,7 @@ function DocRow({ doc: d, required }: { doc: VendorDocument; required: boolean }
             <Button variant="outline" className="h-8 px-3 text-xs" onClick={() => setRejecting(true)}>
               {t("mod.rejectDoc")}
             </Button>
-            <Button className="h-8 px-3 text-xs" onClick={() => reviewDocument(actor, d.id, "approved")}>
+            <Button className="h-8 px-3 text-xs" onClick={() => reviewDocument(d.id, "approved")}>
               {t("mod.approveDoc")}
             </Button>
           </span>
@@ -172,7 +161,7 @@ function DocRow({ doc: d, required }: { doc: VendorDocument; required: boolean }
           className="mt-3 flex gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            reviewDocument(actor, d.id, "rejected", note);
+            reviewDocument(d.id, "rejected", note);
             setRejecting(false);
           }}
         >
@@ -199,10 +188,9 @@ function DocRow({ doc: d, required }: { doc: VendorDocument; required: boolean }
 
 function DocsRegistry() {
   const { t, date } = useI18n();
-  const db = useDB((d) => d);
   const [f, setF] = useState<VendorDocument["status"] | "all">("pending");
-  const docs = db.documents.filter((d) => f === "all" || d.status === f).sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
-  const count = (s: VendorDocument["status"]) => db.documents.filter((d) => d.status === s).length;
+  const { rows: docs, counts } = useDocsRegistry(f);
+  const count = (s: VendorDocument["status"]) => counts[s];
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-1.5">
@@ -223,8 +211,7 @@ function DocsRegistry() {
       {docs.length ? (
         <div className="overflow-hidden rounded-3xl bg-card">
           <ul className="divide-y divide-border">
-            {docs.map((d) => {
-              const v = db.vendors.find((x) => x.id === d.vendorId);
+            {docs.map(({ doc: d, vendorName, vendorSlug }) => {
               return (
                 <li key={d.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 md:px-5">
                   <FileText className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.5} />
@@ -232,8 +219,8 @@ function DocsRegistry() {
                     <span className="block truncate text-sm">{t(`mod.docKind.${d.kind}`)}</span>
                     <span className="block truncate text-xs text-muted-foreground">{d.fileName}</span>
                   </span>
-                  <Link href={v ? `/vendors/${v.slug}` : "#"} className="w-40 truncate text-sm text-text-secondary hover:underline max-md:w-auto">
-                    {v?.name ?? "—"}
+                  <Link href={vendorSlug ? routes.vendor(vendorSlug) : "#"} className="w-40 truncate text-sm text-text-secondary hover:underline max-md:w-auto">
+                    {vendorName ?? "—"}
                   </Link>
                   <span className="w-16 text-xs text-muted-foreground tabular-nums">{date(d.uploadedAt.slice(0, 10), "d MMM")}</span>
                   <DocStatus status={d.status} />

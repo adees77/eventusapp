@@ -8,12 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { leaveReview } from "@/lib/data/actions";
 import { useI18n } from "@/lib/i18n";
-import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 export function ReviewDialog({ bookingId, vendorName, onClose }: { bookingId: string | null; vendorName: string; onClose: () => void }) {
   const { t } = useI18n();
-  const actor = useActor();
   const [rating, setRating] = useState(5);
   const [text, setText] = useState("");
   return (
@@ -54,7 +52,7 @@ export function ReviewDialog({ bookingId, vendorName, onClose }: { bookingId: st
             disabled={!text.trim()}
             onClick={() => {
               try {
-                leaveReview(actor, bookingId!, rating, text);
+                leaveReview(bookingId!, rating, text);
                 toast.success(t("cabinet.reviewThanks"));
                 setText("");
                 onClose();

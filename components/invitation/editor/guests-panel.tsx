@@ -10,7 +10,6 @@ import { addGuests, markGuestsSent, removeGuest } from "@/lib/data/actions";
 import type { Invitation } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { guestStatus, rsvpOfGuest, type GuestStatus } from "@/lib/invitations/design";
-import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 export const STATUS_TONE: Record<GuestStatus, string> = {
@@ -33,7 +32,6 @@ export function shareText(inv: Invitation, t: ReturnType<typeof useI18n>["t"], n
 
 export function GuestsPanel({ inv }: { inv: Invitation }) {
   const { t } = useI18n();
-  const actor = useActor();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [group, setGroup] = useState("");
@@ -47,7 +45,7 @@ export function GuestsPanel({ inv }: { inv: Invitation }) {
   function addOne(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    addGuests(actor, inv.id, [{ name, phone, group: group || undefined, seats }]);
+    addGuests(inv.id, [{ name, phone, group: group || undefined, seats }]);
     setName("");
     setPhone("");
     setSeats(1);
@@ -59,7 +57,7 @@ export function GuestsPanel({ inv }: { inv: Invitation }) {
       .map((line) => line.split(/[,;\t]/).map((x) => x.trim()))
       .filter(([n]) => n)
       .map(([n, p, s]) => ({ name: n, phone: p, seats: Number(s) || 1, group: group || undefined }));
-    const n = addGuests(actor, inv.id, list);
+    const n = addGuests(inv.id, list);
     toast.success(t("inv.imported", { n }));
     setBulk(null);
   }
@@ -84,7 +82,7 @@ export function GuestsPanel({ inv }: { inv: Invitation }) {
           : `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
       window.open(url, "_blank", "noopener");
     }
-    markGuestsSent(actor, inv.id, [g.id]);
+    markGuestsSent(inv.id, [g.id]);
   }
 
   const statuses: (GuestStatus | "all")[] = ["all", "draft", "sent", "opened", "coming", "declined"];
@@ -167,7 +165,7 @@ export function GuestsPanel({ inv }: { inv: Invitation }) {
             variant="outline"
             className="h-9 px-4"
             onClick={() => {
-              markGuestsSent(actor, inv.id, picked);
+              markGuestsSent(inv.id, picked);
               toast.success(t("inv.markedSent", { n: picked.length }));
               setPicked([]);
             }}
@@ -239,7 +237,7 @@ export function GuestsPanel({ inv }: { inv: Invitation }) {
                         <SendBtn label={t("invitations.copyLink")} onClick={() => send(g, "copy")}>
                           <Copy className="size-3.5" />
                         </SendBtn>
-                        <SendBtn label={t("inv.delete")} onClick={() => removeGuest(actor, inv.id, g.id)}>
+                        <SendBtn label={t("inv.delete")} onClick={() => removeGuest(inv.id, g.id)}>
                           <Trash2 className="size-3.5" />
                         </SendBtn>
                       </div>

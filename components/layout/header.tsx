@@ -4,16 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/brand/logo";
 import { useI18n } from "@/lib/i18n";
-import { unreadCount } from "@/lib/data/queries";
-import { useDB } from "@/lib/data/store";
+import { useUnreadCount } from "@/lib/data/views/messaging";
+import { useOwnVendor } from "@/lib/data/views/vendor";
 import { useActor, useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { DemoBadge } from "./demo-badge";
 import { NotificationsBell } from "./notifications-bell";
-import { vendorOfOwner } from "@/lib/data/queries";
 import { CreateMenu } from "./create-menu";
 import { HOME_BY_ROLE, NAV_BY_ROLE, isActive } from "./nav-items";
 import { SettingsMenu } from "./settings-menu";
+import { routes } from "@/lib/routes";
 
 export function Header() {
   const { t } = useI18n();
@@ -21,10 +21,11 @@ export function Header() {
   const pathname = usePathname();
   const items = NAV_BY_ROLE[role];
   const actor = useActor();
-  const unread = useDB((db) => unreadCount(db, actor));
-  const mySlug = useDB((db) => (role === "vendor" ? vendorOfOwner(db, actor.id)?.slug : undefined));
-  const onMine = !!mySlug && pathname === `/vendors/${mySlug}`;
-  const on = (href: string) => (href === "/me" ? onMine : isActive(pathname, href) && !(href === "/vendors" && onMine));
+  const unread = useUnreadCount(actor);
+  const ownVendor = useOwnVendor();
+  const mySlug = role === "vendor" ? ownVendor?.slug : undefined;
+  const onMine = !!mySlug && pathname === routes.vendor(mySlug);
+  const on = (href: string) => (href === routes.me ? onMine : isActive(pathname, href) && !(href === routes.feed && onMine));
 
   return (
     <header className="sticky top-0 z-40 bg-background/85 backdrop-blur-md print:hidden">
@@ -44,7 +45,7 @@ export function Header() {
               )}
             >
               {t(item.label)}
-              {item.href === "/messages" && unread > 0 && (
+              {item.href === routes.inbox && unread > 0 && (
                 <span className={cn("ml-2 text-xs tabular-nums", on(item.href) ? "text-sun" : "text-primary")}>
                   {unread}
                 </span>

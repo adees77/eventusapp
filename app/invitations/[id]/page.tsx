@@ -20,11 +20,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { deleteInvitation, duplicateInvitation } from "@/lib/data/actions";
 import { can } from "@/lib/data/policies";
-import { useDB } from "@/lib/data/store";
+import { useInvitation } from "@/lib/data/views/client";
 import { useI18n } from "@/lib/i18n";
 import { invitationStats } from "@/lib/invitations/design";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { routes } from "@/lib/routes";
 
 const TABS = ["design", "guests", "stats", "share"] as const;
 type Tab = (typeof TABS)[number];
@@ -43,7 +44,7 @@ function Editor() {
   const router = useRouter();
   const { t } = useI18n();
   const actor = useActor();
-  const inv = useDB((db) => db.invitations.find((i) => i.id === id));
+  const inv = useInvitation(id);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const tab: Tab = TABS.find((x) => x === params.get("tab")) ?? "design";
 
@@ -51,7 +52,7 @@ function Editor() {
     return (
       <div className="mx-auto flex max-w-sm flex-1 flex-col items-center justify-center gap-3 px-4 py-24 text-center">
         <p className="font-heading tracking-[-0.025em] text-2xl">{t("invitations.notFound")}</p>
-        <Link href="/invitations" className="text-sm text-primary">
+        <Link href={routes.invitations} className="text-sm text-primary">
           {t("invitations.back")}
         </Link>
       </div>
@@ -59,7 +60,7 @@ function Editor() {
   }
 
   const s = invitationStats(inv);
-  const setTab = (k: Tab) => router.replace(`/invitations/${inv.id}${k === "design" ? "" : `?tab=${k}`}`, { scroll: false });
+  const setTab = (k: Tab) => router.replace(routes.invitation(inv.id, k), { scroll: false });
 
   async function copyLink() {
     try {
@@ -74,7 +75,7 @@ function Editor() {
     <div className="flex h-[calc(100dvh-56px-64px)] flex-col lg:h-[calc(100dvh-64px)]">
       <header className="flex h-14 shrink-0 items-center gap-2 bg-background px-2 md:px-4">
         <Link
-          href="/invitations"
+          href={routes.invitations}
           className="flex size-9 items-center justify-center rounded-lg text-text-secondary hover:bg-muted"
           aria-label={t("invitations.back")}
         >
@@ -95,7 +96,7 @@ function Editor() {
           ))}
         </nav>
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
-          <Button variant="outline" className="h-9 px-3 max-sm:hidden" onClick={() => window.open(`/i/${inv.id}`, "_blank")}>
+          <Button variant="outline" className="h-9 px-3 max-sm:hidden" onClick={() => window.open(routes.publicInvitation(inv.id), "_blank")}>
             <ExternalLink />
             {t("inv.preview")}
           </Button>
@@ -118,8 +119,8 @@ function Editor() {
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuItem
                 onClick={() => {
-                  const copy = duplicateInvitation(actor, inv.id);
-                  if (copy) router.push(`/invitations/${copy.id}`);
+                  const copy = duplicateInvitation(inv.id);
+                  if (copy) router.push(routes.invitation(copy.id));
                 }}
               >
                 <Files className="size-4" />
@@ -165,8 +166,8 @@ function Editor() {
             <Button
               variant="destructive"
               onClick={() => {
-                deleteInvitation(actor, inv.id);
-                router.replace("/invitations");
+                deleteInvitation(inv.id);
+                router.replace(routes.invitations);
               }}
             >
               {t("invitations.delete")}

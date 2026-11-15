@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { registerOwnVendor, signUpVendor, upsertAuthUser } from "../actions";
+import { asActor, signUpVendor, upsertAuthUser } from "../actions";
 import { buildSeed } from "../seed";
 import { getDB, useDataStore } from "../store";
 
@@ -21,7 +21,7 @@ describe("vendor sign-up (the /onboarding/vendor finish)", () => {
     const u = upsertAuthUser({ email: "new@vendor.kg", name: "Айбек", provider: "google" });
     let writes = 0;
     const unsub = useDataStore.subscribe(() => writes++);
-    const { vendor, offerId, postId } = signUpVendor({ id: u.id, role: "client" }, input);
+    const { vendor, offerId, postId } = asActor({ id: u.id, role: "client" }, () => signUpVendor(input));
     unsub();
 
     expect(writes).toBe(1);
@@ -37,11 +37,11 @@ describe("vendor sign-up (the /onboarding/vendor finish)", () => {
 
   it("finishes an interrupted earlier attempt by reusing its vendor instead of creating a second one", () => {
     const u = upsertAuthUser({ email: "half@vendor.kg", provider: "email" });
-    registerOwnVendor({ id: u.id, role: "client" }, { ownerName: "", name: "Half", category: "cars", city: "osh", tagline: "Кортеж" });
+    asActor({ id: u.id, role: "client" }, () => signUpVendor({ ...input, name: "Half", category: "cars", specs: {} }));
     // simulate the lost onboarding write
     useDataStore.setState((s) => ({ db: { ...s.db!, users: s.db!.users.map((x) => (x.id === u.id ? { ...x, needsOnboarding: true, role: "client" as const } : x)) } }));
 
-    signUpVendor({ id: u.id, role: "client" }, { ...input, category: "cars", specs: {} });
+    asActor({ id: u.id, role: "client" }, () => signUpVendor({ ...input, category: "cars", specs: {} }));
     const db = getDB();
     expect(db.users.find((x) => x.id === u.id)).toMatchObject({ needsOnboarding: false, role: "vendor" });
     const mine = db.vendors.filter((v) => v.ownerId === u.id);
@@ -50,6 +50,6 @@ describe("vendor sign-up (the /onboarding/vendor finish)", () => {
   });
 
   it("refuses admins", () => {
-    expect(() => signUpVendor({ id: "u-admin", role: "admin" }, input)).toThrow();
+    expect(() => asActor({ id: "u-admin", role: "admin" }, () => signUpVendor(input))).toThrow();
   });
 });

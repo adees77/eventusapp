@@ -5,66 +5,63 @@ import { Empty } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { setBookingStatus } from "@/lib/data/actions";
-import { useDB } from "@/lib/data/store";
-import type { Booking } from "@/lib/data/types";
+import type { BookingView } from "@/lib/data/views/_shared";
 import { useI18n } from "@/lib/i18n";
 import { escrowOf } from "@/lib/payments/escrow";
-import { useActor } from "@/lib/session";
 import { BookingRow } from "./booking-row";
 import { ReviewDialog } from "./review-dialog";
+import { routes } from "@/lib/routes";
 
 /** Client bookings with the next action for each: pay, confirm the deal, chat, review */
-export function ClientBookingList({ bookings, empty }: { bookings: Booking[]; empty?: React.ReactNode }) {
+export function ClientBookingList({ rows, empty }: { rows: BookingView[]; empty?: React.ReactNode }) {
   const { t } = useI18n();
-  const actor = useActor();
-  const db = useDB((d) => d);
-  const [reviewFor, setReviewFor] = useState<Booking | null>(null);
+  const [reviewFor, setReviewFor] = useState<BookingView | null>(null);
 
-  if (!bookings.length)
-    return <Empty action={<LinkButton href="/vendors">{t("nav.feed")}</LinkButton>}>{empty ?? t("dashboard.noBookings")}</Empty>;
+  if (!rows.length)
+    return <Empty action={<LinkButton href={routes.feed}>{t("nav.feed")}</LinkButton>}>{empty ?? t("dashboard.noBookings")}</Empty>;
 
   return (
     <>
       <ul className="flex flex-col divide-y divide-border">
-        {bookings.map((b) => {
-          const conv = db.conversations.find((c) => c.bookingId === b.id);
+        {rows.map((row) => {
+          const { booking: b, conversationId, reviewed } = row;
+          const conv = conversationId ? { id: conversationId } : undefined;
           const e = escrowOf(b);
-          const reviewed = db.reviews.some((r) => r.bookingId === b.id);
           const canReview =
             !reviewed && (b.status === "completed" || e.state === "released") && b.date <= new Date().toISOString().slice(0, 10);
           return (
             <BookingRow
               key={b.id}
-              b={b}
+              row={row}
               perspective="client"
               actions={
                 <>
                   {b.status === "pending" && (
                     <>
-                      <LinkButton href={`/checkout/${b.id}`} className="h-9 px-4">
+                      <LinkButton href={routes.checkout(b.id)} className="h-9 px-4">
                         {t("dashboard.pay")}
                       </LinkButton>
                       <Button
                         variant="ghost"
                         className="h-9 px-3 text-muted-foreground"
-                        onClick={() => setBookingStatus(actor, b.id, "cancelled")}
+                        onClick={() => setBookingStatus(b.id, "cancelled")}
                       >
                         {t("dashboard.cancel")}
                       </Button>
                     </>
                   )}
                   {e.state === "held" && !e.clientConfirmedAt && conv && (
-                    <LinkButton href={`/messages/${conv.id}`} className="h-9 px-4">
+                    <LinkButton href={routes.chat(conv.id)} className="h-9 px-4">
                       {t("escrow.confirm")}
                     </LinkButton>
                   )}
                   {canReview && (
-                    <Button variant="outline" className="h-9 px-4" onClick={() => setReviewFor(b)}>
+                    <Button variant="outline" className="h-9 px-4" onClick={() => setReviewFor(row)}>
                       {t("cabinet.leaveReview")}
                     </Button>
                   )}
                   {conv && !(e.state === "held" && !e.clientConfirmedAt) && (
-                    <LinkButton href={`/messages/${conv.id}`} variant="outline" className="h-9 px-4">
+                    <LinkButton href={routes.chat(conv.id)} variant="outline" className="h-9 px-4">
                       {t("dashboard.chat")}
                     </LinkButton>
                   )}
@@ -75,8 +72,8 @@ export function ClientBookingList({ bookings, empty }: { bookings: Booking[]; em
         })}
       </ul>
       <ReviewDialog
-        bookingId={reviewFor?.id ?? null}
-        vendorName={db.vendors.find((v) => v.id === reviewFor?.vendorId)?.name ?? ""}
+        bookingId={reviewFor?.booking.id ?? null}
+        vendorName={reviewFor?.vendorName ?? ""}
         onClose={() => setReviewFor(null)}
       />
     </>

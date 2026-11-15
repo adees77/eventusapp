@@ -3,7 +3,7 @@
  * Every mutation in the store calls `assert(can.xxx(...))`.
  * The same rules are expressed as Postgres RLS policies in supabase/schema.sql.
  */
-import type { Booking, Conversation, DB, Offer, Role, Vendor } from "./types";
+import type { Booking, Conversation, DB, DocKind, Offer, Role, Vendor } from "./types";
 
 export interface Actor {
   id: string;
@@ -25,6 +25,14 @@ export class PolicyError extends Error {
 export const isFinishedDeal = (b: Pick<Booking, "status" | "escrow">) =>
   b.status !== "cancelled" && (b.status === "completed" || b.escrow?.state === "released");
 
+export const DOC_KINDS: DocKind[] = ["passport", "registration", "license", "contract"];
+
+/** Required document kinds the vendor still has to upload (a rejected file counts as missing) */
+export function missingDocs(db: Pick<DB, "documents" | "settings">, vendorId: string): DocKind[] {
+  const ok = (k: DocKind) => db.documents.some((x) => x.vendorId === vendorId && x.kind === k && x.status !== "rejected");
+  return (db.settings.requiredDocs ?? []).filter((k) => !ok(k));
+}
+
 export function assert(allowed: boolean, action: string): asserts allowed {
   if (!allowed) throw new PolicyError(action);
 }
@@ -41,8 +49,6 @@ export const can = {
 
   editVendor: (a: Actor, v: Vendor) => isAdmin(a) || ownsVendor(a, v),
   createVendor: (a: Actor) => isAdmin(a),
-  /** A freshly signed-up user turns their own account into a vendor (no vendor yet) */
-  registerOwnVendor: (a: Actor, db: DB) => a.role !== "admin" && !db.vendors.some((v) => v.ownerId === a.id),
   /** Users edit only their own profile */
   editProfile: (a: Actor, userId: string) => isAdmin(a) || a.id === userId,
   setVendorHidden: (a: Actor) => isAdmin(a),

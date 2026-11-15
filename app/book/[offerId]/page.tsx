@@ -11,12 +11,13 @@ import { LinkButton } from "@/components/ui/link-button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { AvailabilityCalendar } from "@/components/vendor/availability-calendar";
 import { AvailabilityError, createBooking } from "@/lib/data/actions";
-import { getAvailability } from "@/lib/data/availability";
-import { offerById, vendorById } from "@/lib/data/queries";
-import { useDB } from "@/lib/data/store";
+import { useAvailabilityLookup } from "@/lib/data/views/availability";
+import { useOfferForBooking } from "@/lib/data/views/bookings";
+import { useClientEvents } from "@/lib/data/views/client";
 import { useI18n } from "@/lib/i18n";
 import { usePlanner } from "@/lib/planner";
 import { useActor } from "@/lib/session";
+import { routes } from "@/lib/routes";
 
 export default function BookPage() {
   return (
@@ -34,10 +35,9 @@ function Book() {
   const actor = useActor();
   const planner = usePlanner();
 
-  const db = useDB((d) => d);
-  const offer = offerById(db, offerId);
-  const vendor = offer ? vendorById(db, offer.vendorId) : undefined;
-  const events = db.events.filter((e) => e.clientId === actor.id);
+  const { offer, vendor } = useOfferForBooking(offerId);
+  const events = useClientEvents(actor.id);
+  const availabilityOn = useAvailabilityLookup({ offerId });
 
   const [date, setDateState] = useState<string | null>(params.get("date") ?? planner.date);
   const [qty, setQty] = useState(Math.max(1, Number(params.get("qty")) || 1));
@@ -51,14 +51,14 @@ function Book() {
     return (
       <div className="mx-auto flex max-w-sm flex-1 flex-col items-center justify-center gap-4 px-4 py-24 text-center">
         <p className="font-heading tracking-[-0.025em] text-2xl">{t("vendor.notFound")}</p>
-        <LinkButton href="/vendors" variant="outline">
+        <LinkButton href={routes.feed} variant="outline">
           {t("nav.catalog")}
         </LinkButton>
       </div>
     );
   }
 
-  const avail = date ? getAvailability(db, offer, date) : null;
+  const avail = date ? availabilityOn(date) : null;
   const maxQty = Math.max(1, Math.min(avail?.free ?? offer.totalUnits, offer.maxPerBooking ?? offer.totalUnits));
   const safeQty = Math.min(qty, maxQty);
   const total = offer.price * safeQty;
@@ -76,8 +76,8 @@ function Book() {
     if (!date) return toast(t("booking.selectDate"));
     setSubmitting(true);
     try {
-      const b = createBooking(actor, { offerId: offer!.id, date, qty: safeQty, eventId: eventId || undefined, note });
-      router.push(`/checkout/${b.id}`);
+      const b = createBooking({ offerId: offer!.id, date, qty: safeQty, eventId: eventId || undefined, note });
+      router.push(routes.checkout(b.id));
     } catch (err) {
       setSubmitting(false);
       if (err instanceof AvailabilityError) toast.error(err.free ? t("booking.notEnough", { n: err.free }) : t("booking.soldOut"));

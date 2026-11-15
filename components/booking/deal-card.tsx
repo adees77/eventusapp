@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { textareaClass } from "@/components/panel";
 import { cancelDeal, confirmDeal, openDispute, unconfirmDeal } from "@/lib/data/actions";
-import { useDB } from "@/lib/data/store";
+import { usePlatformSettings } from "@/lib/data/views/catalog";
+import { useVendor } from "@/lib/data/views/vendor";
 import type { Booking, EscrowState } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { escrowOf } from "@/lib/payments/escrow";
@@ -74,8 +75,8 @@ export function EscrowTimeline({ booking }: { booking: Booking }) {
 export function DealCard({ booking, className }: { booking: Booking; className?: string }) {
   const { t, money } = useI18n();
   const actor = useActor();
-  const vendorOwner = useDB((db) => db.vendors.find((v) => v.id === booking.vendorId)?.ownerId);
-  const feePercent = useDB((db) => db.settings.feePercent);
+  const vendorOwner = useVendor(booking.vendorId)?.ownerId;
+  const feePercent = usePlatformSettings().feePercent;
   const [dialog, setDialog] = useState<"cancel" | "dispute" | null>(null);
   const [reason, setReason] = useState("");
   const e = escrowOf(booking);
@@ -150,7 +151,7 @@ export function DealCard({ booking, className }: { booking: Booking; className?:
           {party && (
             <div className="mt-4 flex flex-col gap-2">
               {mine ? (
-                <Button variant="outline" className="h-10" onClick={() => run(() => unconfirmDeal(actor, booking.id))}>
+                <Button variant="outline" className="h-10" onClick={() => run(() => unconfirmDeal(booking.id))}>
                   {t("escrow.unconfirm")}
                 </Button>
               ) : (
@@ -159,7 +160,7 @@ export function DealCard({ booking, className }: { booking: Booking; className?:
                     className="h-11"
                     onClick={() =>
                       run(() => {
-                        const next = confirmDeal(actor, booking.id);
+                        const next = confirmDeal(booking.id);
                         toast.success(next.state === "released" ? t("escrow.releasedToast") : t("escrow.confirmedToast"));
                       })
                     }
@@ -229,7 +230,7 @@ export function DealCard({ booking, className }: { booking: Booking; className?:
               <Button
                 variant="destructive"
                 onClick={() => {
-                  run(() => cancelDeal(actor, booking.id), t("escrow.refundedToast"));
+                  run(() => cancelDeal(booking.id), t("escrow.refundedToast"));
                   setDialog(null);
                 }}
               >
@@ -239,7 +240,7 @@ export function DealCard({ booking, className }: { booking: Booking; className?:
               <Button
                 disabled={!reason.trim()}
                 onClick={() => {
-                  run(() => openDispute(actor, booking.id, reason), t("escrow.disputeOpened"));
+                  run(() => openDispute(booking.id, reason), t("escrow.disputeOpened"));
                   setDialog(null);
                   setReason("");
                 }}

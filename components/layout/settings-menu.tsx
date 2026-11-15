@@ -23,13 +23,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { demoConfig } from "@/config/demo";
+import { useIsDemo } from "@/lib/demo/mode";
 import { useAuth } from "@/lib/auth/store";
-import { useDataStore, useDB } from "@/lib/data/store";
+import { useDataStore } from "@/lib/data/store";
+import { useUser } from "@/lib/data/views/users";
 import type { Role } from "@/lib/data/types";
 import { LOCALES, useI18n } from "@/lib/i18n";
 import { DEFAULT_USER_BY_ROLE, useSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { HOME_BY_ROLE } from "./nav-items";
+import { routes } from "@/lib/routes";
 
 const ROLE_ICONS: Record<Role, typeof User> = { client: User, vendor: Store, admin: Shield };
 
@@ -38,13 +41,14 @@ export function SettingsMenu() {
   const { t, locale, setLocale } = useI18n();
   const router = useRouter();
   const { role, id, setRole } = useSession();
-  const user = useDB((db) => db.users.find((u) => u.id === id));
+  const user = useUser(id);
   const resetDemo = useDataStore((s) => s.resetDemo);
   const accountId = useAuth((s) => s.userId);
-  const isDemoAccount = useAuth((s) => s.demo);
+  const isDemo = useIsDemo();
+  const canSwitch = isDemo && demoConfig.features.roleSwitcher;
   const signOut = useAuth((s) => s.signOut);
-  const account = useDB((db) => db.users.find((u) => u.id === accountId));
-  const actingAsOther = !!account && !isDemoAccount && account.id !== id;
+  const account = useUser(accountId);
+  const actingAsOther = !!account && !isDemo && account.id !== id;
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const RoleIcon = ROLE_ICONS[role];
@@ -85,7 +89,7 @@ export function SettingsMenu() {
           <div className="px-2 pt-1.5 pb-2">
             <div className="truncate text-sm font-medium">{user?.name}</div>
             <div className="truncate text-xs text-muted-foreground">
-              {user?.email ?? (isDemoAccount ? t("common.demoMode") : t(`roles.${role}`))}
+              {user?.email ?? (isDemo ? t("common.demoMode") : t(`roles.${role}`))}
             </div>
           </div>
           {actingAsOther && (
@@ -100,8 +104,8 @@ export function SettingsMenu() {
               {t("auth.backToAccount")}
             </DropdownMenuItem>
           )}
-          {demoConfig.enabled && <DropdownMenuSeparator />}
-          {demoConfig.enabled && (
+          {canSwitch && <DropdownMenuSeparator />}
+          {canSwitch && (
             <DropdownMenuGroup>
               <DropdownMenuLabel>{t("auth.demoSwitch")}</DropdownMenuLabel>
               {(["client", "vendor", "admin"] as Role[]).map((r) => {
@@ -136,7 +140,7 @@ export function SettingsMenu() {
             </div>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          {demoConfig.enabled && (
+          {isDemo && demoConfig.features.reset && (
             <DropdownMenuItem onClick={() => setConfirmOpen(true)} className="py-1.5 text-muted-foreground">
               <RotateCcw />
               {t("demo.reset")}
@@ -145,12 +149,12 @@ export function SettingsMenu() {
           <DropdownMenuItem
             onClick={() => {
               signOut();
-              router.replace("/welcome");
+              router.replace(isDemo ? routes.home : routes.welcome);
             }}
             className="py-1.5"
           >
             <LogOut className="text-muted-foreground" />
-            {t("auth.signOut")}
+            {isDemo ? t("demo.leave") : t("auth.signOut")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
