@@ -1,5 +1,7 @@
 "use client";
 
+import { AskPriceButton } from "@/components/vendor/ask-price";
+import { usePricesHidden } from "@/lib/data/views/catalog";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -52,6 +54,7 @@ function VendorCards({ hits, date, qty }: { hits: VendorHit[]; date: string | nu
 
 function ChatVendorCard({ h, date, qty, index }: { h: VendorHit; date: string | null; qty: number | null; index: number }) {
   const { t, money } = useI18n();
+  const hidden = usePricesHidden();
   const router = useRouter();
   const actor = useActor();
   const setPlanner = usePlanner((s) => s.set);
@@ -86,20 +89,28 @@ function ChatVendorCard({ h, date, qty, index }: { h: VendorHit; date: string | 
         {offer ? (
           <>
             <p className="line-clamp-1 text-sm text-text-secondary">{offer.title}</p>
-            <div className="text-sm tabular-nums">
-              <span className="font-medium">{money(offer.price)}</span>
-              <span className="text-muted-foreground"> / {offer.unit}</span>
-            </div>
+            {hidden ? (
+              <AskPriceButton vendorId={h.vendor_id} offerTitle={offer.title} />
+            ) : (
+              <div className="text-sm tabular-nums">
+                <span className="font-medium">{money(offer.price)}</span>
+                <span className="text-muted-foreground"> / {offer.unit}</span>
+              </div>
+            )}
             <AvailDots a={{ free: offer.free, total: offer.total, blocked: 0, booked: 0 }} size="sm" />
           </>
         ) : (
           <>
             <p className="line-clamp-1 text-sm text-text-secondary">{h.tagline}</p>
-            <div className="text-sm tabular-nums">
-              <span className="text-muted-foreground">{t("common.from")} </span>
-              <span className="font-medium">{money(h.price_from)}</span>
-              <span className="text-muted-foreground"> / {h.unit}</span>
-            </div>
+            {hidden ? (
+              <AskPriceButton vendorId={h.vendor_id} />
+            ) : (
+              <div className="text-sm tabular-nums">
+                <span className="text-muted-foreground">{t("common.from")} </span>
+                <span className="font-medium">{money(h.price_from)}</span>
+                <span className="text-muted-foreground"> / {h.unit}</span>
+              </div>
+            )}
           </>
         )}
         <div className="mt-auto flex gap-2 pt-3">

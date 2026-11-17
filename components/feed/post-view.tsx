@@ -1,7 +1,7 @@
 "use client";
 
 /** One full-screen post of the viewer: photos, caption, booking bar, action rail */
-import { Bookmark, ChevronLeft, ChevronRight, Flag, GalleryVerticalEnd, Heart, MessageCircle, Send, Star, Trash2 } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, EyeOff, Flag, GalleryVerticalEnd, Heart, Link2, MessageCircle, MoreHorizontal, Send, Star, Store, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,10 +9,13 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Monogram, VerifiedSeal } from "@/components/vendor/badges";
 import { ReportForm } from "@/components/feed/report-form";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useFeedPrefs } from "@/lib/feed-prefs";
 import { deletePost, ensureConversation, toggleLike } from "@/lib/data/actions";
 import { specFacts } from "@/lib/data/specs";
 import { CITIES } from "@/lib/data/seed/catalog";
 import { usePostCard } from "@/lib/data/views/feed";
+import { usePricesHidden } from "@/lib/data/views/catalog";
 import type { Post } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
@@ -65,11 +68,15 @@ export function PostView({
   const [burst, setBurst] = useState(0);
   const { run } = useAction();
   const strip = useRef<HTMLDivElement>(null);
+  const hidePost = useFeedPrefs((p) => p.hidePost);
+  const hiddenSetting = usePricesHidden();
   if (!card) return null;
 
   const { item, offer, orders, categoryName, priceFrom } = card;
   const vendor = item.vendor;
-  const facts = specFacts(vendor.category, vendor.specs, 2).map((f) => l(f));
+  // prices stay hidden from clients: «Узнать цену» opens the chat where the vendor's AI assistant answers
+  const pricesHidden = hiddenSetting && actor.id !== vendor.ownerId && actor.role !== "admin";
+  const facts = specFacts(vendor.category, vendor.specs, 2, { prices: !pricesHidden }).map((f) => l(f));
   const photos = post.photos;
   const price = offer ? offer.price : priceFrom;
 
@@ -79,6 +86,11 @@ export function PostView({
     if (!item.liked) void run(() => toggleLike(post.id));
     setBurst((b) => b + 1);
   });
+
+  const share = () => {
+    void navigator.clipboard?.writeText(`${location.origin}${routes.feed}?post=${post.id}`).catch(() => {});
+    toast.success(t("feed.copied"));
+  };
 
   const scrollStrip = (d: number) => {
     const el = strip.current;
@@ -161,39 +173,78 @@ export function PostView({
             <Heart className={cn("size-7", item.liked && "fill-[#ff3b5c] text-[#ff3b5c]")} strokeWidth={1.75} />
           </RailBtn>
           <RailBtn label={t("reviews.title")} onClick={() => setSheet("reviews")} count={num(vendor.reviewsCount)}>
-            <Star className="size-7" strokeWidth={1.75} />
+            <MessageCircle className="size-7" strokeWidth={1.75} />
+          </RailBtn>
+          <RailBtn label={t("feed.share")} onClick={share}>
+            <Send className="size-6" strokeWidth={1.75} />
           </RailBtn>
           <RailBtn label={item.saved ? t("feed.saved") : t("feed.save")} active={item.saved} onClick={() => save(post.id)}>
             <Bookmark className={cn("size-7", item.saved && "fill-white")} strokeWidth={1.75} />
           </RailBtn>
-          <RailBtn
-            label={t("feed.share")}
-            onClick={() => {
-              void navigator.clipboard?.writeText(`${location.origin}/vendors?post=${post.id}`).catch(() => {});
-              toast.success(t("feed.copied"));
-            }}
-          >
-            <Send className="size-6" strokeWidth={1.75} />
-          </RailBtn>
-          <RailBtn label={t("feed.similarShow")} onClick={() => onSimilar(post, vendor.name)} count={t("feed.similar")}>
-            <GalleryVerticalEnd className="size-6" strokeWidth={1.75} />
-          </RailBtn>
-          {actor.id !== vendor.ownerId && actor.role !== "admin" && (
-            <RailBtn label={t("mod.report")} onClick={clientOnly(() => setSheet("report"))}>
-              <Flag className="size-6" strokeWidth={1.75} />
-            </RailBtn>
-          )}
-          {actor.id === vendor.ownerId && (
-            <RailBtn
-              label={t("vcab.deletePost")}
-              onClick={() => {
-                if (!window.confirm(t("owner.deletePostConfirm"))) return;
-                void run(() => deletePost(post.id), { success: t("vcab.postDeleted") });
-              }}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label={t("common.more")}
+                  title={t("common.more")}
+                  className="flex w-14 items-center justify-center text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] transition-transform active:scale-90"
+                />
+              }
             >
-              <Trash2 className="size-6" strokeWidth={1.75} />
-            </RailBtn>
-          )}
+              <MoreHorizontal className="size-7" strokeWidth={1.75} />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="left" align="end" className="w-56 rounded-2xl p-1.5">
+              <DropdownMenuItem onClick={() => onSimilar(post, vendor.name)} className="h-10 rounded-xl px-3">
+                <GalleryVerticalEnd className="size-4" />
+                {t("feed.similarShow")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push(routes.vendor(vendor.slug))} className="h-10 rounded-xl px-3">
+                <Store className="size-4" />
+                {t("feed.openProfile")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={share} className="h-10 rounded-xl px-3">
+                <Link2 className="size-4" />
+                {t("feed.copyLink")}
+              </DropdownMenuItem>
+              {actor.id !== vendor.ownerId && (
+                <DropdownMenuItem
+                  onClick={() => {
+                    hidePost(post.id);
+                    toast(t("feed.hiddenToast"));
+                  }}
+                  className="h-10 rounded-xl px-3"
+                >
+                  <EyeOff className="size-4" />
+                  {t("feed.notInterested")}
+                </DropdownMenuItem>
+              )}
+              {actor.id !== vendor.ownerId && actor.role !== "admin" && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={clientOnly(() => setSheet("report"))} className="h-10 rounded-xl px-3 text-destructive">
+                    <Flag className="size-4" />
+                    {t("mod.report")}
+                  </DropdownMenuItem>
+                </>
+              )}
+              {actor.id === vendor.ownerId && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (!window.confirm(t("owner.deletePostConfirm"))) return;
+                      void run(() => deletePost(post.id), { success: t("vcab.postDeleted") });
+                    }}
+                    className="h-10 rounded-xl px-3 text-destructive"
+                  >
+                    <Trash2 className="size-4" />
+                    {t("vcab.deletePost")}
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* bottom: who, what, how much */}
@@ -243,16 +294,24 @@ export function PostView({
           <div className="flex items-center gap-2 rounded-full bg-white/12 p-1.5 pl-4 backdrop-blur-md">
             <span className="min-w-0 flex-1">
               <span className="block truncate text-xs text-white/75">{offer ? l(offer.title) : t("feed.profile")}</span>
-              <span className="block text-sm font-medium tabular-nums">{t("feed.fromPrice", { amount: money(price) })}</span>
+              <span className="block truncate text-sm font-medium tabular-nums">
+                {pricesHidden ? t("feed.priceInChat") : t("feed.fromPrice", { amount: money(price) })}
+              </span>
             </span>
             {actor.id !== vendor.ownerId && (
               <button
               type="button"
-              onClick={clientOnly(() => void run(() => ensureConversation(vendor.id), { onSuccess: (id) => router.push(routes.chat(id)) }))}
-              className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3.5 text-sm text-white transition-colors hover:bg-white/25"
+              onClick={clientOnly(() => {
+                const draft = !pricesHidden ? undefined : offer ? t("vendor.askPriceOffer", { title: l(offer.title) }) : t("vendor.askPriceDraft");
+                void run(() => ensureConversation(vendor.id), { onSuccess: (id) => router.push(routes.chat(id, { draft })) });
+              })}
+              className={cn(
+                "flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm transition-colors",
+                pricesHidden ? "bg-white font-medium text-neutral-900 hover:bg-white/90" : "bg-white/15 text-white hover:bg-white/25",
+              )}
             >
               <MessageCircle className="size-4" strokeWidth={1.75} />
-              {t("feed.message")}
+              {pricesHidden ? t("vendor.askPrice") : t("feed.message")}
             </button>
             )}
           </div>

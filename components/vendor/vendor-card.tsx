@@ -1,5 +1,7 @@
 "use client";
 
+import { AskPriceButton } from "@/components/vendor/ask-price";
+import { usePricesHidden } from "@/lib/data/views/catalog";
 import { Heart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -22,6 +24,7 @@ export function VendorCard({ r, date, priority }: { r: VendorResult; date?: stri
   const { vendor, minPrice, availability } = r;
   const fav = useIsFavorite(actor.id, vendor.id);
   const cheapest = r.offers.find((o) => o.price === minPrice);
+  const hidden = usePricesHidden() && actor.id !== vendor.ownerId;
 
   return (
     <article className="group relative flex flex-col">
@@ -45,11 +48,15 @@ export function VendorCard({ r, date, priority }: { r: VendorResult; date?: stri
           </div>
           <p className="line-clamp-1 text-sm text-text-secondary">{l(vendor.tagline)}</p>
           <div className="mt-1 flex items-center justify-between gap-3 text-sm">
-            <span className="tabular-nums">
-              <span className="text-muted-foreground">{t("common.from")} </span>
-              <span className="font-medium">{money(minPrice)}</span>
-              {cheapest && <span className="text-muted-foreground"> / {l(cheapest.unit)}</span>}
-            </span>
+            {hidden ? (
+              <AskPriceButton vendorId={vendor.id} />
+            ) : (
+              <span className="tabular-nums">
+                <span className="text-muted-foreground">{t("common.from")} </span>
+                <span className="font-medium">{money(minPrice)}</span>
+                {cheapest && <span className="text-muted-foreground"> / {l(cheapest.unit)}</span>}
+              </span>
+            )}
           </div>
           <div className="flex items-center justify-between gap-3">
             {date && availability ? (

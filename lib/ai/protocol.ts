@@ -30,6 +30,8 @@ export const chatContextSchema = z.object({
     .optional(),
   /** date picked in the catalog/profile */
   plannerDate: z.string().max(10).nullable().optional(),
+  /** prices are hidden on the platform: the vendor's own AI assistant names them in the chat */
+  pricesHidden: z.boolean().optional(),
 });
 export type ChatContext = z.infer<typeof chatContextSchema>;
 

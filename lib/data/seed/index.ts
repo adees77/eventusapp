@@ -55,7 +55,7 @@ export function nextDate(month: number, day: number, from = new Date()): Date {
 export function buildSeed(now = new Date()): DB {
   const users: User[] = [
     { id: DEMO_CLIENT_ID, role: "client", name: "Айгерим Касымова", phone: "+996 700 000 001" },
-    { id: DEMO_ADMIN_ID, role: "admin", name: "Команда EVENTUS" },
+    { id: DEMO_ADMIN_ID, role: "admin", name: "Команда EVENTUS AI" },
     { id: "u-client-2", role: "client", name: "Нурсултан Ибраимов" },
     { id: "u-client-3", role: "client", name: "Жибек Абдиева" },
     { id: "u-client-4", role: "client", name: "Daniel Novak" },

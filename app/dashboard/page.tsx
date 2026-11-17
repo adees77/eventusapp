@@ -55,7 +55,7 @@ export default function ClientOverview() {
         href: routes.chat(conversationId ?? ""),
       })),
     ...(stats && stats.guests - stats.sent > 0
-      ? [{ id: "inv", icon: Mail, text: tn("cabinet.todoInvite", stats.guests - stats.sent), href: routes.invitation(inv!.id, "guests") }]
+      ? [{ id: "inv", icon: Mail, text: tn("cabinet.todoInvite", stats.guests - stats.sent), href: routes.invitation(inv!.id, "stats") }]
       : []),
   ];
 

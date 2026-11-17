@@ -92,10 +92,18 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', c1, 'role', 'authenticated')::text, true);
   perform set_config('role', 'authenticated', true);
   insert into public.messages (conversation_id, sender_id, text) values (conv, c1, 'Здравствуйте');
+  -- only the server may mark a message as written by the vendor's AI assistant
+  begin insert into public.messages (conversation_id, sender_id, text, ai) values (conv, c1, 'fake', true); raise exception 'FAIL: client posted an AI message' using errcode = 'T0001';
+  exception when raise_exception or insufficient_privilege then null; end;
   st := public.confirm_deal(b1);
   assert st = 'held', 'FAIL: one-side confirm';
   perform set_config('role', 'none', true);
   assert exists (select 1 from public.notifications where user_id = vo and kind = 'message'), 'FAIL: message notification';
+  perform set_config('request.jwt.claims', json_build_object('role', 'service_role')::text, true);
+  insert into public.messages (conversation_id, sender_id, text, ai, offer_ids) values (conv, vo, 'Цена — 6000 сом', true, array[oid::text]);
+  assert exists (select 1 from public.messages where conversation_id = conv and ai and sender_id = vo), 'FAIL: server AI message';
+  assert (select ai_assistant from public.vendors where id = vid), 'FAIL: assistant on by default';
+  assert (select hide_prices from public.platform_settings), 'FAIL: prices hidden by default';
 
   perform set_config('request.jwt.claims', json_build_object('sub', c2, 'role', 'authenticated')::text, true);
   perform set_config('role', 'authenticated', true);

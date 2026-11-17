@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import type { Invitation } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { InvitationThumb } from "../thumb";
-import { guestLink, shareText } from "./guests-panel";
+import { guestLink, shareText } from "./share-links";
 import { routes } from "@/lib/routes";
 
 export function SharePanel({ inv }: { inv: Invitation }) {

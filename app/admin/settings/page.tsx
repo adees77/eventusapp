@@ -100,6 +100,13 @@ export default function AdminSettings() {
             label={t("mod.hideUnverified")}
             hint={t("mod.hideUnverifiedHint")}
           />
+          <Toggle
+            className="sm:col-span-3"
+            checked={s.hidePrices}
+            onChange={(v) => setS({ ...s, hidePrices: v })}
+            label={t("mod.hidePrices")}
+            hint={t("mod.hidePricesHint")}
+          />
           {saveBtn}
         </form>
       </Section>

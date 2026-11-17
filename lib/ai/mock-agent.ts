@@ -310,8 +310,8 @@ function summariseSearch(r: SearchResult, input: Record<string, unknown>, locale
   if (best.offer) {
     const enough = qty ? L(` — хватит на ${qty}`, ` — enough for ${qty}`) : "";
     lead = L(
-      `Нашла ${r.count} ${plural(r.count, "вариант", "варианта", "вариантов")} на ${dateStr}. Лучше всего подходит ${best.name}: ${best.offer.title}, свободно ${best.offer.free} из ${best.offer.total}${enough}, ${money(best.offer.price, locale)} за ${best.offer.unit}.`,
-      `Found ${r.count} option${r.count === 1 ? "" : "s"} for ${dateStr}. Best fit: ${best.name} — ${best.offer.title}, ${best.offer.free} of ${best.offer.total} free${enough}, ${money(best.offer.price, locale)} per ${best.offer.unit}.`,
+      `Нашла ${r.count} ${plural(r.count, "вариант", "варианта", "вариантов")} на ${dateStr}. Лучше всего подходит ${best.name}: ${best.offer.title}, свободно ${best.offer.free} из ${best.offer.total}${enough}${ctx.pricesHidden ? ". Цену назовёт исполнитель — нажмите «Узнать цену»" : `, ${money(best.offer.price, locale)} за ${best.offer.unit}`}.`,
+      `Found ${r.count} option${r.count === 1 ? "" : "s"} for ${dateStr}. Best fit: ${best.name} — ${best.offer.title}, ${best.offer.free} of ${best.offer.total} free${enough}${ctx.pricesHidden ? ". The vendor will tell you the price — tap “Ask price”" : `, ${money(best.offer.price, locale)} per ${best.offer.unit}`}.`,
     );
   } else {
     lead = L(`Вот что есть в каталоге: ${r.count} ${plural(r.count, "вариант", "варианта", "вариантов")}.`, `Here's what the catalog has: ${r.count} options.`);

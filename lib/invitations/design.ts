@@ -250,3 +250,67 @@ export function guestsCsv(inv: Pick<Invitation, "guests" | "rsvps">, labels: Rec
   }
   return `﻿${rows.join("\n")}`;
 }
+
+/** The four answers a host cares about — the slices of the RSVP donut */
+export type RsvpBucket = "coming" | "declined" | "waiting" | "draft";
+export const RSVP_BUCKETS: RsvpBucket[] = ["coming", "waiting", "declined", "draft"];
+export const bucketOf = (s: GuestStatus): RsvpBucket => (s === "sent" || s === "opened" ? "waiting" : s);
+
+export interface GuestRow {
+  key: string;
+  name: string;
+  phone?: string;
+  note?: string;
+  status: GuestStatus;
+  bucket: RsvpBucket;
+  /** people coming with this answer (or seats reserved while waiting) */
+  persons: number;
+  /** set for a guest on the list (not an answer through the common link) */
+  guestId?: string;
+  /** answered through the common link, not a personal one */
+  viaCommon?: boolean;
+  direct?: boolean;
+}
+
+/** Everyone in one list: invited guests with their status plus answers through the common link */
+export function guestRows(inv: Pick<Invitation, "guests" | "rsvps">): GuestRow[] {
+  const rows: GuestRow[] = [
+    ...inv.guests.map((g): GuestRow => {
+      const r = rsvpOfGuest(inv, g.id);
+      const status = guestStatus(inv, g);
+      return {
+        key: g.id,
+        name: g.name,
+        phone: g.phone || undefined,
+        note: r?.note || undefined,
+        status,
+        bucket: bucketOf(status),
+        persons: r ? r.guests : g.seats,
+        guestId: g.id,
+        direct: g.direct,
+      };
+    }),
+    ...inv.rsvps
+      .filter((r) => !r.guestId)
+      .map(
+        (r): GuestRow => ({
+          key: r.id,
+          name: r.name,
+          note: r.note || undefined,
+          status: r.attending ? "coming" : "declined",
+          bucket: r.attending ? "coming" : "declined",
+          persons: r.guests,
+          viaCommon: true,
+        }),
+      ),
+  ];
+  const order: GuestStatus[] = ["coming", "opened", "sent", "draft", "declined"];
+  return rows.sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status) || a.name.localeCompare(b.name));
+}
+
+/** How many rows fall into each bucket */
+export function bucketCounts(rows: GuestRow[]): Record<RsvpBucket, number> {
+  const c: Record<RsvpBucket, number> = { coming: 0, declined: 0, waiting: 0, draft: 0 };
+  for (const r of rows) c[r.bucket]++;
+  return c;
+}

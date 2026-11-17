@@ -42,7 +42,7 @@ function pushMessage(m: Message) {
     messages: [...d.messages, m],
     conversations: d.conversations.map((c) =>
       c.id === m.conversationId
-        ? { ...c, updatedAt: m.createdAt, readAt: m.system ? c.readAt : { ...c.readAt, [m.senderId]: m.createdAt } }
+        ? { ...c, updatedAt: m.createdAt, readAt: m.system || m.ai ? c.readAt : { ...c.readAt, [m.senderId]: m.createdAt } }
         : c,
     ),
   }));
@@ -61,6 +61,24 @@ export async function sendMessage(conversationId: string, text: string) {
   const clean = text.trim().slice(0, 4000);
   if (!clean) return;
   pushMessage({ id: uid("m"), conversationId, senderId: actor.id, text: clean, createdAt: now() });
+}
+
+/**
+ * The vendor's AI assistant answers the client in the vendor's own chat. The
+ * message is sent as the vendor (so the chat reads like talking to them) and
+ * marked `ai`, so both sides can see an assistant wrote it.
+ */
+export async function postAssistantReply(conversationId: string, text: string, offerIds: string[] = []) {
+  const actor = currentActor();
+  const db = getDB();
+  const c = db.conversations.find((x) => x.id === conversationId);
+  if (!c) throw new Error("Conversation not found");
+  assert(can.assistantReply(actor, db, c), "assistantReply");
+  const v = db.vendors.find((x) => x.id === c.vendorId)!;
+  const clean = text.trim().slice(0, 4000);
+  const offers = offerIds.filter((id) => db.offers.some((o) => o.id === id && o.vendorId === v.id && o.active)).slice(0, 3);
+  if (!clean) return;
+  pushMessage({ id: uid("m"), conversationId, senderId: v.ownerId, text: clean, createdAt: now(), ai: true, ...(offers.length ? { offerIds: offers } : {}) });
 }
 
 /** DEMO: vendor answers automatically so a solo presenter sees a live chat */

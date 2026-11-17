@@ -19,14 +19,15 @@ app/                 маршруты (client components; данные — то�
   assistant/         чат с ИИ (вендоров редиректит в /vendor; `?q=` предзаполняет запрос)
   vendors/           лента-соцсеть + [slug] профиль (шапка; вкладки — components/vendor-profile/*)   book/[offerId], checkout/[bookingId]
   messages/[id]      чат клиент↔вендор  dashboard/*     кабинет клиента (events, bookings, payments, saved, profile)
-  vendor/*           кабинет исполнителя (обзор с календарём, bookings, finance, profile с документами; services/posts/details — через «+»; отзывы только в профиле /vendors/[slug])
+  vendor/*           кабинет исполнителя (обзор с календарём, bookings, finance, profile с документами; posts/services — через «+», details и занятые даты — из кабинета/профиля; нижнее меню: кабинет · лента · + · сообщения · профиль; отзывы только в профиле /vendors/[slug])
   admin/*            админка: users, vendors, verification (документы/заявки), bookings, disputes, finance, posts, reviews, complaints, settings
   onboarding/        онбординг клиента (чат); onboarding/vendor — форма вендора   welcome/ — вход (Google/email-OTP/демо)   auth/callback — возврат с Google   me/ — вкладка «Профиль»
-  invitations/, i/[id]  редактор приглашений / публичная страница   create/post, create/service
+  invitations/, i/[id]  приглашения: список с кольцом ответов + «Создать» (с нуля → конструктор, шаблон → простые поля quick-editor); вкладки дизайн/статистика(гости внутри)/поделиться; i/[id] — публичная   create/post, create/service
   api/chat           SSE-стрим одного хода ассистента   api/onboarding — разбор свободного текста
+  api/vendor-chat    ИИ-помощник исполнителя: отвечает в чате клиент↔исполнитель от его имени (`ai: true`, карточки брони `offerIds`); молчит, если исполнитель писал сам < 12 ч или `Vendor.aiAssistant === false`
 components/          ui/ (shadcn, не трогать без нужды), layout/ (app-shell, header, bottom-nav, cabinet-shell, nav-items),
                      landing/ (секции лендинга), vendor-profile/ (вкладки профиля), vendor-panel/ (offers, calendar, profile-form, documents…),
-                     feed/ (post-dialog → post-view, post-sheets), demo/ (TryDemoButton), chat/, vendor/, booking/, invitation/{editor,page}, auth/,
+                     feed/ (post-dialog → post-view: иконки + меню «⋯» с жалобой; post-sheets), demo/ (TryDemoButton), chat/, vendor/, booking/, invitation/{editor,page,rsvp-donut,create-dialog}, auth/,
                      onboarding/, cabinet/, charts/, messages/, brand/
 config/brand.ts      имя («EVENTUS AI» — в UI только через `brand.name`), домен eventusai.app, цвета → CSS-переменные (инжект в app/layout.tsx). Ключи хранилища `eventus-*` не переименовывать — сбросит вход и данные
 config/demo.ts       `enabled` — показывать ли демо вообще; `features` — что работает внутри демо (roleSwitcher, vendorAutoReply, baselineOccupancy, reset)
@@ -48,7 +49,7 @@ lib/data/
   seed/              buildSeed() — демо целиком; buildLiveSeed() — только каталог (без клиентов и их активности); `SEED_VERSION` — поднять при смене формы сида;
                      catalog, posts, photos (Unsplash), specs, moderation (документы, жалобы, DEFAULT_SETTINGS, DEFAULT_PREPAY_PERCENT)
 lib/ai/              protocol, tool-defs (zod), tool-exec (в браузере по стору), claude-agent, deepseek-agent,
-                     mock-agent (без ключей), system-prompt, use-chat, chat-store, onboarding-extract
+                     mock-agent (без ключей), system-prompt, use-chat, chat-store, onboarding-extract; vendor-{protocol,agent,mock} — ИИ-помощник исполнителя (карточку собирает `selectAssistantRequest` в views/messaging)
 lib/feed-prefs.ts, lib/photos.ts (файл → data URL)
 lib/auth/            store.ts — вход: live = Supabase Auth (supabase.ts: код на почту, Google OAuth; id аккаунта = auth.uid, админ — из profiles.role; syncLiveSession), без env — имитация; signInDemo(userId?) → режим demo; lib/session.ts — аккаунт вкладки (sessionStorage), роль берётся из профиля; lib/planner.ts — дата/город/гости
 lib/payments/        provider.ts (DemoPaymentProvider), escrow.ts (P2P-эскроу, комиссия)
@@ -83,6 +84,7 @@ lib/supabase/        client.ts — браузерный клиент (publishabl
 - Без AI-slop: никаких эмодзи, блёсток, фиолетовых градиентов. Вместо фото-заглушек — макеты нашего UI (чат, бронь, сделка). Фирменная деталь — точки «свободно N из M». Контейнер `container-app` 1280.
 
 ## Известные грабли
+- Цены: `settings.hidePrices` (по умолчанию вкл) — клиент не видит цен в ленте/профиле/ассистенте, вместо них «Узнать цену» (`AskPriceButton`, `routes.chat(id, {draft})`); владелец и админ видят. При оформлении брони цена видна всегда. Миграция `…_vendor_ai_assistant.sql` применена; пометку `ai` в messages ставит только service_role (триггер guard_message_ai).
 - В UI «исполнитель», не «поставщик». Входа «как владелец» нет (убран: доступ к чужому аккаунту без согласия).
 - Вкладки на localhost:3000 делят localStorage и режим (демо/live); смена режима в одной вкладке перезагружает остальные. Вкладка со старым кодом может затереть запись — перезагрузи её.
 - Нет prettier-конфига: не запускать `prettier --write` (переформатирует под 80 колонок; в проекте строки до ~150).

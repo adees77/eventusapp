@@ -7,6 +7,7 @@ import {
   ArrowDown,
   ArrowUp,
   CalendarDays,
+  ChevronDown,
   Clock,
   Copy,
   Eye,
@@ -89,7 +90,6 @@ export function DesignEditor({ inv }: { inv: Invitation }) {
   const h = useDesignHistory(inv);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [device, setDevice] = useState<Device>("phone");
-  const [zoom, setZoom] = useState(1);
   const [sheet, setSheet] = useState<"layers" | "inspector" | null>(null);
   const design = inv.design;
   const selected = design.blocks.find((b) => b.id === selectedId) ?? null;
@@ -201,22 +201,6 @@ export function DesignEditor({ inv }: { inv: Invitation }) {
         <Tool label={t("inv.desktop")} onClick={() => setDevice("desktop")} active={device === "desktop"} className="max-md:hidden">
           <Monitor className="size-4" />
         </Tool>
-        <span className="mx-1 h-5 w-px bg-border max-md:hidden" />
-        <div className="flex items-center gap-1 max-md:hidden">
-          <Tool label="−" onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(1)))}>
-            <Minus className="size-3.5" />
-          </Tool>
-          <button
-            type="button"
-            onClick={() => setZoom(1)}
-            className="w-12 text-center text-xs text-text-secondary tabular-nums hover:text-foreground"
-          >
-            {Math.round(zoom * 100)}%
-          </button>
-          <Tool label="+" onClick={() => setZoom((z) => Math.min(1.5, +(z + 0.1).toFixed(1)))}>
-            <Plus className="size-3.5" />
-          </Tool>
-        </div>
         <div className="ml-auto flex items-center gap-2">
           <span className="hidden text-xs text-muted-foreground sm:inline">{t("invitations.saved")}</span>
           <Tool label={t("inv.properties")} onClick={() => setSheet("inspector")} className="lg:hidden">
@@ -236,7 +220,6 @@ export function DesignEditor({ inv }: { inv: Invitation }) {
                 "h-fit shrink-0 overflow-hidden bg-white shadow-[0_12px_40px_rgb(17_24_39/0.12)]",
                 device === "phone" ? "w-[390px] max-w-full rounded-[28px] ring-8 ring-[#111827]" : "w-[1040px] rounded-xl",
               )}
-              style={{ zoom }}
             >
               <InvitationPage
                 data={inv}
@@ -467,7 +450,7 @@ function PageInspector({
         </div>
       </Group>
 
-      <Group title={t("inv.colors")}>
+      <Group title={t("inv.colors")} collapsed>
         <div className="grid grid-cols-2 gap-2">
           {(
             [
@@ -482,7 +465,7 @@ function PageInspector({
         </div>
       </Group>
 
-      <Group title={t("inv.fonts")}>
+      <Group title={t("inv.fonts")} collapsed>
         <div className="flex flex-col gap-3">
           {(["display", "body"] as const).map((k) => (
             <div key={k}>
@@ -561,7 +544,18 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   );
 }
 
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
+function Group({ title, children, collapsed }: { title: string; children: React.ReactNode; collapsed?: boolean }) {
+  // rarely needed settings fold away so the panel stays short
+  if (collapsed)
+    return (
+      <details className="group/g rounded-2xl bg-foreground/[0.03] px-3 py-2.5">
+        <summary className="flex cursor-pointer list-none items-center justify-between text-xs text-muted-foreground select-none [&::-webkit-details-marker]:hidden">
+          {title}
+          <ChevronDown className="size-3.5 transition-transform group-open/g:rotate-180" />
+        </summary>
+        <div className="pt-3">{children}</div>
+      </details>
+    );
   return (
     <section>
       <h3 className="mb-2.5 text-xs text-muted-foreground">{title}</h3>
@@ -725,7 +719,7 @@ function BlockInspector({
         </Group>
       )}
 
-      <Group title={t("inv.styleTitle")}>
+      <Group title={t("inv.styleTitle")} collapsed>
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label={t("inv.align")}>
             {(

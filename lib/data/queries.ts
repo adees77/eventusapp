@@ -118,3 +118,4 @@ export function unreadCount(db: DB, actor: Actor) {
   return conversationsFor(db, actor).filter((c) => isUnread(db, c, actor.id)).length;
 }
 
+

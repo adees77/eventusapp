@@ -3,7 +3,7 @@
  * string literals, so renaming or restructuring a route is a one-line change.
  */
 export type VendorTab = "posts" | "details" | "services" | "reviews";
-export type InvitationTab = "design" | "guests" | "share" | "stats";
+export type InvitationTab = "design" | "share" | "stats";
 
 const q = (params: Record<string, string | number | undefined | null>) => {
   const s = new URLSearchParams(Object.entries(params).flatMap(([k, v]) => (v === undefined || v === null || v === "" ? [] : [[k, String(v)]])));
@@ -35,7 +35,8 @@ export const routes = {
 
   // chats
   inbox: "/messages",
-  chat: (conversationId: string) => `/messages/${conversationId}`,
+  /** `draft` pre-fills the message box (e.g. «Узнать цену» → «Сколько стоит …?») */
+  chat: (conversationId: string, opts?: { draft?: string }) => `/messages/${conversationId}${q({ draft: opts?.draft })}`,
 
   // client cabinet
   dashboard: "/dashboard",

@@ -9,6 +9,8 @@ export const useCategories = () => useDB(selectCategories);
 export const useCategory = (id?: CategoryId) => useDB((db) => db.categories.find((c) => c.id === id));
 
 export const usePlatformSettings = () => useDB((db) => db.settings);
+/** Prices are hidden from clients until they ask in the chat (the vendor and admins still see them) */
+export const usePricesHidden = () => useDB((db) => !!db.settings.hidePrices);
 /** Non-reactive read, e.g. to seed a form once */
 export const readPlatformSettings = () => getDB().settings;
 

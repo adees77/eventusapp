@@ -840,7 +840,7 @@ export function durationOf(src: Record<string, unknown>, id: string): LText | nu
 }
 
 /** Up to `max` short facts for the feed and cards: «до 300 гостей», «600 м²», «12 авто» */
-export function specFacts(category: CategoryId, specs: VendorSpecs | undefined, max = 3): LText[] {
+export function specFacts(category: CategoryId, specs: VendorSpecs | undefined, max = 3, opts?: { prices?: boolean }): LText[] {
   if (!specs) return [];
   const out: LText[] = [];
   for (const f of specFields(category)) {
@@ -850,6 +850,7 @@ export function specFacts(category: CategoryId, specs: VendorSpecs | undefined, 
     if (f.kind === "number" && f.short) out.push(fill(f.short, Number(v)));
     else if (f.kind === "bool" && f.short) out.push(f.short);
     else if (f.kind === "price" && f.short) {
+      if (opts?.prices === false) continue;
       const p = priceOf(specs, f.id);
       if (p) out.push(fillText(f.short, p));
     } else if (f.kind === "duration" && f.short) {

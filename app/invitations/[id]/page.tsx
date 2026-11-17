@@ -6,7 +6,8 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { toast } from "sonner";
 import { DesignEditor } from "@/components/invitation/editor/design-editor";
-import { GuestsPanel, guestLink } from "@/components/invitation/editor/guests-panel";
+import { QuickEditor } from "@/components/invitation/editor/quick-editor";
+import { guestLink } from "@/components/invitation/editor/share-links";
 import { SharePanel } from "@/components/invitation/editor/share-panel";
 import { StatsPanel } from "@/components/invitation/editor/stats-panel";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,7 @@ import { cn } from "@/lib/utils";
 import { routes } from "@/lib/routes";
 import { useAction } from "@/lib/data/use-action";
 
-const TABS = ["design", "guests", "stats", "share"] as const;
+const TABS = ["design", "stats", "share"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function InvitationEditorPage() {
@@ -48,7 +49,9 @@ function Editor() {
   const actor = useActor();
   const inv = useInvitation(id);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const tab: Tab = TABS.find((x) => x === params.get("tab")) ?? "design";
+  // the guest list now lives in «Статистика»: old ?tab=guests links land there
+  const asked = params.get("tab") === "guests" ? "stats" : params.get("tab");
+  const tab: Tab = TABS.find((x) => x === asked) ?? "design";
 
   if (!inv || !can.manageInvitation(actor, inv.ownerId)) {
     return (
@@ -93,7 +96,7 @@ function Editor() {
           {TABS.map((k) => (
             <TabBtn key={k} on={tab === k} onClick={() => setTab(k)}>
               {t(`inv.tabs.${k}`)}
-              {k === "guests" && <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">{s.guests}</span>}
+              {k === "stats" && s.guests > 0 && <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">{s.guests}</span>}
             </TabBtn>
           ))}
         </nav>
@@ -146,10 +149,9 @@ function Editor() {
       </nav>
 
       {tab === "design" ? (
-        <DesignEditor inv={inv} />
+        inv.templateId ? <QuickEditor inv={inv} /> : <DesignEditor inv={inv} />
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {tab === "guests" && <GuestsPanel inv={inv} />}
           {tab === "stats" && <StatsPanel inv={inv} />}
           {tab === "share" && <SharePanel inv={inv} />}
         </div>

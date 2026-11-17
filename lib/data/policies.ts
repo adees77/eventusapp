@@ -40,6 +40,25 @@ export function assert(allowed: boolean, action: string): asserts allowed {
 const isAdmin = (a: Actor) => a.role === "admin";
 const ownsVendor = (a: Actor, v: Vendor | undefined) => !!v && a.role === "vendor" && v.ownerId === a.id;
 
+/** The vendor wrote by hand this recently → their AI assistant stays quiet in that chat */
+export const ASSISTANT_PAUSE_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * Whether the vendor's AI assistant answers in this chat now: the vendor has it
+ * on (default) and has not written there themselves within the pause window.
+ */
+export function assistantActive(
+  db: Pick<DB, "vendors" | "messages">,
+  c: Pick<Conversation, "id" | "vendorId">,
+  now = Date.now(),
+): boolean {
+  const v = db.vendors.find((x) => x.id === c.vendorId);
+  if (!v || v.aiAssistant === false) return false;
+  const manual = db.messages.filter((m) => m.conversationId === c.id && m.senderId === v.ownerId && !m.ai && !m.system);
+  const last = manual.reduce((t, m) => Math.max(t, Date.parse(m.createdAt)), 0);
+  return now - last > ASSISTANT_PAUSE_MS;
+}
+
 export const can = {
   /** Clients design invitations for their own events; admin can moderate */
   manageInvitation: (a: Actor, ownerId: string) => isAdmin(a) || (a.role === "client" && a.id === ownerId),
@@ -84,6 +103,12 @@ export const can = {
     isAdmin(a) || c.clientId === a.id || ownsVendor(a, db.vendors.find((v) => v.id === c.vendorId)),
   sendMessage: (a: Actor, db: DB, c: Conversation) =>
     c.clientId === a.id || ownsVendor(a, db.vendors.find((v) => v.id === c.vendorId)),
+
+  /**
+   * The vendor's AI assistant posts its answer into the chat on the vendor's behalf.
+   * Local data: the client's browser runs it. Supabase: a server function with the service role.
+   */
+  assistantReply: (a: Actor, db: DB, c: Conversation) => a.role === "client" && c.clientId === a.id && assistantActive(db, c),
 
   manageEvent: (a: Actor, clientId: string) => a.role === "client" && a.id === clientId,
   favorite: (a: Actor) => a.role === "client",

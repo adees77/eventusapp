@@ -64,6 +64,8 @@ export interface Vendor {
   hidden: boolean;
   /** percent of total, 0–100 */
   prepayPercent: number;
+  /** the AI assistant answers clients in this vendor's chats until the vendor writes; undefined = on */
+  aiAssistant?: boolean;
   cover: string;
   portfolio: string[];
   phone: string;
@@ -239,6 +241,10 @@ export interface Message {
   text: string;
   createdAt: string;
   system?: boolean;
+  /** written by the vendor's AI assistant (senderId is still the vendor owner) */
+  ai?: boolean;
+  /** services the assistant suggests booking: shown as cards under the message */
+  offerIds?: string[];
 }
 
 export interface Review {
@@ -334,6 +340,8 @@ export interface PlatformSettings {
   hideUnverified: boolean;
   supportPhone: string;
   supportEmail: string;
+  /** prices stay in the data but clients do not see them before booking: «Узнать цену» opens the chat */
+  hidePrices: boolean;
 }
 
 export interface Favorite {

@@ -10,6 +10,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { AvailabilityCalendar } from "@/components/vendor/availability-calendar";
 import { useOffersAvailability } from "@/lib/data/views/availability";
+import { usePricesHidden } from "@/lib/data/views/catalog";
 import type { Offer, Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { usePlanner } from "@/lib/planner";
@@ -21,11 +22,14 @@ export function ServicesTab({
   offers,
   isOwner,
   onBook,
+  onAsk,
 }: {
   vendor: Vendor;
   offers: Offer[];
   isOwner: boolean;
   onBook: (offer: Offer) => void;
+  /** «Узнать цену»: opens the chat with the vendor (their AI assistant names the price) */
+  onAsk: (offer: Offer) => void;
 }) {
   const { t, tn, l, money, date: fmtDate } = useI18n();
   const planner = usePlanner();
@@ -34,6 +38,7 @@ export function ServicesTab({
   const [calendarOffer, setCalendarOffer] = useState<string | null>(null);
   const live = offers.filter((o) => o.active);
   const minPrice = live.length ? Math.min(...live.map((o) => o.price)) : 0;
+  const hidden = usePricesHidden() && !isOwner;
   return (
     <div className="container-app grid gap-12 lg:grid-cols-[1fr_360px]">
       <div className="min-w-0">
@@ -96,10 +101,16 @@ export function ServicesTab({
                     </div>
                     <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-2">
                       <div className="flex flex-col gap-1">
-                        <span className="tabular-nums">
-                          <span className="font-medium">{money(o.price)}</span>
-                          <span className="text-sm text-muted-foreground"> / {l(o.unit)}</span>
-                        </span>
+                        {hidden ? (
+                          <button type="button" onClick={() => onAsk(o)} className="w-fit text-sm text-primary underline-offset-2 hover:underline">
+                            {t("vendor.askPrice")}
+                          </button>
+                        ) : (
+                          <span className="tabular-nums">
+                            <span className="font-medium">{money(o.price)}</span>
+                            <span className="text-sm text-muted-foreground"> / {l(o.unit)}</span>
+                          </span>
+                        )}
                         {a && <AvailDots a={a} size="sm" />}
                       </div>
                       {isOwner ? (
@@ -126,9 +137,11 @@ export function ServicesTab({
         <div className="rounded-2xl bg-card p-5 shadow-soft lg:sticky lg:top-24">
           <div className="flex items-baseline justify-between gap-2">
             <h2 className="text-base font-medium">{t("vendor.calendar")}</h2>
-            <span className="text-sm text-muted-foreground tabular-nums">
-              {t("common.from")} {money(minPrice)}
-            </span>
+            {!hidden && (
+              <span className="text-sm text-muted-foreground tabular-nums">
+                {t("common.from")} {money(minPrice)}
+              </span>
+            )}
           </div>
           {offers.length > 1 && (
             <NativeSelect

@@ -20,12 +20,12 @@ export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
     { href: routes.inbox, label: "nav.messages", icon: MessageCircle },
     { href: routes.dashboard, label: "nav.cabinet", icon: CalendarHeart },
   ],
-  // social layout: feed and chats on the left, «+» in the middle, business cabinet and own profile on the right
+  // cabinet first, then feed, «+» in the middle, chats, own profile last
   vendor: [
-    { href: routes.feed, label: "nav.feed", icon: LayoutGrid },
-    { href: routes.inbox, label: "nav.messages", icon: MessageCircle },
-    { href: routes.create, label: "nav.create", icon: Plus, create: true },
     { href: routes.vendorHome, label: "nav.cabinet", icon: BarChart3 },
+    { href: routes.feed, label: "nav.feed", icon: LayoutGrid },
+    { href: routes.create, label: "nav.create", icon: Plus, create: true },
+    { href: routes.inbox, label: "nav.messages", icon: MessageCircle },
     { href: routes.me, label: "nav.profile", icon: CircleUserRound },
   ],
   admin: [

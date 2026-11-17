@@ -201,6 +201,7 @@ export function migrate(input: DB): DB {
     };
   }
   if (!db.settings.requiredDocs) db = { ...db, settings: { ...seed().settings, ...db.settings } };
+  if (db.settings.hidePrices === undefined) db = { ...db, settings: { ...db.settings, hidePrices: true } };
   return db;
 }
 

@@ -1,12 +1,13 @@
 "use client";
 
 /** Vendor company profile form */
-import { Plus, X } from "lucide-react";
+import { Plus, Sparkles, X } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Field, Section, inputClass, textareaClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { updateVendor } from "@/lib/data/actions";
 import type { Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
@@ -54,6 +55,20 @@ export function VendorProfileForm({ vendor }: { vendor: Vendor }) {
         );
       }}
     >
+      <section className="flex items-start gap-4 rounded-3xl bg-card p-4 md:p-6 lg:col-span-2">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary text-primary">
+          <Sparkles className="size-4.5" strokeWidth={1.75} />
+        </span>
+        <label className="min-w-0 flex-1 cursor-pointer" htmlFor="ai-assistant">
+          <span className="block font-heading text-lg tracking-[-0.02em]">{t("vp.aiTitle")}</span>
+          <span className="mt-1 block text-sm leading-relaxed text-text-secondary">{t("vp.aiHint")}</span>
+        </label>
+        <Switch
+          id="ai-assistant"
+          checked={vendor.aiAssistant !== false}
+          onCheckedChange={(on) => void run(() => updateVendor(vendor.id, { aiAssistant: on }), { success: on ? t("vp.aiOn") : t("vp.aiOff") })}
+        />
+      </section>
       <Section title={t("vp.profile")}>
         <div className="flex flex-col gap-4">
           <Field label={t("vp.name")}>

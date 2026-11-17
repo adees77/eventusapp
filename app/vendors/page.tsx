@@ -7,6 +7,7 @@ import { Masonry, PostCard } from "@/components/feed/post-card";
 import { PostDialog } from "@/components/feed/post-dialog";
 import { Button } from "@/components/ui/button";
 import { useFeed } from "@/lib/data/views/feed";
+import { useFeedPrefs } from "@/lib/feed-prefs";
 import type { CategoryId } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { usePlanner } from "@/lib/planner";
@@ -42,7 +43,8 @@ function Feed() {
   };
   const postId = params.get("post");
 
-  const items = useFeed(
+  const hidden = useFeedPrefs((p) => p.hidden);
+  const all = useFeed(
       {
         tab,
         query: state.query,
@@ -54,6 +56,8 @@ function Feed() {
       },
       actor,
   );
+  // «not interested» posts leave this device's feed
+  const items = useMemo(() => (hidden.length ? all.filter((x) => !hidden.includes(x.post.id)) : all), [all, hidden]);
 
   const setParams = useCallback(
     (patch: Record<string, string | null>, push = false) => {

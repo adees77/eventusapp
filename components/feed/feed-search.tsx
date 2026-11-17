@@ -1,5 +1,6 @@
 "use client";
 
+import { usePricesHidden } from "@/lib/data/views/catalog";
 import { ArrowLeft, Clock, Search, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -42,6 +43,7 @@ export function FeedSearch({
   count: number;
 }) {
   const { t, tn, l, money, date } = useI18n();
+  const pricesHidden = usePricesHidden();
   const categories = useCategories();
   const { recent, remember, forget } = useFeedPrefs();
   const [open, setOpen] = useState(false);
@@ -289,7 +291,7 @@ export function FeedSearch({
       <section>
         <h3 className="text-xs text-muted-foreground">{t("feed.sort")}</h3>
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {SORTS.map((s) => (
+          {SORTS.filter((s) => !pricesHidden || s === "rating").map((s) => (
             <Choice key={s} on={value.sort === s} onClick={() => onChange({ sort: s })}>
               {t(`feed.${s === "rating" ? "sortRating" : s === "priceAsc" ? "sortPriceAsc" : "sortPriceDesc"}`)}
             </Choice>

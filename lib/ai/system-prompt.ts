@@ -28,6 +28,10 @@ export function contextPrompt(ctx: ChatContext) {
       }${e.budget ? `, budget ${e.budget} som` : ""}. Use these details unless the user says otherwise.`,
     );
   }
+  if (ctx.pricesHidden)
+    lines.push(
+      "Prices are hidden on the platform right now: never state amounts or compare vendors by price. Tool results may contain prices — use them only to respect the user's budget. When the user asks about price, say the vendor will name it in the chat and suggest the «Узнать цену» / «Ask price» button on the card.",
+    );
   if (ctx.plannerDate) lines.push(`The user last selected the date ${ctx.plannerDate} in the catalog.`);
   return lines.join("\n");
 }

@@ -620,25 +620,31 @@ export type Database = {
       }
       messages: {
         Row: {
+          ai: boolean
           conversation_id: string
           created_at: string
           id: string
+          offer_ids: string[]
           sender_id: string | null
           system: boolean
           text: string
         }
         Insert: {
+          ai?: boolean
           conversation_id: string
           created_at?: string
           id?: string
+          offer_ids?: string[]
           sender_id?: string | null
           system?: boolean
           text: string
         }
         Update: {
+          ai?: boolean
           conversation_id?: string
           created_at?: string
           id?: string
+          offer_ids?: string[]
           sender_id?: string | null
           system?: boolean
           text?: string
@@ -760,6 +766,7 @@ export type Database = {
           auto_release_days: number
           default_prepay_percent: number
           fee_percent: number
+          hide_prices: boolean
           hide_unverified: boolean
           id: boolean
           low_rating_threshold: number
@@ -773,6 +780,7 @@ export type Database = {
           auto_release_days?: number
           default_prepay_percent?: number
           fee_percent?: number
+          hide_prices?: boolean
           hide_unverified?: boolean
           id?: boolean
           low_rating_threshold?: number
@@ -786,6 +794,7 @@ export type Database = {
           auto_release_days?: number
           default_prepay_percent?: number
           fee_percent?: number
+          hide_prices?: boolean
           hide_unverified?: boolean
           id?: boolean
           low_rating_threshold?: number
@@ -1188,6 +1197,7 @@ export type Database = {
       }
       vendors: {
         Row: {
+          ai_assistant: boolean
           category: Database["public"]["Enums"]["category_id"]
           city: string
           cover: string
@@ -1218,6 +1228,7 @@ export type Database = {
           years_on_market: number
         }
         Insert: {
+          ai_assistant?: boolean
           category: Database["public"]["Enums"]["category_id"]
           city: string
           cover?: string
@@ -1248,6 +1259,7 @@ export type Database = {
           years_on_market?: number
         }
         Update: {
+          ai_assistant?: boolean
           category?: Database["public"]["Enums"]["category_id"]
           city?: string
           cover?: string

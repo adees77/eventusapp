@@ -15,6 +15,7 @@ export const DEFAULT_SETTINGS = (fee: number): PlatformSettings => ({
   hideUnverified: false,
   supportPhone: "+996 555 000 777",
   supportEmail: "support@eventusai.app",
+  hidePrices: true,
 });
 
 const file = (v: Vendor, kind: DocKind) =>
@@ -73,7 +74,7 @@ export function buildComplaints(vendors: Vendor[], posts: Post[], reviews: Revie
       targetId: v0.id,
       vendorId: v0.id,
       reason: "fraud",
-      text: "Просили перевести предоплату на карту в обход EVENTUS",
+      text: "Просили перевести предоплату на карту в обход EVENTUS AI",
       status: "open",
       createdAt: subHours(now, 3).toISOString(),
     });

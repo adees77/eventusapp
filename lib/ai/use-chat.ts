@@ -39,6 +39,7 @@ export function useChat(threadId: string | null, onThreadCreated: (id: string) =
         ? { title: event.title, date: event.date, city: event.city, guests: event.guests, budget: event.budget }
         : undefined,
       plannerDate: usePlanner.getState().date,
+      pricesHidden: !!db.settings.hidePrices,
     };
   }, [actor.id, locale]);
 

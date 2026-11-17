@@ -13,7 +13,7 @@
 export * from "./vendors";
 export * from "./bookings";
 export { markNotificationsRead } from "./notifications";
-export { ensureConversation, markRead, sendAutoReply, sendMessage } from "./messaging";
+export { ensureConversation, markRead, postAssistantReply, sendAutoReply, sendMessage } from "./messaging";
 export * from "./events";
 export * from "./invitations";
 export * from "./feed";

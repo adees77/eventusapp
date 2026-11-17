@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarX2, ChevronRight, Images, ListChecks, Plus, Tag, type LucideIcon } from "lucide-react";
+import { ChevronRight, Images, Plus, Tag, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -11,13 +11,11 @@ import { routes } from "@/lib/routes";
 const ACTIONS: { href: string; icon: LucideIcon; title: MessageKey; hint: MessageKey }[] = [
   { href: routes.createPost, icon: Images, title: "create.post", hint: "create.postHint" },
   { href: routes.createService, icon: Tag, title: "create.service", hint: "create.serviceHint" },
-  { href: routes.vendorDetails, icon: ListChecks, title: "create.details", hint: "create.detailsHint" },
-  { href: routes.vendorCalendar, icon: CalendarX2, title: "create.calendar", hint: "create.calendarHint" },
 ];
 
 /**
  * The vendor's author button («+» like in TikTok / Instagram): everything they
- * put out — posts, services, details — starts here.
+ * put out — posts and services — starts here. Details and busy dates live in the cabinet.
  */
 export function CreateMenu({ variant }: { variant: "tab" | "header" }) {
   const { t } = useI18n();

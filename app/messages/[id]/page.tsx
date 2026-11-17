@@ -1,10 +1,10 @@
 "use client";
 
 import { format } from "date-fns";
-import { ArrowLeft, ArrowUp } from "lucide-react";
+import { ArrowLeft, ArrowUp, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { BookingSummary } from "@/components/booking/booking-summary";
 import { StatusBadge } from "@/components/booking/status-badge";
 import { DealCard, EscrowBadge } from "@/components/booking/deal-card";
@@ -12,8 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Monogram } from "@/components/vendor/badges";
 import { demoFeature } from "@/lib/demo/mode";
-import { markRead, sendAutoReply, sendMessage } from "@/lib/data/actions";
-import { useThread } from "@/lib/data/views/messaging";
+import { markRead, postAssistantReply, sendAutoReply, sendMessage } from "@/lib/data/actions";
+import type { VendorChatReply } from "@/lib/ai/vendor-protocol";
+import { readAssistantRequest, useThread } from "@/lib/data/views/messaging";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -21,11 +22,21 @@ import { routes } from "@/lib/routes";
 import { background, useAction } from "@/lib/data/use-action";
 
 export default function ThreadPage() {
+  return (
+    <Suspense>
+      <Thread />
+    </Suspense>
+  );
+}
+
+function Thread() {
   const { id } = useParams<{ id: string }>();
-  const { t, l, list, date: fmt } = useI18n();
+  const { t, l, list, money, locale, date: fmt } = useI18n();
   const actor = useActor();
-  const { conversation: conv, messages, booking, offer, vendor, name, canSend } = useThread(actor, id);
-  const [text, setText] = useState("");
+  const { conversation: conv, messages, booking, offer, vendor, name, canSend, suggested, assistant } = useThread(actor, id);
+  const params = useSearchParams();
+  // «Узнать цену» opens the chat with the question typed in (?draft=…); the client sends it themselves
+  const [text, setText] = useState(() => params.get("draft")?.slice(0, 500) ?? "");
   const [typing, setTyping] = useState(false);
   const [dealOpen, setDealOpen] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
@@ -88,6 +99,24 @@ export default function ThreadPage() {
     await run(() => sendMessage(conv!.id, clean), { onSuccess: () => (sent = true) });
     if (!sent) return;
     setText("");
+    if (params.get("draft")) window.history.replaceState(null, "", routes.chat(conv!.id));
+    // the vendor's AI assistant answers in their name (marked as AI) until the vendor writes here themselves
+    const req = actor.role === "client" ? readAssistantRequest(actor, conv!.id, locale) : null;
+    if (req) {
+      setTyping(true);
+      try {
+        const res = await fetch("/api/vendor-chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(req) });
+        if (res.ok) {
+          const reply = (await res.json()) as VendorChatReply;
+          if (reply.text) await run(() => postAssistantReply(conv!.id, reply.text, reply.offerIds));
+        }
+      } catch {
+        // network trouble: the message is delivered, the vendor answers by hand
+      } finally {
+        setTyping(false);
+      }
+      return;
+    }
     // DEMO: vendor answers on its own so a solo presenter sees a live chat
     if (actor.role === "client" && demoFeature("vendorAutoReply")) {
       const vendorCount = messages.filter((m) => m.senderId === vendor!.ownerId).length;
@@ -120,7 +149,7 @@ export default function ThreadPage() {
             </Link>
           )}
           <div className="text-xs text-muted-foreground">
-            {typing ? t("messages.typing") : isVendor ? t("vp.client") : t("vendor.response", { n: vendor.responseMinutes })}
+            {typing ? t("messages.typing") : isVendor ? t("vp.client") : assistant ? t("messages.aiAnswers") : t("vendor.response", { n: vendor.responseMinutes })}
           </div>
         </div>
       </header>
@@ -140,6 +169,17 @@ export default function ThreadPage() {
       <div className="flex min-h-0 flex-1">
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex-1 overflow-y-auto px-3 py-5 lg:px-5">
+            {isVendor && assistant && (
+              <div className="mx-auto mb-4 flex max-w-md items-start gap-2.5 rounded-2xl bg-secondary px-4 py-3 text-xs leading-relaxed text-secondary-foreground">
+                <Sparkles className="mt-0.5 size-3.5 shrink-0" strokeWidth={1.75} />
+                <span>
+                  {t("messages.aiVendorBanner")}{" "}
+                  <Link href={routes.vendorProfile} className="underline underline-offset-2">
+                    {t("messages.aiSettings")}
+                  </Link>
+                </span>
+              </div>
+            )}
             <ul className="flex flex-col gap-2">
               {messages.map((m, i) => {
                 const mine = m.senderId === actor.id;
@@ -163,7 +203,35 @@ export default function ThreadPage() {
                         >
                           {m.text}
                         </div>
-                        <span className="mt-1 px-1 text-2xs text-muted-foreground tabular-nums">
+                        {m.offerIds?.map((oid) => {
+                          const o = suggested[oid];
+                          if (!o) return null;
+                          return (
+                            <div key={oid} className="mt-1.5 flex w-72 max-w-full items-center gap-3 rounded-2xl bg-card p-2.5 pl-3.5 shadow-soft">
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm">{l(o.title)}</span>
+                                <span className="block text-xs text-text-secondary tabular-nums">
+                                  {money(o.price)} · {l(o.unit)}
+                                </span>
+                              </span>
+                              {!isVendor && (
+                                <Link
+                                  href={routes.book(o.id)}
+                                  className="flex h-9 shrink-0 items-center rounded-full bg-sun px-3.5 text-xs font-medium text-sun-foreground transition-colors hover:bg-[color-mix(in_oklch,var(--sun),black_7%)]"
+                                >
+                                  {t("vendor.book")}
+                                </Link>
+                              )}
+                            </div>
+                          );
+                        })}
+                        <span className="mt-1 flex items-center gap-1 px-1 text-2xs text-muted-foreground tabular-nums">
+                          {m.ai && (
+                            <>
+                              <Sparkles className="size-2.5" strokeWidth={2} aria-hidden />
+                              {t("messages.aiMark")} ·
+                            </>
+                          )}
                           {format(new Date(m.createdAt), "HH:mm")}
                         </span>
                       </div>
