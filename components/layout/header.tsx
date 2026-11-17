@@ -12,7 +12,6 @@ import { DemoBadge } from "./demo-badge";
 import { NotificationsBell } from "./notifications-bell";
 import { CreateMenu } from "./create-menu";
 import { HOME_BY_ROLE, NAV_BY_ROLE, isActive } from "./nav-items";
-import { SettingsMenu } from "./settings-menu";
 import { routes } from "@/lib/routes";
 import { brand } from "@/config/brand";
 
@@ -59,7 +58,6 @@ export function Header() {
           {items.some((i) => i.create) && <CreateMenu variant="header" />}
           <DemoBadge />
           <NotificationsBell />
-          <SettingsMenu />
         </div>
       </div>
     </header>

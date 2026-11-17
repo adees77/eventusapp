@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { AccountSection } from "@/components/cabinet/account-section";
 import { CategoryIcon } from "@/components/category-icon";
 import { Field, PageHeader, Section, inputClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
@@ -179,6 +180,7 @@ export default function AdminSettings() {
           {t("demo.reset")}
         </Button>
       </Section>
+      <AccountSection />
     </div>
   );
 }

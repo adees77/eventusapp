@@ -9,6 +9,7 @@ import { sanitizeSpecs } from "../specs";
 import { asActor, currentActor, now, uid, update } from "./_core";
 import { createEvent, setChecklist } from "./events";
 import { DEFAULT_PREPAY_PERCENT } from "../seed/moderation";
+import { pullAccount, pushClientOnboarding, pushVendorSignUp, type RemoteAccount } from "../remote-account";
 
 // ── Sign-up & onboarding ──────────────────────────────────────
 
@@ -78,6 +79,16 @@ export async function updateProfile(patch: { name?: string; city?: string; phone
   }));
 }
 
+/** The imitation's email change (real accounts confirm a link, then sign-in brings the new address) */
+export async function updateEmail(raw: string) {
+  const actor = currentActor();
+  assert(can.editProfile(actor, actor.id), "editProfile");
+  const email = raw.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Invalid email");
+  if (getDB().users.some((u) => u.id !== actor.id && u.email?.toLowerCase() === email)) throw new Error("Email is taken");
+  update((d) => ({ ...d, users: d.users.map((u) => (u.id === actor.id ? { ...u, email } : u)) }));
+}
+
 function finishOnboarding(userId: string, role: "client" | "vendor") {
   update((d) => ({
     ...d,
@@ -105,6 +116,8 @@ export async function completeClientOnboarding(
     .map((c, i) => ({ id: `c${i}`, title: CHECKLIST_TITLES[c], done: false, category: c }));
   await asActor(client, () => setChecklist(e.id, checklist));
   finishOnboarding(actor.id, "client");
+  // the server remembers the account is set up: the next sign-in on any device skips onboarding
+  await pushClientOnboarding({ name: input.name, city: input.city, event: input.event, checklist });
   return { ...e, checklist };
 }
 
@@ -217,5 +230,82 @@ export async function signUpVendor(
     offers: [...d.offers, offer],
     posts: [post, ...d.posts],
   }));
+  await pushVendorSignUp({ ownerName: input.ownerName.trim() || vendor.name, vendor, offer: input.offer });
   return { vendor, offerId: offer.id, postId: post.id };
+}
+
+// ── Returning accounts (real sign-in) ─────────────────────────
+
+/**
+ * Called right after a real sign-in. The server is asked what it knows:
+ * - it saw the account finish onboarding but this browser did not (new device,
+ *   cleared site data) → the account is restored here, no onboarding again;
+ * - this browser finished onboarding but the server never heard of it (accounts
+ *   set up before the server kept track) → it is told now.
+ * Network trouble leaves everything as it was.
+ */
+export async function syncAccountWithServer(userId: string): Promise<void> {
+  const remote = await pullAccount(userId).catch(() => null);
+  if (!remote) return;
+  const user = getDB().users.find((u) => u.id === userId);
+  if (!user) return;
+  if (remote === "onboarding") {
+    if (!user.needsOnboarding) await mirrorLocalAccount(userId);
+    return;
+  }
+  restoreAccount(userId, remote);
+}
+
+function restoreAccount(userId: string, r: RemoteAccount) {
+  update((d) => {
+    const has = <T extends { id: string }>(list: T[], id: string) => list.some((x) => x.id === id);
+    const keepVendor = d.vendors.find((v) => v.ownerId === userId);
+    const vendor = !keepVendor && r.vendor ? r.vendor : undefined;
+    // a vendor without a vendor row on the server goes through the vendor form again (the server finishes the half-made sign-up)
+    if (r.role === "vendor" && !keepVendor && !vendor) return d;
+    return {
+      ...d,
+      users: d.users.map((u) =>
+        u.id === userId
+          ? {
+              ...u,
+              role: r.role,
+              name: u.name || r.name,
+              ...(r.phone && !u.phone && { phone: r.phone }),
+              ...(r.city && !u.city && { city: r.city }),
+              needsOnboarding: false,
+              onboardedAt: u.onboardedAt ?? r.onboardedAt ?? now(),
+            }
+          : u,
+      ),
+      events: [...d.events, ...r.events.filter((e) => !has(d.events, e.id))],
+      ...(vendor && {
+        vendors: [...d.vendors, vendor],
+        stats: [...d.stats, { vendorId: vendor.id, views: 0 }],
+        offers: [...d.offers, ...r.offers.filter((o) => !has(d.offers, o.id))],
+        posts: [...r.posts.filter((p) => !has(d.posts, p.id)), ...d.posts],
+      }),
+    };
+  });
+}
+
+async function mirrorLocalAccount(userId: string) {
+  const db = getDB();
+  const user = db.users.find((u) => u.id === userId);
+  if (!user) return;
+  if (user.role === "vendor") {
+    const vendor = db.vendors.find((v) => v.ownerId === userId);
+    const offer = vendor && db.offers.find((o) => o.vendorId === vendor.id);
+    if (vendor && offer) await pushVendorSignUp({ ownerName: user.name || vendor.name, vendor, offer: { title: offer.title.ru, price: offer.price, unit: offer.unit } });
+    return;
+  }
+  if (user.role !== "client") return;
+  const event = db.events.filter((e) => e.clientId === userId).sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
+  if (event)
+    await pushClientOnboarding({
+      name: user.name,
+      city: user.city ?? event.city,
+      event: { title: event.title, date: event.date, guests: event.guests, budget: event.budget },
+      checklist: event.checklist,
+    });
 }

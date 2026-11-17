@@ -9,7 +9,7 @@ const eslintConfig = defineConfig([
     // Layering: UI reads data only through lib/data/views (one hook per screen) and writes through
     // lib/data/actions. That keeps every query in one place for the move to Supabase.
     files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
-    ignores: ["components/layout/app-shell.tsx", "components/layout/settings-menu.tsx", "app/admin/settings/page.tsx"],
+    ignores: ["components/layout/app-shell.tsx", "components/cabinet/account-section.tsx", "app/admin/settings/page.tsx"],
     rules: {
       "no-restricted-imports": [
         "error",

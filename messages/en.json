@@ -1457,5 +1457,13 @@
     "vVerified": "Profile verified",
     "vNeed": "Upload the required documents",
     "vHelp": "Questions about verification: {phone} · {email}"
+  },
+  "account": {
+    "title": "Sign-in and settings",
+    "changeEmail": "Change",
+    "newEmail": "New email",
+    "emailInvalid": "Check the email address",
+    "emailFailed": "Could not change the email. Please try again",
+    "emailSent": "We sent a link to {email}. Confirm it in the email and the address will change. If confirmation from the old address is on, a letter goes there too."
   }
 }

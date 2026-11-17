@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { AccountSection } from "@/components/cabinet/account-section";
 import { ProfileForm } from "@/components/cabinet/profile-form";
 import { PageHeader, Section } from "@/components/panel";
 import { Switch } from "@/components/ui/switch";
@@ -30,6 +31,7 @@ export default function ClientProfile() {
           ))}
         </ul>
       </Section>
+      <AccountSection />
     </div>
   );
 }

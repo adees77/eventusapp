@@ -25,8 +25,8 @@ app/                 маршруты (client components; данные — то�
   invitations/, i/[id]  приглашения: список с кольцом ответов + «Создать» (с нуля → конструктор, шаблон → простые поля quick-editor); вкладки дизайн/статистика(гости внутри)/поделиться; i/[id] — публичная   create/post, create/service
   api/chat           SSE-стрим одного хода ассистента   api/onboarding — разбор свободного текста
   api/vendor-chat    ИИ-помощник исполнителя: отвечает в чате клиент↔исполнитель от его имени (`ai: true`, карточки брони `offerIds`); молчит, если исполнитель писал сам < 12 ч или `Vendor.aiAssistant === false`
-components/          ui/ (shadcn, не трогать без нужды), layout/ (app-shell, header, bottom-nav, cabinet-shell, nav-items),
-                     landing/ (секции лендинга), vendor-profile/ (вкладки профиля), vendor-panel/ (offers, calendar, profile-form, documents…),
+components/          ui/ (shadcn, не трогать без нужды), layout/ (app-shell, header — без меню аккаунта, bottom-nav, cabinet-shell, nav-items), cabinet/account-section (почта и её смена, язык, демо-роли, выход — в профилях клиента/исполнителя/админа),
+                     landing/ (секции лендинга; story — скролл-история «Как это работает»: липкий телефон, 5 сцен, библиотека `motion`), vendor-profile/ (вкладки профиля), vendor-panel/ (offers, calendar, profile-form, documents…),
                      feed/ (post-dialog → post-view: иконки + меню «⋯» с жалобой; post-sheets), demo/ (TryDemoButton), chat/, vendor/, booking/, invitation/{editor,page,rsvp-donut,create-dialog}, auth/,
                      onboarding/, cabinet/, charts/, messages/, brand/
 app/manifest.ts      PWA (на экран «Домой», standalone); иконки public/icons/* (сгенерированы sharp из logo.svg). Нижнее меню — плавающая капсула (`bottom-tabbar`/`pb-tabbar` в globals.css); у клиента: лента · приглашения · шар EVENTUS (ассистент, `orb` в nav-items) · сообщения · кабинет. Фон чатов — `chat/logo-watermark`
@@ -52,6 +52,7 @@ lib/data/
 lib/ai/              protocol, tool-defs (zod), tool-exec (в браузере по стору), claude-agent, deepseek-agent,
                      mock-agent (без ключей), system-prompt, use-chat, chat-store, onboarding-extract; vendor-{protocol,agent,mock} — ИИ-помощник исполнителя (карточку собирает `selectAssistantRequest` в views/messaging)
 lib/feed-prefs.ts, lib/photos.ts (файл → data URL)
+lib/data/remote-account.ts  мост до этапа 4: итог онбординга → RPC complete_client_onboarding/sign_up_vendor; при входе `syncAccountWithServer` (actions/account) восстанавливает аккаунт с сервера или досылает локальный
 lib/auth/            store.ts — вход: live = Supabase Auth (supabase.ts: код на почту, Google OAuth; id аккаунта = auth.uid, админ — из profiles.role; syncLiveSession), без env — имитация; signInDemo(userId?) → режим demo; lib/session.ts — аккаунт вкладки (sessionStorage), роль берётся из профиля; lib/planner.ts — дата/город/гости
 lib/payments/        provider.ts (DemoPaymentProvider), escrow.ts (P2P-эскроу, комиссия)
 lib/i18n/index.tsx   `useT()`, `t(key, vars)`, `tn(key, n)`; ключи типизированы из messages/ru.json

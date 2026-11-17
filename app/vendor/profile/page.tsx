@@ -1,5 +1,6 @@
 "use client";
 
+import { AccountSection } from "@/components/cabinet/account-section";
 import { PageHeader } from "@/components/panel";
 import { VendorDocuments } from "@/components/vendor-panel/documents";
 import { VendorProfileForm } from "@/components/vendor-panel/profile-form";
@@ -14,6 +15,7 @@ export default function Page() {
       <PageHeader title={t("vcab.settings")} />
       <VendorDocuments vendor={vendor} />
       <VendorProfileForm key={vendor.id} vendor={vendor} />
+      <AccountSection />
     </div>
   );
 }

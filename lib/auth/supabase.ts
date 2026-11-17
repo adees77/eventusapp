@@ -98,6 +98,15 @@ export async function currentLiveUser(): Promise<LiveUser | null> {
   return data.session?.user ? toLiveUser(data.session.user) : null;
 }
 
+/**
+ * Asks Supabase to move the account to a new address: a confirmation link goes to the new
+ * address (with «Secure email change» on, to the current one too); the email changes once confirmed.
+ */
+export async function requestEmailChange(email: string): Promise<void> {
+  const { error } = await supabase().auth.updateUser({ email }, { emailRedirectTo: `${window.location.origin}/auth/callback` });
+  if (error) throw failure(error);
+}
+
 export async function signOutLive(): Promise<void> {
   await supabase().auth.signOut();
 }

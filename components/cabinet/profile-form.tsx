@@ -44,9 +44,6 @@ export function ProfileForm() {
             ))}
           </NativeSelect>
         </Field>
-        <Field label={t("cabinet.email")}>
-          <input value={user?.email ?? "—"} disabled className={`${inputClass} text-muted-foreground`} />
-        </Field>
         <div className="sm:col-span-2">
           <Button type="submit" className="h-10 px-5">
             {t("common.save")}

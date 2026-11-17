@@ -14,7 +14,7 @@
  */
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { upsertAuthUser } from "@/lib/data/actions";
+import { syncAccountWithServer, updateEmail, upsertAuthUser } from "@/lib/data/actions";
 import { getDB } from "@/lib/data/store";
 import { DEMO_CLIENT_ID, TEST_ACCOUNTS } from "@/lib/data/seed";
 import { getMode } from "@/lib/demo/mode";
@@ -48,6 +48,8 @@ interface AuthState {
   /** Open the demo, as the demo client or as one of the seeded TEST_ACCOUNTS */
   signInDemo: (userId?: string) => void;
   signOut: () => void;
+  /** Real accounts: a confirmation link is emailed ("sent"); the imitation changes it at once ("done") */
+  changeEmail: (email: string) => Promise<"sent" | "done">;
 }
 
 function bindSession(userId: string) {
@@ -120,6 +122,8 @@ export const useAuth = create<AuthState>()(
       completeLiveSignIn: async (u) => {
         enterMode("live");
         const user = await upsertAuthUser({ id: u.id, email: u.email, name: u.name, provider: u.provider, serverAdmin: u.isAdmin });
+        // a returning account set up on another device is restored here instead of going through onboarding again
+        await syncAccountWithServer(user.id);
         set({ userId: user.id, pending: null });
         bindSession(user.id);
       },
@@ -131,6 +135,16 @@ export const useAuth = create<AuthState>()(
         if (!getDB().users.some((u) => u.id === userId)) return;
         set({ userId, pending: null });
         bindSession(userId);
+      },
+
+      changeEmail: async (raw) => {
+        const email = raw.trim().toLowerCase();
+        if (realAccounts() && getMode() === "live") {
+          await live.requestEmailChange(email);
+          return "sent";
+        }
+        await updateEmail(email);
+        return "done";
       },
 
       /** Leaving the demo ends in live mode too */
