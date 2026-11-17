@@ -22,7 +22,11 @@ const script = Marck_Script({ variable: "--font-script", subsets: ["latin", "cyr
 export const metadata: Metadata = {
   title: { default: brand.name, template: `%s · ${brand.name}` },
   description: brand.tagline.ru,
-  icons: { icon: brand.logo.mark },
+  applicationName: brand.name,
+  icons: { icon: brand.logo.mark, apple: "/icons/apple-touch-icon.png" },
+  // home-screen launch on iPhone: full screen, no Safari bars
+  appleWebApp: { capable: true, title: brand.shortName, statusBarStyle: "default" },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {

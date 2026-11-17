@@ -99,7 +99,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col">
       <Header />
-      <main className="flex flex-1 flex-col pb-20 lg:pb-0 print:pb-0">{children}</main>
+      <main className="flex flex-1 flex-col pb-tabbar lg:pb-0 print:pb-0">{children}</main>
       <BottomNav />
     </div>
   );

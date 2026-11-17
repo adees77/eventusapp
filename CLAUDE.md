@@ -29,6 +29,7 @@ components/          ui/ (shadcn, не трогать без нужды), layout
                      landing/ (секции лендинга), vendor-profile/ (вкладки профиля), vendor-panel/ (offers, calendar, profile-form, documents…),
                      feed/ (post-dialog → post-view: иконки + меню «⋯» с жалобой; post-sheets), demo/ (TryDemoButton), chat/, vendor/, booking/, invitation/{editor,page,rsvp-donut,create-dialog}, auth/,
                      onboarding/, cabinet/, charts/, messages/, brand/
+app/manifest.ts      PWA (на экран «Домой», standalone); иконки public/icons/* (сгенерированы sharp из logo.svg). Нижнее меню — плавающая капсула (`bottom-tabbar`/`pb-tabbar` в globals.css)
 config/brand.ts      имя («EVENTUS AI» — в UI только через `brand.name`), домен eventusai.app, цвета → CSS-переменные (инжект в app/layout.tsx). Ключи хранилища `eventus-*` не переименовывать — сбросит вход и данные
 config/demo.ts       `enabled` — показывать ли демо вообще; `features` — что работает внутри демо (roleSwitcher, vendorAutoReply, baselineOccupancy, reset)
 lib/demo/            mode.ts — режим данных `live` | `demo` (`isDemoMode()`, `useIsDemo()`, `demoFeature(x)`); switch.ts — `enterMode()` меняет базу

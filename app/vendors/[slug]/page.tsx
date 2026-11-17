@@ -309,7 +309,7 @@ function VendorProfile() {
       {/* Mobile booking bar */}
       <div
         className={cn(
-          "fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+60px)] z-30 bg-card/95 shadow-[0_-8px_24px_rgb(13_26_47/0.08)] px-4 py-3 backdrop-blur lg:hidden",
+          "bottom-above-tabbar fixed inset-x-3 z-30 mx-auto max-w-md rounded-[26px] bg-card/90 px-4 py-2.5 shadow-[0_8px_28px_rgb(13_26_47/0.14)] backdrop-blur-xl lg:hidden",
           (tab !== "services" || isOwner) && "hidden",
         )}
       >

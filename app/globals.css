@@ -195,4 +195,26 @@
   .pb-safe {
     padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
   }
+  /* floating tab bar: hovers above the home indicator; content scrolls under it */
+  .bottom-tabbar {
+    bottom: max(calc(env(safe-area-inset-bottom) - 8px), 12px);
+  }
+  .bottom-above-tabbar {
+    bottom: calc(max(calc(env(safe-area-inset-bottom) - 8px), 12px) + 72px);
+  }
+  /* launched from the home screen: feel like an app, not a page */
+  @media (display-mode: standalone) {
+    html,
+    body {
+      overscroll-behavior-y: none;
+    }
+    nav,
+    button {
+      -webkit-user-select: none;
+      user-select: none;
+    }
+  }
+  .pb-tabbar {
+    padding-bottom: calc(max(calc(env(safe-area-inset-bottom) - 8px), 12px) + 88px);
+  }
 }

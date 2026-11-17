@@ -27,7 +27,7 @@ export function CreateMenu({ variant }: { variant: "tab" | "header" }) {
           type="button"
           onClick={() => setOpen(true)}
           aria-label={t("create.title")}
-          className="mx-auto flex h-9 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-soft transition-transform active:scale-95"
+          className="mx-auto flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-soft transition-transform active:scale-95"
         >
           <Plus className="size-5" strokeWidth={2} />
         </button>

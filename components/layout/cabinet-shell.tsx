@@ -56,7 +56,6 @@ export function CabinetShell({
                 <ul className="flex flex-col gap-0.5">
                   {g.items.map((it) => {
                     const on = isOn(pathname, it);
-                    const Icon = it.icon;
                     return (
                       <li key={it.href}>
                         <Link
@@ -69,7 +68,6 @@ export function CabinetShell({
                               : "text-text-secondary hover:bg-foreground/[0.05] hover:text-foreground",
                           )}
                         >
-                          <Icon className={cn("size-4 shrink-0", on ? "text-sun" : "text-muted-foreground")} strokeWidth={1.5} />
                           <span className="flex-1 truncate">{t(it.label)}</span>
                           {!!it.badge && <span className={cn("text-xs tabular-nums", on ? "text-sun" : "text-primary")}>{it.badge}</span>}
                         </Link>
