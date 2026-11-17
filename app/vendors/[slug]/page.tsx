@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, BarChart3, Flag, Star, Heart, Link2, MessageCircle, MoreHorizontal, Pencil, Send } from "lucide-react";
+import { ArrowLeft, BarChart3, Flag, Star, Link2, MessageCircle, MoreHorizontal, Pencil, Send } from "lucide-react";
 import Image from "next/image";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -12,7 +12,7 @@ import { PostDialog } from "@/components/feed/post-dialog";
 import { ReportForm } from "@/components/feed/report-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ensureConversation, toggleFavorite, trackView } from "@/lib/data/actions";
+import { ensureConversation, trackView } from "@/lib/data/actions";
 import { specFacts } from "@/lib/data/specs";
 import { can } from "@/lib/data/policies";
 import { useVendorReviews } from "@/lib/data/views/feed";
@@ -55,7 +55,7 @@ function VendorProfile() {
   const planner = usePlanner();
   const date = planner.date;
 
-  const { vendor, offers, favorite: fav, posts, orders } = useVendorProfile(slug, actor.id);
+  const { vendor, offers, posts, orders } = useVendorProfile(slug, actor.id);
   const reviews = useVendorReviews(vendor?.id);
   const hiddenSetting = usePricesHidden();
   const params = useSearchParams();
@@ -134,18 +134,6 @@ function VendorProfile() {
         <Button variant="outline" className={iconBtn} onClick={() => void write()} aria-label={t("vendor.write")} title={t("vendor.write")}>
           <MessageCircle strokeWidth={1.75} />
         </Button>
-        {isClient && (
-          <Button
-            variant="outline"
-            className={iconBtn}
-            onClick={() => run(() => toggleFavorite(vendor.id))}
-            aria-pressed={fav}
-            aria-label={fav ? t("vendor.favorited") : t("vendor.favorite")}
-            title={fav ? t("vendor.favorited") : t("vendor.favorite")}
-          >
-            <Heart className={cn(fav && "fill-[#ff3b5c] text-[#ff3b5c]")} strokeWidth={1.75} />
-          </Button>
-        )}
         <Button variant="outline" className={iconBtn} onClick={share} aria-label={t("feed.share")} title={t("feed.share")}>
           <Send strokeWidth={1.75} />
         </Button>
@@ -287,7 +275,7 @@ function VendorProfile() {
         </nav>
       </div>
 
-      {tab === "posts" && <PostsTab posts={posts} isOwner={isOwner} onOpen={setOpenPost} />}
+      {tab === "posts" && <PostsTab posts={posts} onOpen={setOpenPost} />}
 
       {tab === "details" && <DetailsTab vendor={vendor} isOwner={isOwner} />}
 

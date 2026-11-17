@@ -7,7 +7,7 @@ import { useI18n } from "@/lib/i18n";
 import { usePlanner } from "@/lib/planner";
 import { useActor } from "@/lib/session";
 import { useChatStore } from "./chat-store";
-import type { ChatContentBlock, ChatContext, ChatEvent } from "./protocol";
+import type { ChatContentBlock, ChatContext, ChatEvent, ChatMessage } from "./protocol";
 import { executeTool } from "./tool-exec";
 
 export type ChatStatus = "idle" | "thinking" | "tool" | "streaming" | "error";
@@ -66,7 +66,8 @@ export function useChat(threadId: string | null, onThreadCreated: (id: string) =
           const res = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages: thread.messages, context: buildContext() }),
+            // a thread imported from onboarding opens with the assistant's greeting: the API wants the user first
+            body: JSON.stringify({ messages: fromFirstUser(thread.messages), context: buildContext() }),
             signal: controller.signal,
           });
           const m = res.headers.get("X-Eventus-Mode");
@@ -130,6 +131,13 @@ export function useChat(threadId: string | null, onThreadCreated: (id: string) =
   const stop = useCallback(() => abortRef.current?.abort(), []);
 
   return { send, stop, status, live, tool, mode, busy: status === "thinking" || status === "streaming" || status === "tool" };
+}
+
+/** Drops leading assistant turns and keeps the last 80 messages, cut at a plain user message */
+function fromFirstUser(messages: ChatMessage[]): ChatMessage[] {
+  let start = Math.max(0, messages.length - 80);
+  while (start < messages.length && !(messages[start].role === "user" && typeof messages[start].content === "string")) start++;
+  return messages.slice(start);
 }
 
 async function readStream(

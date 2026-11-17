@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, CalendarHeart, CreditCard, LayoutDashboard, Receipt, UserRound } from "lucide-react";
+import { CalendarHeart, CreditCard, Heart, LayoutDashboard, Receipt, UserRound } from "lucide-react";
 import { CabinetShell, RoleGate, type CabinetGroup } from "@/components/layout/cabinet-shell";
 import { Monogram } from "@/components/vendor/badges";
 import { useClientTodoCount } from "@/lib/data/views/client";
@@ -28,7 +28,7 @@ export default function ClientCabinetLayout({ children }: { children: React.Reac
     {
       title: "cabinet.groupMore",
       items: [
-        { href: routes.saved, label: "cabinet.saved", icon: Bookmark },
+        { href: routes.saved, label: "cabinet.saved", icon: Heart },
         { href: routes.profile, label: "cabinet.profile", icon: UserRound },
       ],
     },

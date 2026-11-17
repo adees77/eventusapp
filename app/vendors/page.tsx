@@ -10,7 +10,6 @@ import { useFeed } from "@/lib/data/views/feed";
 import { useFeedPrefs } from "@/lib/feed-prefs";
 import type { CategoryId } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
-import { usePlanner } from "@/lib/planner";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
@@ -25,20 +24,16 @@ export default function FeedPage() {
 }
 
 function Feed() {
-  const { t, date: fmt } = useI18n();
+  const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const actor = useActor();
-  const planner = usePlanner();
 
   const tab = params.get("tab") === "top" ? "top" : "foryou";
   const state: SearchState = {
     query: params.get("q") ?? "",
     category: (params.get("category") as CategoryId | null) ?? null,
-    city: params.get("city"),
-    date: planner.date,
-    budgetMax: params.get("budget") ? Number(params.get("budget")) : null,
     sort: (params.get("sort") as SearchState["sort"]) ?? "rating",
   };
   const postId = params.get("post");
@@ -49,9 +44,10 @@ function Feed() {
         tab,
         query: state.query,
         category: state.category,
-        city: state.city,
-        date: state.date,
-        budgetMax: state.budgetMax,
+        city: null,
+        // no date or budget filter: everyone shows, availability is told on the vendor's own page
+        date: null,
+        budgetMax: null,
         sort: state.sort,
       },
       actor,
@@ -76,25 +72,19 @@ function Feed() {
 
   const onChange = useCallback(
     (patch: Partial<SearchState>) => {
-      if ("date" in patch) planner.set({ date: patch.date ?? null });
       const p: Record<string, string | null> = {};
       if ("query" in patch) p.q = patch.query || null;
       if ("category" in patch) p.category = patch.category ?? null;
-      if ("city" in patch) p.city = patch.city ?? null;
-      if ("budgetMax" in patch) p.budget = patch.budgetMax ? String(patch.budgetMax) : null;
       if ("sort" in patch) p.sort = patch.sort === "rating" ? null : (patch.sort ?? null);
       if (Object.keys(p).length) setParams(p);
     },
-    [planner, setParams],
+    [setParams],
   );
 
-  const reset = useCallback(() => {
-    planner.set({ date: null });
-    setParams({ q: null, category: null, city: null, budget: null, sort: null });
-  }, [planner, setParams]);
+  const reset = useCallback(() => setParams({ q: null, category: null, city: null, budget: null, sort: null }), [setParams]);
 
   // progressive rendering: a page of posts, more when the sentinel scrolls into view
-  const key = `${tab}|${state.query}|${state.category}|${state.city}|${state.date}|${state.budgetMax}|${state.sort}`;
+  const key = `${tab}|${state.query}|${state.category}|${state.sort}`;
   const [limit, setLimit] = useState({ key, n: PAGE });
   const n = limit.key === key ? limit.n : PAGE;
   const sentinel = useRef<HTMLDivElement>(null);
@@ -110,13 +100,13 @@ function Feed() {
 
   const shown = useMemo(() => items.slice(0, n), [items, n]);
   const order = items.map((x) => x.post.id);
-  const filtered = Boolean(state.query || state.category || state.city || state.date || state.budgetMax);
+  const filtered = Boolean(state.query || state.category);
 
   return (
     <div className="container-app pt-4 pb-16 md:pt-6">
       <div className="sticky top-14 z-30 -mx-4 bg-background/95 px-4 pt-2 pb-3 backdrop-blur md:top-16 md:mx-0 md:px-0">
         <div className="mx-auto max-w-3xl">
-          <FeedSearch value={state} onChange={onChange} onReset={reset} count={items.length} />
+          <FeedSearch value={state} onChange={onChange} onReset={reset} />
         </div>
         <nav className="mx-auto mt-4 flex max-w-3xl items-center justify-center gap-1 text-sm" aria-label={t("nav.feed")}>
           {(["foryou", "top"] as const).map((k) => (
@@ -138,7 +128,6 @@ function Feed() {
 
       {filtered && (
         <p className="mt-2 mb-4 text-center text-sm text-muted-foreground tabular-nums">
-          {state.date ? `${t("feed.availableOn", { date: fmt(state.date, "d MMMM") })} · ` : ""}
           {items.length}
         </p>
       )}

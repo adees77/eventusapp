@@ -91,17 +91,21 @@ export function vendorCard(db: DB, vendorId: string): VendorResult | null {
   return { vendor, offers, minPrice: minPrice(offers), availability: null, bestOffer: null, bestOfferAvailability: null };
 }
 
+/** What the client liked: posts from the feed and vendors from the assistant's picks (a like is the only «save») */
 export function selectSaved(db: DB, actor: Actor) {
   return {
-    posts: db.saved
+    posts: db.likes
       .filter((s) => s.userId === actor.id)
+      .reverse()
       .flatMap((s) => {
         const p = db.posts.find((x) => x.id === s.postId);
-        const it = p && feedItem(db, p, actor);
+        const it = p && !p.hidden && feedItem(db, p, actor);
         return it ? [it] : [];
       }),
+    /** vendors liked from the assistant's picks, newest first */
     vendors: db.favorites
       .filter((f) => f.userId === actor.id)
+      .reverse()
       .flatMap((f) => {
         const r = vendorCard(db, f.vendorId);
         return r && !r.vendor.hidden ? [r] : [];

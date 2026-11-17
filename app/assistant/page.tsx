@@ -2,8 +2,9 @@
 
 import { PanelLeft, SquarePen } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Composer } from "@/components/chat/composer";
+import { LogoWatermark } from "@/components/chat/logo-watermark";
 import { VoiceHero } from "@/components/chat/voice-hero";
 import { MessageList } from "@/components/chat/message-list";
 import { ThreadList } from "@/components/chat/thread-list";
@@ -29,13 +30,19 @@ export default function AssistantPage() {
   const allThreads = useChatStore((s) => s.threads);
   const removeThread = useChatStore((s) => s.remove);
   const threads = allThreads.filter((th) => th.userId === actor.id);
-  const [threadId, setThreadId] = useState<string | null>(null);
+  // the open thread is remembered per user: coming back to the assistant shows the same conversation
+  const threadId = useChatStore((s) => s.active[actor.id] ?? null);
+  const setActive = useChatStore((s) => s.setActive);
+  const setThreadId = useCallback((id: string | null) => setActive(actor.id, id), [actor.id, setActive]);
   const [input, setInput] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
   // a landing package link prefills the request: /assistant?q=…
   useEffect(() => {
     const q = new URLSearchParams(window.location.search).get("q");
-    if (q) setInput(q); // eslint-disable-line react-hooks/set-state-in-effect -- one-time read of the URL
+    if (!q) return;
+    setActive(actor.id, null); // a new request starts a new conversation
+    setInput(q); // eslint-disable-line react-hooks/set-state-in-effect -- one-time read of the URL
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const thread = threads.find((th) => th.id === threadId) ?? null;
   const { send, stop, status, live, tool, mode, busy } = useChat(thread?.id ?? null, setThreadId);
@@ -73,7 +80,6 @@ export default function AssistantPage() {
       onNew={newChat}
       onDelete={(id) => {
         removeThread(id);
-        if (id === threadId) setThreadId(null);
       }}
     />
   );
@@ -81,7 +87,7 @@ export default function AssistantPage() {
   const empty = messages.length === 0 && !busy;
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-56px-80px)] w-full max-w-7xl lg:h-[calc(100dvh-64px)] lg:pl-4 xl:pl-6">
+    <div className="mx-auto flex h-[calc(100dvh-56px-100px)] w-full max-w-7xl lg:h-[calc(100dvh-64px)] lg:pl-4 xl:pl-6">
       <aside className="hidden w-60 shrink-0 py-6 pr-4 lg:block">{history}</aside>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
@@ -91,7 +97,8 @@ export default function AssistantPage() {
         </SheetContent>
       </Sheet>
 
-      <section className="flex min-w-0 flex-1 flex-col">
+      <section className="relative isolate flex min-w-0 flex-1 flex-col">
+        <LogoWatermark />
         <div className="flex h-12 shrink-0 items-center justify-between px-2 lg:hidden">
           <button
             type="button"

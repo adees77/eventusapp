@@ -2,6 +2,7 @@
 
 import { AskPriceButton } from "@/components/vendor/ask-price";
 import { usePricesHidden } from "@/lib/data/views/catalog";
+import { Heart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -12,7 +13,11 @@ import { Rating, VerifiedSeal } from "@/components/vendor/badges";
 import type { AlternativeDate, AvailabilityResult, SearchResult, VendorDetails, VendorHit } from "@/lib/ai/tool-defs";
 import { useI18n } from "@/lib/i18n";
 import { usePlanner } from "@/lib/planner";
+import { toggleFavorite } from "@/lib/data/actions";
+import { useAction } from "@/lib/data/use-action";
+import { useIsFavorite } from "@/lib/data/views/vendor";
 import { useActor } from "@/lib/session";
+import { cn } from "@/lib/utils";
 import { routes } from "@/lib/routes";
 
 /** Renders a tool_result as UI. Data comes only from our tools. */
@@ -59,6 +64,13 @@ function ChatVendorCard({ h, date, qty, index }: { h: VendorHit; date: string | 
   const actor = useActor();
   const setPlanner = usePlanner((s) => s.set);
   const offer = h.offer;
+  const liked = useIsFavorite(actor.id, h.vendor_id);
+  const { run } = useAction();
+
+  function like() {
+    if (actor.role !== "client") return toast(t("vendor.onlyClients"));
+    void run(() => toggleFavorite(h.vendor_id), liked ? {} : { success: t("chat.likedToast") });
+  }
 
   function book() {
     if (actor.role !== "client") return toast(t("vendor.onlyClients"));
@@ -75,9 +87,22 @@ function ChatVendorCard({ h, date, qty, index }: { h: VendorHit; date: string | 
       className="flex w-[78%] shrink-0 snap-start animate-rise flex-col overflow-hidden rounded-2xl bg-card sm:w-auto"
       style={{ animationDelay: `${index * 50}ms` }}
     >
-      <Link href={routes.vendor(h.slug)} className="relative block aspect-[16/10] bg-muted">
-        {h.cover && <Image src={h.cover} alt="" fill sizes="(min-width: 640px) 320px, 78vw" className="object-cover" />}
-      </Link>
+      <div className="relative">
+        <Link href={routes.vendor(h.slug)} className="relative block aspect-[16/10] bg-muted">
+          {h.cover && <Image src={h.cover} alt="" fill sizes="(min-width: 640px) 320px, 78vw" className="object-cover" />}
+        </Link>
+        {/* like a pick to come back to it: liked vendors gather in the cabinet («Понравилось») */}
+        <button
+          type="button"
+          onClick={like}
+          aria-pressed={liked}
+          aria-label={liked ? t("chat.liked") : t("chat.like")}
+          title={liked ? t("chat.liked") : t("chat.like")}
+          className="absolute top-2.5 right-2.5 flex size-10 items-center justify-center rounded-full bg-card/90 shadow-soft backdrop-blur transition-transform active:scale-90"
+        >
+          <Heart className={cn("size-5", liked ? "fill-[#ff3b5c] text-[#ff3b5c]" : "text-foreground")} strokeWidth={1.75} />
+        </button>
+      </div>
       <div className="flex flex-1 flex-col gap-1.5 p-4">
         <div className="flex items-center gap-1.5">
           <Link href={routes.vendor(h.slug)} className="truncate text-md font-medium hover:underline">

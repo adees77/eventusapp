@@ -2,12 +2,14 @@
 
 import { format } from "date-fns";
 import { ArrowLeft, ArrowUp, Sparkles } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { BookingSummary } from "@/components/booking/booking-summary";
 import { StatusBadge } from "@/components/booking/status-badge";
 import { DealCard, EscrowBadge } from "@/components/booking/deal-card";
+import { LogoWatermark } from "@/components/chat/logo-watermark";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Monogram } from "@/components/vendor/badges";
@@ -167,7 +169,8 @@ function Thread() {
       )}
 
       <div className="flex min-h-0 flex-1">
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="relative isolate flex min-w-0 flex-1 flex-col">
+          <LogoWatermark />
           <div className="flex-1 overflow-y-auto px-3 py-5 lg:px-5">
             {isVendor && assistant && (
               <div className="mx-auto mb-4 flex max-w-md items-start gap-2.5 rounded-2xl bg-secondary px-4 py-3 text-xs leading-relaxed text-secondary-foreground">
@@ -206,8 +209,15 @@ function Thread() {
                         {m.offerIds?.map((oid) => {
                           const o = suggested[oid];
                           if (!o) return null;
+                          const photo = o.photos[0] ?? vendor.cover;
                           return (
-                            <div key={oid} className="mt-1.5 flex w-72 max-w-full items-center gap-3 rounded-2xl bg-card p-2.5 pl-3.5 shadow-soft">
+                            <div key={oid} className="mt-1.5 w-72 max-w-full overflow-hidden rounded-3xl bg-card shadow-soft">
+                              {photo && (
+                                <div className="relative aspect-[4/3] w-full bg-muted">
+                                  <Image src={photo} alt={l(o.title)} fill sizes="288px" className="object-cover" />
+                                </div>
+                              )}
+                              <div className="flex items-center gap-3 p-2.5 pl-3.5">
                               <span className="min-w-0 flex-1">
                                 <span className="block truncate text-sm">{l(o.title)}</span>
                                 <span className="block text-xs text-text-secondary tabular-nums">
@@ -222,6 +232,7 @@ function Thread() {
                                   {t("vendor.book")}
                                 </Link>
                               )}
+                              </div>
                             </div>
                           );
                         })}

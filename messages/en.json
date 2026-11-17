@@ -106,7 +106,10 @@
       "hosts": "I need a wedding host",
       "decor": "I need venue decoration",
       "photo": "I need a photographer and videographer for the whole day"
-    }
+    },
+    "like": "Like",
+    "liked": "Liked",
+    "likedToast": "Added to Liked — find it in your cabinet"
   },
   "voice": {
     "start": "Voice input",
@@ -624,6 +627,11 @@
         "Wedding motorcade in Bishkek, five cars"
       ],
       "bubbleVendor": "Tell us about your services — what you do and in which city."
+    },
+    "picks": {
+      "intro": "Done{name}, your event is saved. Here is who is free on {date} in {city}, matching what matters most to you:",
+      "outro": "Open a card to see their work and ask the price. I can find more — decor, cars, a cake — or compare options. What should we look at next?",
+      "none": "Done, your event is saved. I could not find free vendors on that date yet — tell me what matters most and I will find options, nearby dates included."
     }
   },
   "escrow": {
@@ -766,7 +774,7 @@
     "events": "My events",
     "bookings": "Bookings",
     "payments": "Payments",
-    "saved": "Saved",
+    "saved": "Liked",
     "profile": "Profile",
     "groupMore": "More",
     "hello": "Hello, {name}",
@@ -804,7 +812,7 @@
       "refund": "Refund",
       "payout": "Payout to card"
     },
-    "noSaved": "Save posts you like from the feed — they will appear here",
+    "noSaved": "Like posts in the feed — everything you liked gathers here",
     "notifications": "Notifications",
     "pref": {
       "deals": "Deals and payments",
@@ -820,7 +828,9 @@
     "reviewRating": "Rating",
     "reviewPlaceholder": "A few words for other clients",
     "reviewSubmit": "Publish",
-    "reviewThanks": "Thanks for the review!"
+    "reviewThanks": "Thanks for the review!",
+    "likedVendors": "Vendors",
+    "noLikedVendors": "Like the vendors the assistant suggests — they gather here"
   },
   "vcab": {
     "groupShowcase": "Showcase",

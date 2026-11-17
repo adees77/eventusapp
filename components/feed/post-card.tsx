@@ -1,34 +1,15 @@
 "use client";
 
-import { Bookmark, Heart, Layers } from "lucide-react";
+import { Heart, Layers } from "lucide-react";
 import Image from "next/image";
-import { toast } from "sonner";
 import { VerifiedSeal } from "@/components/vendor/badges";
-import { toggleLike, toggleSave } from "@/lib/data/actions";
 import type { FeedItem } from "@/lib/data/feed";
 import { useI18n } from "@/lib/i18n";
-import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
-import { useAction } from "@/lib/data/use-action";
-
-export function useFeedActions() {
-  const { t } = useI18n();
-  const actor = useActor();
-  const { run } = useAction();
-  const guard = (fn: () => void) => () => {
-    if (actor.role !== "client") return toast(t("feed.loginToAct"));
-    fn();
-  };
-  return {
-    like: (postId: string) => guard(() => void run(() => toggleLike(postId)))(),
-    save: (postId: string) => guard(() => void run(() => toggleSave(postId)))(),
-  };
-}
 
 /** Grid tile (Instagram-like): a flat 4:5 rectangle, no rounding or gaps; vendor and likes show on hover */
 export function PostCard({ item, onOpen, priority }: { item: FeedItem; onOpen: (id: string) => void; priority?: boolean }) {
-  const { t, num } = useI18n();
-  const { save } = useFeedActions();
+  const { num } = useI18n();
   const { post, vendor } = item;
   return (
     <article className="group relative">
@@ -59,43 +40,7 @@ export function PostCard({ item, onOpen, priority }: { item: FeedItem; onOpen: (
           </span>
         </span>
       </button>
-      <div className="absolute bottom-2 right-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100 max-lg:hidden">
-        <IconAction active={item.saved} label={item.saved ? t("feed.saved") : t("feed.save")} onClick={() => save(post.id)} className="size-8">
-          <Bookmark className={cn("size-3.5", item.saved && "fill-current")} strokeWidth={1.75} />
-        </IconAction>
-      </div>
     </article>
-  );
-}
-
-export function IconAction({
-  children,
-  label,
-  active,
-  onClick,
-  className,
-}: {
-  children: React.ReactNode;
-  label: string;
-  active?: boolean;
-  onClick: () => void;
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      aria-label={label}
-      title={label}
-      className={cn(
-        "flex size-9 items-center justify-center rounded-full bg-card/95 text-foreground shadow-soft backdrop-blur transition-colors hover:bg-card active:scale-[0.97]",
-        active && "text-primary",
-        className,
-      )}
-    >
-      {children}
-    </button>
   );
 }
 

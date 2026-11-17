@@ -2,27 +2,20 @@
 
 import { AskPriceButton } from "@/components/vendor/ask-price";
 import { usePricesHidden } from "@/lib/data/views/catalog";
-import { Heart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { AvailDots } from "@/components/avail-dots";
-import { toggleFavorite } from "@/lib/data/actions";
 import type { VendorResult } from "@/lib/data/queries";
 import { CITIES } from "@/lib/data/seed/catalog";
-import { useIsFavorite } from "@/lib/data/views/vendor";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
-import { cn } from "@/lib/utils";
 import { Rating, VerifiedSeal } from "./badges";
 import { routes } from "@/lib/routes";
-import { useAction } from "@/lib/data/use-action";
 
 export function VendorCard({ r, date, priority }: { r: VendorResult; date?: string | null; priority?: boolean }) {
-  const { run } = useAction();
   const { t, l, money } = useI18n();
   const actor = useActor();
   const { vendor, minPrice, availability } = r;
-  const fav = useIsFavorite(actor.id, vendor.id);
   const cheapest = r.offers.find((o) => o.price === minPrice);
   const hidden = usePricesHidden() && actor.id !== vendor.ownerId;
 
@@ -68,17 +61,6 @@ export function VendorCard({ r, date, priority }: { r: VendorResult; date?: stri
           </div>
         </div>
       </Link>
-      {actor.role === "client" && (
-        <button
-          type="button"
-          onClick={() => run(() => toggleFavorite(vendor.id))}
-          aria-pressed={fav}
-          aria-label={fav ? t("vendor.favorited") : t("vendor.favorite")}
-          className="absolute top-3 right-3 flex size-9 items-center justify-center rounded-full bg-card/90 text-foreground shadow-soft backdrop-blur transition-colors hover:bg-card active:scale-[0.97]"
-        >
-          <Heart className={cn("size-4", fav && "fill-primary text-primary")} strokeWidth={1.75} />
-        </button>
-      )}
     </article>
   );
 }

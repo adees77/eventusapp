@@ -13,12 +13,13 @@ import { routes } from "@/lib/routes";
 
 type Tab = "posts" | "vendors";
 
+/** Everything the client liked: posts from the feed and vendors picked by the assistant */
 export default function SavedPage() {
   const { t } = useI18n();
   const actor = useActor();
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("posts");
   const { posts, vendors } = useSaved(actor);
+  const [tab, setTab] = useState<Tab>("posts");
 
   return (
     <div className="flex flex-col gap-6">
@@ -28,7 +29,7 @@ export default function SavedPage() {
         onChange={setTab}
         options={[
           { value: "posts", label: `${t("profile.tabPosts")} · ${posts.length}` },
-          { value: "vendors", label: `${t("dashboard.favorites")} · ${vendors.length}` },
+          { value: "vendors", label: `${t("cabinet.likedVendors")} · ${vendors.length}` },
         ]}
       />
       {tab === "posts" &&
@@ -49,7 +50,7 @@ export default function SavedPage() {
             ))}
           </div>
         ) : (
-          <Empty>{t("dashboard.noFavorites")}</Empty>
+          <Empty action={<LinkButton href={routes.assistant}>{t("nav.chat")}</LinkButton>}>{t("cabinet.noLikedVendors")}</Empty>
         ))}
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 /** One full-screen post of the viewer: photos, caption, booking bar, action rail */
-import { Bookmark, ChevronLeft, ChevronRight, EyeOff, Flag, GalleryVerticalEnd, Heart, Link2, MessageCircle, MoreHorizontal, Send, Star, Store, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, EyeOff, Flag, GalleryVerticalEnd, Heart, Link2, MessageCircle, MoreHorizontal, Send, Star, Store, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,7 +20,6 @@ import type { Post } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
-import { useFeedActions } from "./post-card";
 import { BottomSheet, ReviewsSheet } from "./post-sheets";
 import { routes } from "@/lib/routes";
 import { useAction } from "@/lib/data/use-action";
@@ -54,7 +53,6 @@ export function PostView({
   const { t, tn, l, money, num } = useI18n();
   const router = useRouter();
   const actor = useActor();
-  const { save } = useFeedActions();
   const card = usePostCard(post, actor);
   const [slide, setSlide] = useState(0);
   const [expanded, setExpanded] = useState(false);
@@ -178,8 +176,9 @@ export function PostView({
           <RailBtn label={t("feed.share")} onClick={share}>
             <Send className="size-6" strokeWidth={1.75} />
           </RailBtn>
-          <RailBtn label={item.saved ? t("feed.saved") : t("feed.save")} active={item.saved} onClick={() => save(post.id)}>
-            <Bookmark className={cn("size-7", item.saved && "fill-white")} strokeWidth={1.75} />
+          {/* likes are the saves (see them in the cabinet); this slot shows more like this */}
+          <RailBtn label={t("feed.similarShow")} onClick={() => onSimilar(post, vendor.name)}>
+            <GalleryVerticalEnd className="size-6" strokeWidth={1.75} />
           </RailBtn>
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -195,10 +194,6 @@ export function PostView({
               <MoreHorizontal className="size-7" strokeWidth={1.75} />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="left" align="end" className="w-56 rounded-2xl p-1.5">
-              <DropdownMenuItem onClick={() => onSimilar(post, vendor.name)} className="h-10 rounded-xl px-3">
-                <GalleryVerticalEnd className="size-4" />
-                {t("feed.similarShow")}
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push(routes.vendor(vendor.slug))} className="h-10 rounded-xl px-3">
                 <Store className="size-4" />
                 {t("feed.openProfile")}

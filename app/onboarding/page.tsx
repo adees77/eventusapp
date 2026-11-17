@@ -8,10 +8,12 @@ import { toast } from "sonner";
 import { Logo, LogoMark } from "@/components/brand/logo";
 import { CategoryIcon } from "@/components/category-icon";
 import { Composer } from "@/components/chat/composer";
+import { LogoWatermark } from "@/components/chat/logo-watermark";
 import { VoiceHero } from "@/components/chat/voice-hero";
 import { MonthCalendar } from "@/components/month-calendar";
 import { SummaryCard } from "@/components/onboarding/summary-card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { importOnboardingThread } from "@/lib/ai/onboarding-thread";
 import { completeClientOnboarding, signUpVendor } from "@/lib/data/actions";
 import { CITIES } from "@/lib/data/seed/catalog";
 import { useCategories } from "@/lib/data/views/catalog";
@@ -329,9 +331,27 @@ export default function OnboardingPage() {
           priorities: answers.priorities ?? [],
         });
         useSession.getState().setRole("client", actor.id);
-        toast.success(t("onboarding.doneClient"));
+        // the dialog stays: it becomes the first assistant thread and goes on with picks for the date
+        const first = (answers.name ?? user?.name ?? "").split(" ")[0];
+        const where = answers.city ? l(CITIES[answers.city]) : "";
+        importOnboardingThread({ id: actor.id, role: "client" }, locale, {
+          title: eventTitle(answers, t),
+          transcript: bubbles.map((b) => (b.from === "bot" ? { from: "bot", text: b.lines.join("\n\n") } : { from: "user", text: b.text })),
+          confirmText: t("onboarding.confirm"),
+          date: answers.date,
+          city: answers.city,
+          guests: answers.guests,
+          priorities: answers.priorities,
+          intro: t("onboarding.picks.intro", {
+            name: first ? `, ${first}` : "",
+            date: answers.date ? date(answers.date, "d MMMM") : "",
+            city: where,
+          }),
+          outro: t("onboarding.picks.outro"),
+          none: t("onboarding.picks.none"),
+        });
         clearDraft(actor.id);
-        router.replace(routes.dashboard);
+        router.replace(routes.assistant);
       }
     } catch (err) {
       console.error(err);
@@ -350,7 +370,8 @@ export default function OnboardingPage() {
   const pct = step === "summary" ? 100 : Math.round(progress(answers) * 100);
 
   return (
-    <div className="flex h-dvh flex-col">
+    <div className="relative isolate flex h-dvh flex-col">
+      <LogoWatermark />
       <header className="shrink-0">
         <div className="mx-auto flex h-14 w-full max-w-3xl items-center gap-3 px-4">
           <button
