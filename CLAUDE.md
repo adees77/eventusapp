@@ -15,7 +15,7 @@
 ## Карта
 ```
 app/                 маршруты (client components; данные — только через хуки lib/data/views, запись — lib/data/actions)
-  page.tsx           лендинг = скролл-история Story (9 сцен, тексты `landing.story*`) + Footer
+  page.tsx           лендинг клиента = Story (9 сцен, `landing.story*`) + Footer   for-vendors/ — лендинг исполнителя (VendorStory, 6 сцен-игра с кортежем из каталога, `landing.v*`)
   assistant/         чат с ИИ (вендоров редиректит в /vendor; `?q=` — новый чат с запросом; открытый тред помнится per user — `chat-store.active`)
   vendors/           лента-соцсеть + [slug] профиль (шапка; вкладки — components/vendor-profile/*)   book/[offerId], checkout/[bookingId]
   messages/[id]      чат клиент↔вендор  dashboard/*     кабинет клиента (events, bookings, payments, saved, profile)
@@ -26,7 +26,7 @@ app/                 маршруты (client components; данные — то�
   api/chat           SSE-стрим одного хода ассистента   api/onboarding — разбор свободного текста
   api/vendor-chat    ИИ-помощник исполнителя: отвечает в чате клиент↔исполнитель от его имени (`ai: true`, карточки брони `offerIds`); молчит, если исполнитель писал сам < 12 ч или `Vendor.aiAssistant === false`
 components/          ui/ (shadcn, не трогать без нужды), layout/ (app-shell, header — без меню аккаунта, bottom-nav, cabinet-shell, nav-items), cabinet/account-section (почта и её смена, язык, демо-роли, выход — в профилях клиента/исполнителя/админа),
-                     landing/ (story — липкий телефон и сцены на `motion`; story-screens — экраны телефона и плавающие карточки с реальными исполнителями из useShowcase; footer), vendor-profile/ (вкладки профиля), vendor-panel/ (offers, calendar, profile-form, documents…),
+                     landing/ (story-stage — движок скролл-истории: шапка с вкладками, позы телефона, док «Далее»; story-kit — общие детали; story/story-screens — клиент; vendor-story/vendor-story-screens — исполнитель с HUD; footer), vendor-profile/ (вкладки профиля), vendor-panel/ (offers, calendar, profile-form, documents…),
                      feed/ (post-dialog → post-view: иконки + меню «⋯» с жалобой; post-sheets), demo/ (TryDemoButton), chat/, vendor/, booking/, invitation/{editor,page,rsvp-donut,create-dialog}, auth/,
                      onboarding/, cabinet/, charts/, messages/, brand/
 app/manifest.ts      PWA (на экран «Домой», standalone); иконки public/icons/* (сгенерированы sharp из logo.svg). Нижнее меню — плавающая капсула (`bottom-tabbar`/`pb-tabbar` в globals.css); у клиента: лента · приглашения · шар EVENTUS (ассистент, `orb` в nav-items) · сообщения · кабинет. Фон чатов — `chat/logo-watermark`
@@ -75,7 +75,7 @@ lib/supabase/        client.ts — браузерный клиент (URL и pub
 - **Новый экран**: `app/<путь>/page.tsx` + адрес в `lib/routes.ts` + данные хуком из `lib/data/views/<раздел>.ts` (селектор `selectX` + `useX`). Страница > ~300 строк → блоки в `components/<раздел>/*`.
 - **Новое действие**: `export async function` в `lib/data/actions/<домен>.ts` (`const actor = currentActor(); assert(can.x(actor, …))`), правило в `policies.ts`, тест в `lib/data/__tests__`.
 - **Новое поле/сущность**: `types.ts` → сид (`seed/`) → `migrate()` в store.ts (или поднять `SEED_VERSION`) → новая миграция в `supabase/migrations/` (+ smoke.sql, + типы).
-- **Новая строка UI**: ключ в оба `messages/{ru,en}.json`. **Новая сцена лендинга**: запись в `SCENES` (story.tsx) + экран/плавающие в story-screens.tsx + ключи `landing.story<N>{k,t,p}`.
+- **Новая строка UI**: ключ в оба `messages/{ru,en}.json`. **Новая сцена лендинга**: запись в `SCENES` (story.tsx или vendor-story.tsx, с `pose`) + экран/плавающие в *-screens.tsx + ключи `landing.story<N>{k,t,p}` / `landing.v<N>{k,t,p}`.
 - **Что-то только для демо**: `demoFeature("…")` / `useIsDemo()` + флаг в `config/demo.ts` `features`. Реальные аккаунты (режим live) это не видят.
 
 ## Дизайн (не нарушать)

@@ -33,7 +33,7 @@ export function Footer() {
             <ul className="mt-4 flex flex-col gap-2.5 text-sm text-white/60">
               {[
                 ["#story", t("landing.navHow")],
-                [routes.welcomeVendor, t("landing.navVendors")],
+                [routes.forVendors, t("landing.navVendors")],
               ].map(([href, label]) => (
                 <li key={href}>
                   <a href={href} className="hover:text-white">
