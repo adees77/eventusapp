@@ -32,9 +32,7 @@ export function Footer() {
             <div className="text-sm font-medium">{t("landing.footNav")}</div>
             <ul className="mt-4 flex flex-col gap-2.5 text-sm text-white/60">
               {[
-                ["#bento", t("landing.navHow")],
-                ["#deal", t("landing.navDeal")],
-                ["#packages", t("landing.pkgTitle")],
+                ["#story", t("landing.navHow")],
                 [routes.welcomeVendor, t("landing.navVendors")],
               ].map(([href, label]) => (
                 <li key={href}>
