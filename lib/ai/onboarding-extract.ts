@@ -26,7 +26,7 @@ const SCHEMA = `{
 
 function prompt(step: string, text: string, today: string) {
   return [
-    "You extract data from a user's reply in the onboarding chat of EVENTUS, an event marketplace in Kyrgyzstan.",
+    "You extract data from a user's reply in the onboarding chat of EVENTUS AI, an event marketplace in Kyrgyzstan.",
     `Today is ${today}. The assistant just asked about: "${step}".`,
     "Reply with ONLY a JSON object matching this shape; include only fields the user actually stated or clearly implied, never guess:",
     SCHEMA,

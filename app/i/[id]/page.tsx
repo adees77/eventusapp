@@ -8,6 +8,8 @@ import { InvitationPage } from "@/components/invitation/page/invitation-page";
 import { recordInvitationView } from "@/lib/data/actions";
 import { useInvitation } from "@/lib/data/views/client";
 import { useI18n } from "@/lib/i18n";
+import { background } from "@/lib/data/use-action";
+import { brand } from "@/config/brand";
 
 /** Public guest page: the invitation as a standalone web page. No app navigation. */
 export default function GuestInvitationPage() {
@@ -37,7 +39,7 @@ function Guest() {
     } catch {
       /* storage blocked: still count */
     }
-    recordInvitationView(id, guestId);
+    background(() => recordInvitationView(id, guestId));
   }, [found, id, guestId]);
 
   useEffect(() => {
@@ -65,7 +67,7 @@ function Guest() {
         className="mx-auto flex w-full max-w-[720px] flex-col items-center gap-2 px-6 pt-6 pb-10 print:hidden"
         style={{ color: inv.design.theme.muted }}
       >
-        <Link href="/" className="opacity-60 transition-opacity hover:opacity-100" aria-label="EVENTUS">
+        <Link href="/" className="opacity-60 transition-opacity hover:opacity-100" aria-label={brand.name}>
           <LogoMark className="h-4 w-auto" />
         </Link>
         <span className="text-2xs">{t("inv.madeWith")}</span>

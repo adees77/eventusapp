@@ -19,9 +19,9 @@ export class AvailabilityError extends Error {
   }
 }
 
-export function createBooking(
+export async function createBooking(
   input: { offerId: string; date: string; qty: number; eventId?: string; note?: string },
-): Booking {
+): Promise<Booking> {
   const actor = currentActor();
   const db = getDB();
   assert(can.createBooking(actor, actor.id), "createBooking");
@@ -52,7 +52,7 @@ export function createBooking(
 }
 
 /** Called after the payment provider confirms. Returns the conversation id. */
-export function markBookingPrepaid(bookingId: string, paymentRef: string): string {
+export async function markBookingPrepaid(bookingId: string, paymentRef: string): Promise<string> {
   const actor = currentActor();
   const db = getDB();
   const b = db.bookings.find((x) => x.id === bookingId);
@@ -65,7 +65,7 @@ export function markBookingPrepaid(bookingId: string, paymentRef: string): strin
   const { free } = getAvailability(others, offer, b.date);
   if (free < b.qty) throw new AvailabilityError(free);
 
-  const conversationId = ensureConversation(b.vendorId, b.id);
+  const conversationId = await ensureConversation(b.vendorId, b.id);
   const t = escrow.hold(b, now());
   update((d) => ({
     ...d,
@@ -84,7 +84,7 @@ function checkCategory(e: EventItem, category?: CategoryId): EventItem {
   return { ...e, checklist: e.checklist.map((c) => (c.category === category ? { ...c, done: true } : c)) };
 }
 
-export function setBookingStatus(bookingId: string, status: Booking["status"]) {
+export async function setBookingStatus(bookingId: string, status: Booking["status"]) {
   const actor = currentActor();
   const db = getDB();
   const b = db.bookings.find((x) => x.id === bookingId);
@@ -130,7 +130,7 @@ function dealParties(b: Booking) {
 }
 
 /** «Подтвердить сделку». Releases the money when both sides have confirmed. */
-export function confirmDeal(bookingId: string) {
+export async function confirmDeal(bookingId: string) {
   const actor = currentActor();
   const db = getDB();
   const b = db.bookings.find((x) => x.id === bookingId);
@@ -152,7 +152,7 @@ export function confirmDeal(bookingId: string) {
   return t.escrow;
 }
 
-export function unconfirmDeal(bookingId: string) {
+export async function unconfirmDeal(bookingId: string) {
   const actor = currentActor();
   const b = getDB().bookings.find((x) => x.id === bookingId);
   if (!b) throw new Error("Booking not found");
@@ -160,7 +160,7 @@ export function unconfirmDeal(bookingId: string) {
 }
 
 /** Cancel before both confirmed → full refund of the frozen prepayment */
-export function cancelDeal(bookingId: string) {
+export async function cancelDeal(bookingId: string) {
   const actor = currentActor();
   const b = getDB().bookings.find((x) => x.id === bookingId);
   if (!b) throw new Error("Booking not found");
@@ -173,7 +173,7 @@ export function cancelDeal(bookingId: string) {
   }
 }
 
-export function openDispute(bookingId: string, reason: string) {
+export async function openDispute(bookingId: string, reason: string) {
   const actor = currentActor();
   const b = getDB().bookings.find((x) => x.id === bookingId);
   if (!b) throw new Error("Booking not found");
@@ -181,13 +181,13 @@ export function openDispute(bookingId: string, reason: string) {
   applyTransition(b.id, escrow.openDispute(b, actor.id, reason, now()));
   const { vendorOwner, href, convId } = dealParties(b);
   if (convId) addSystemMessage(convId, "escrow_disputed");
-  const text = { ru: "Открыт спор по сделке — деньги заморожены до решения EVENTUS", en: "A dispute was opened — money stays frozen until EVENTUS decides" };
+  const text = { ru: "Открыт спор по сделке — деньги заморожены до решения EVENTUS AI", en: "A dispute was opened — money stays frozen until EVENTUS AI decides" };
   for (const u of [b.clientId, vendorOwner, ...getDB().users.filter((x) => x.role === "admin").map((x) => x.id)]) {
     if (u) notify(u, "escrow_disputed", text, u.startsWith("u-admin") ? routes.adminDisputes : href);
   }
 }
 
-export function resolveDispute(bookingId: string, resolution: "release" | "refund") {
+export async function resolveDispute(bookingId: string, resolution: "release" | "refund") {
   const actor = currentActor();
   assert(actor.role === "admin", "resolveDispute");
   const db = getDB();
@@ -204,7 +204,7 @@ export function resolveDispute(bookingId: string, resolution: "release" | "refun
 }
 
 /** DEMO: payout of the available balance to the vendor's card/account */
-export function requestPayout(vendorId: string, amount: number) {
+export async function requestPayout(vendorId: string, amount: number) {
   const actor = currentActor();
   const db = getDB();
   const v = db.vendors.find((x) => x.id === vendorId);

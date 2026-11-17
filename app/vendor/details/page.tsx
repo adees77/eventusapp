@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
 import { PageHeader, Section } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { SpecsForm } from "@/components/vendor-panel/specs-form";
@@ -10,9 +9,11 @@ import { updateVendor } from "@/lib/data/actions";
 import { sanitizeSpecs, specFacts, specsProgress } from "@/lib/data/specs";
 import type { VendorSpecs } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
+import { useAction } from "@/lib/data/use-action";
 
 /** Category details the vendor keeps up to date: fleet, hall area, languages, inventory… */
 export default function VendorDetails() {
+  const { run, pending } = useAction();
   const { t, l } = useI18n();
   const vendor = useMyVendor();
   const saved = JSON.stringify(sanitizeSpecs(vendor.category, vendor.specs ?? {}));
@@ -30,9 +31,10 @@ export default function VendorDetails() {
 
   function save() {
     const next = sanitizeSpecs(vendor.category, specs);
-    updateVendor(vendor.id, { specs: next });
-    setDraft({ base: JSON.stringify(next), specs: next });
-    toast.success(t("common.saved"));
+    void run(() => updateVendor(vendor.id, { specs: next }), {
+      success: t("common.saved"),
+      onSuccess: () => setDraft({ base: JSON.stringify(next), specs: next }),
+    });
   }
 
   return (
@@ -41,7 +43,7 @@ export default function VendorDetails() {
         title={t("vcab.details")}
         subtitle={t("vcab.detailsHint")}
         action={
-          <Button className="h-10 px-5" onClick={save} disabled={!dirty}>
+          <Button className="h-10 px-5" onClick={save} disabled={!dirty} pending={pending}>
             {t("common.save")}
           </Button>
         }
@@ -53,7 +55,7 @@ export default function VendorDetails() {
         <Section title={t("vcab.detailsForm")}>
           <SpecsForm category={vendor.category} value={specs} onChange={setSpecs} />
           <div className="mt-8 border-t border-border pt-5">
-            <Button className="h-11 px-6" onClick={save} disabled={!dirty}>
+            <Button className="h-11 px-6" onClick={save} disabled={!dirty} pending={pending}>
               {t("common.save")}
             </Button>
           </div>

@@ -8,7 +8,7 @@ import { currentActor, now, uid, update } from "./_core";
 
 // ── Client events ─────────────────────────────────────────────
 
-export function createEvent(input: Omit<EventItem, "id" | "clientId" | "createdAt" | "checklist">) {
+export async function createEvent(input: Omit<EventItem, "id" | "clientId" | "createdAt" | "checklist">) {
   const actor = currentActor();
   assert(can.manageEvent(actor, actor.id), "manageEvent");
   const defaults: { title: string; category: CategoryId }[] = [
@@ -29,7 +29,7 @@ export function createEvent(input: Omit<EventItem, "id" | "clientId" | "createdA
   return e;
 }
 
-export function updateEvent(eventId: string, patch: Partial<EventItem>) {
+export async function updateEvent(eventId: string, patch: Partial<EventItem>) {
   const actor = currentActor();
   const e = getDB().events.find((x) => x.id === eventId);
   if (!e) return;
@@ -37,6 +37,6 @@ export function updateEvent(eventId: string, patch: Partial<EventItem>) {
   update((d) => ({ ...d, events: d.events.map((x) => (x.id === eventId ? { ...x, ...patch, id: x.id, clientId: x.clientId } : x)) }));
 }
 
-export function setChecklist(eventId: string, checklist: ChecklistItem[]) {
-  updateEvent(eventId, { checklist });
+export async function setChecklist(eventId: string, checklist: ChecklistItem[]) {
+  await updateEvent(eventId, { checklist });
 }

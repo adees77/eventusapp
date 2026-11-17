@@ -1,7 +1,7 @@
 /**
  * Access rules — the single source of truth for "who can do what".
  * Every mutation in the store calls `assert(can.xxx(...))`.
- * The same rules are expressed as Postgres RLS policies in supabase/schema.sql.
+ * The same rules are expressed as Postgres RLS policies and server functions in supabase/migrations.
  */
 import type { Booking, Conversation, DB, DocKind, Offer, Role, Vendor } from "./types";
 

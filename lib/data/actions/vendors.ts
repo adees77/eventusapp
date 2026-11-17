@@ -9,7 +9,7 @@ import { DEFAULT_PREPAY_PERCENT } from "../seed/moderation";
 
 // ── Favorites & stats ─────────────────────────────────────────
 
-export function toggleFavorite(vendorId: string) {
+export async function toggleFavorite(vendorId: string) {
   const actor = currentActor();
   assert(can.favorite(actor), "favorite");
   update((db) => {
@@ -23,7 +23,7 @@ export function toggleFavorite(vendorId: string) {
   });
 }
 
-export function trackView(vendorId: string) {
+export async function trackView(vendorId: string) {
   update((db) => ({
     ...db,
     stats: db.stats.map((s) => (s.vendorId === vendorId ? { ...s, views: s.views + 1 } : s)),
@@ -33,7 +33,7 @@ export function trackView(vendorId: string) {
 
 // ── Vendor self-service ───────────────────────────────────────
 
-export function updateVendor(vendorId: string, patch: Partial<Vendor>) {
+export async function updateVendor(vendorId: string, patch: Partial<Vendor>) {
   const actor = currentActor();
   const db = getDB();
   const v = db.vendors.find((x) => x.id === vendorId)!;
@@ -52,7 +52,7 @@ export function updateVendor(vendorId: string, patch: Partial<Vendor>) {
   update((d) => ({ ...d, vendors: d.vendors.map((x) => (x.id === vendorId ? { ...x, ...safe } : x)) }));
 }
 
-export function upsertOffer(offer: Omit<Offer, "id"> & { id?: string }): string {
+export async function upsertOffer(offer: Omit<Offer, "id"> & { id?: string }): Promise<string> {
   const actor = currentActor();
   const db = getDB();
   assert(can.editOffer(actor, db, offer), "editOffer");
@@ -70,7 +70,7 @@ export function upsertOffer(offer: Omit<Offer, "id"> & { id?: string }): string 
   return id;
 }
 
-export function deleteOffer(offerId: string) {
+export async function deleteOffer(offerId: string) {
   const actor = currentActor();
   const db = getDB();
   const o = db.offers.find((x) => x.id === offerId);
@@ -86,7 +86,7 @@ export function deleteOffer(offerId: string) {
   }));
 }
 
-export function setBlockedUnits(offerId: string, date: string, units: number) {
+export async function setBlockedUnits(offerId: string, date: string, units: number) {
   const actor = currentActor();
   const db = getDB();
   const offer = db.offers.find((o) => o.id === offerId)!;
@@ -100,9 +100,9 @@ export function setBlockedUnits(offerId: string, date: string, units: number) {
 
 // ── Admin ─────────────────────────────────────────────────────
 
-export function createVendor(
+export async function createVendor(
   input: { name: string; owner: string; category: CategoryId; city: string; tagline: LText; cover?: string },
-): Vendor {
+): Promise<Vendor> {
   const actor = currentActor();
   assert(can.createVendor(actor), "createVendor");
   const slugBase =

@@ -71,12 +71,12 @@ function Book() {
     planner.set({ date: d });
   }
 
-  function submit() {
+  async function submit() {
     if (!isClient) return toast(t("vendor.onlyClients"));
     if (!date) return toast(t("booking.selectDate"));
     setSubmitting(true);
     try {
-      const b = createBooking({ offerId: offer!.id, date, qty: safeQty, eventId: eventId || undefined, note });
+      const b = await createBooking({ offerId: offer!.id, date, qty: safeQty, eventId: eventId || undefined, note });
       router.push(routes.checkout(b.id));
     } catch (err) {
       setSubmitting(false);
@@ -186,7 +186,7 @@ function Book() {
               prepayPercent={vendor.prepayPercent}
             />
             {avail && avail.free === 0 && <p className="mt-3 text-sm text-destructive">{t("booking.soldOut")}</p>}
-            <Button className="mt-4 h-12 w-full text-md" disabled={!canPay || submitting} onClick={submit}>
+            <Button className="mt-4 h-12 w-full text-md" disabled={!canPay} pending={submitting} onClick={submit}>
               {t("booking.pay")} · {money(prepay)}
             </Button>
             {!isClient && <p className="mt-3 text-center text-xs text-muted-foreground">{t("vendor.onlyClients")}</p>}

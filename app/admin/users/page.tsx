@@ -2,7 +2,6 @@
 
 import { Search } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 import { PageHeader, Segmented, inputClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Monogram } from "@/components/vendor/badges";
@@ -11,8 +10,10 @@ import { useAdminUsers } from "@/lib/data/views/admin";
 import type { Role } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 export default function AdminUsers() {
+  const { run } = useAction();
   const { t, date } = useI18n();
   const [q, setQ] = useState("");
   const [role, setR] = useState<Role | "all">("all");
@@ -55,10 +56,7 @@ export default function AdminUsers() {
                 <Button
                   variant="outline"
                   className="h-8 px-3 text-xs"
-                  onClick={() => {
-                    setUserBlocked(u.id, !u.blocked);
-                    toast(u.blocked ? t("acab.unblocked") : t("acab.blocked"));
-                  }}
+                  onClick={() => run(() => setUserBlocked(u.id, !u.blocked), { notice: u.blocked ? t("acab.unblocked") : t("acab.blocked") })}
                 >
                   {u.blocked ? t("acab.unblock") : t("acab.block")}
                 </Button>

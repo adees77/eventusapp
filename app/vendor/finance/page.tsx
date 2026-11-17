@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
 import { Kpi } from "@/components/layout/cabinet-shell";
 import { Empty, Field, PageHeader, Section, inputClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import { requestPayout } from "@/lib/data/actions";
 import { useVendorFinance } from "@/lib/data/views/vendor";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 export default function VendorFinance() {
   const { t, money, date } = useI18n();
@@ -18,6 +18,7 @@ export default function VendorFinance() {
   const { balance: bal, feePercent, rows } = useVendorFinance(vendor.id);
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
+  const { run, pending } = useAction();
 
   const sign = (k: string) => (k === "release" ? "+" : k === "payout" || k === "fee" ? "−" : "");
 
@@ -106,15 +107,13 @@ export default function VendorFinance() {
             </Button>
             <Button
               disabled={!(Number(amount) > 0)}
-              onClick={() => {
-                try {
-                  const sum = requestPayout(vendor.id, Number(amount));
-                  toast.success(t("vcab.withdrawn", { amount: money(sum) }));
-                  setOpen(false);
-                } catch {
-                  toast.error(t("common.error"));
-                }
-              }}
+              pending={pending}
+              onClick={() =>
+                run(() => requestPayout(vendor.id, Number(amount)), {
+                  success: (sum) => t("vcab.withdrawn", { amount: money(sum) }),
+                  onSuccess: () => setOpen(false),
+                })
+              }
             >
               {t("vcab.withdraw")}
             </Button>

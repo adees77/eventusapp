@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { useFeedActions } from "./post-card";
 import { BottomSheet, ReviewsSheet } from "./post-sheets";
 import { routes } from "@/lib/routes";
+import { useAction } from "@/lib/data/use-action";
 
 /** Unsplash photos are re-cropped to the tall viewer frame; other sources are shown as they are */
 /** The photo as shot: drop any server-side crop so the viewer shows the whole frame */
@@ -62,6 +63,7 @@ export function PostView({
     };
   }, [sheet, registerSheet]);
   const [burst, setBurst] = useState(0);
+  const { run } = useAction();
   const strip = useRef<HTMLDivElement>(null);
   if (!card) return null;
 
@@ -72,9 +74,9 @@ export function PostView({
   const price = offer ? offer.price : priceFrom;
 
   const clientOnly = (fn: () => void) => () => (actor.role === "client" ? fn() : toast(t("feed.loginToAct")));
-  const like = clientOnly(() => toggleLike(post.id));
+  const like = clientOnly(() => void run(() => toggleLike(post.id)));
   const likeOnce = clientOnly(() => {
-    if (!item.liked) toggleLike(post.id);
+    if (!item.liked) void run(() => toggleLike(post.id));
     setBurst((b) => b + 1);
   });
 
@@ -186,8 +188,7 @@ export function PostView({
               label={t("vcab.deletePost")}
               onClick={() => {
                 if (!window.confirm(t("owner.deletePostConfirm"))) return;
-                deletePost(post.id);
-                toast(t("vcab.postDeleted"));
+                void run(() => deletePost(post.id), { success: t("vcab.postDeleted") });
               }}
             >
               <Trash2 className="size-6" strokeWidth={1.75} />
@@ -247,7 +248,7 @@ export function PostView({
             {actor.id !== vendor.ownerId && (
               <button
               type="button"
-              onClick={clientOnly(() => router.push(routes.chat(ensureConversation(vendor.id))))}
+              onClick={clientOnly(() => void run(() => ensureConversation(vendor.id), { onSuccess: (id) => router.push(routes.chat(id)) }))}
               className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3.5 text-sm text-white transition-colors hover:bg-white/25"
             >
               <MessageCircle className="size-4" strokeWidth={1.75} />

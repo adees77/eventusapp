@@ -6,16 +6,18 @@ import { Suspense } from "react";
 import { Logo } from "@/components/brand/logo";
 import { EmailSignIn } from "@/components/auth/email-sign-in";
 import { GoogleButton } from "@/components/auth/google-button";
+import { homeAfterSignIn } from "@/components/auth/after-sign-in";
 import { HOME_BY_ROLE } from "@/components/layout/nav-items";
-import { useAuth } from "@/lib/auth/store";
-import { readUser } from "@/lib/data/views/users";
+import { realAccounts, useAuth } from "@/lib/auth/store";
+import { LiveAuthError } from "@/lib/auth/supabase";
+import { toast } from "sonner";
+import { useAction } from "@/lib/data/use-action";
 import { TryDemoButton } from "@/components/demo/try-demo-button";
 import { demoConfig } from "@/config/demo";
 import { TEST_ACCOUNTS } from "@/lib/data/seed";
 import { PHOTOS, unsplash } from "@/lib/data/seed/photos";
 import { LOCALES, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { routes } from "@/lib/routes";
 
 export default function WelcomePage() {
   return (
@@ -33,11 +35,10 @@ function Welcome() {
   const signInWithGoogle = useAuth((s) => s.signInWithGoogle);
   const signInDemo = useAuth((s) => s.signInDemo);
   const pending = useAuth((s) => s.pending);
+  const { run, pending: googlePending } = useAction();
 
   function afterSignIn() {
-    const id = useAuth.getState().userId;
-    const user = readUser(id);
-    router.replace(!user || user.needsOnboarding ? (asVendor ? routes.onboardingVendor : routes.onboarding) : HOME_BY_ROLE[user.role]);
+    router.replace(homeAfterSignIn(useAuth.getState().userId, asVendor));
   }
 
   return (
@@ -77,10 +78,20 @@ function Welcome() {
             {!pending && (
               <>
                 <GoogleButton
-                  onSignIn={(input) => {
-                    signInWithGoogle(input);
-                    afterSignIn();
-                  }}
+                  onSignIn={(input) => run(() => signInWithGoogle(input), { onSuccess: afterSignIn })}
+                  pending={googlePending}
+                  onStart={
+                    realAccounts()
+                      ? () =>
+                          run(() => useAuth.getState().startGoogleSignIn({ asVendor }), {
+                            onError: (e) => {
+                              if (!(e instanceof LiveAuthError) || e.reason !== "providerDisabled") return false;
+                              toast.error(t("auth.googleUnavailable"));
+                              return true;
+                            },
+                          })
+                      : undefined
+                  }
                 />
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
                   <span className="h-px flex-1 bg-border" />

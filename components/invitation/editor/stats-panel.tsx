@@ -13,6 +13,7 @@ import { useI18n } from "@/lib/i18n";
 import { guestStatus, guestsCsv, invitationStats, rsvpOfGuest, type GuestStatus } from "@/lib/invitations/design";
 import { cn } from "@/lib/utils";
 import { STATUS_TONE } from "./guests-panel";
+import { useAction } from "@/lib/data/use-action";
 
 export function StatsPanel({ inv }: { inv: Invitation }) {
   const { t, num, date } = useI18n();
@@ -159,6 +160,7 @@ const ORDER: GuestStatus[] = ["coming", "opened", "sent", "draft", "declined"];
 
 /** Everyone in one place: invited guests, answers through the common link, and guests added without an invitation */
 function GuestList({ inv, labels, onExport }: { inv: Invitation; labels: Record<GuestStatus, string>; onExport: () => void }) {
+  const { run } = useAction();
   const { t, num } = useI18n();
   const [adding, setAdding] = useState(false);
   const [filter, setFilter] = useState<GuestStatus | "all">("all");
@@ -198,9 +200,12 @@ function GuestList({ inv, labels, onExport }: { inv: Invitation; labels: Record<
   function add(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    addGuests(inv.id, [{ name, group: group || undefined, seats, direct: true }]);
-    setName("");
-    setSeats(1);
+    void run(() => addGuests(inv.id, [{ name, group: group || undefined, seats, direct: true }]), {
+      onSuccess: () => {
+        setName("");
+        setSeats(1);
+      },
+    });
   }
 
   return (
@@ -296,7 +301,7 @@ function GuestList({ inv, labels, onExport }: { inv: Invitation; labels: Record<
                   {r.directId && (
                     <button
                       type="button"
-                      onClick={() => removeGuest(inv.id, r.directId!)}
+                      onClick={() => run(() => removeGuest(inv.id, r.directId!))}
                       aria-label={t("inv.delete")}
                       title={t("inv.delete")}
                       className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"

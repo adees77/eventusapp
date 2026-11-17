@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
 import { Field, Section, inputClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -10,9 +9,11 @@ import { CITIES } from "@/lib/data/seed/catalog";
 import { readUser } from "@/lib/data/views/users";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
+import { useAction } from "@/lib/data/use-action";
 
 /** Name, phone, city of the signed-in account */
 export function ProfileForm() {
+  const { run } = useAction();
   const { t, l } = useI18n();
   const actor = useActor();
   const [user] = useState(() => readUser(actor.id));
@@ -25,8 +26,7 @@ export function ProfileForm() {
         className="grid gap-4 sm:grid-cols-2"
         onSubmit={(e) => {
           e.preventDefault();
-          updateProfile({ name, phone, city });
-          toast.success(t("common.saved"));
+          void run(() => updateProfile({ name, phone, city }), { success: t("common.saved") });
         }}
       >
         <Field label={t("cabinet.name")}>

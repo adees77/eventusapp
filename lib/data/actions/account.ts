@@ -4,7 +4,7 @@
 import { assert, can, type Actor } from "../policies";
 import { getDB } from "../store";
 import { CATEGORY_PHOTOS, PHOTOS, unsplash } from "../seed/photos";
-import type { CategoryId, ChecklistItem, EventItem, LText, Offer, Post, Vendor, VendorSpecs } from "../types";
+import type { CategoryId, ChecklistItem, EventItem, LText, Offer, Post, Role, User, Vendor, VendorSpecs } from "../types";
 import { sanitizeSpecs } from "../specs";
 import { asActor, currentActor, now, uid, update } from "./_core";
 import { createEvent, setChecklist } from "./events";
@@ -28,23 +28,39 @@ const CHECKLIST_TITLES: Record<CategoryId, string> = {
 };
 
 /** Finds a user by email or creates a fresh one that still has to go through onboarding */
-export function upsertAuthUser(input: { email: string; name?: string; provider: "google" | "email" }) {
+export async function upsertAuthUser(input: {
+  email: string;
+  name?: string;
+  provider: "google" | "email";
+  /** Supabase Auth user id: the account keeps it, so stage 4 can move its data to the server as is */
+  id?: string;
+  /** profiles.role from Supabase (lib/auth/supabase.ts) — the only source of the admin role in live mode */
+  serverAdmin?: boolean;
+}): Promise<User> {
   const email = input.email.trim().toLowerCase();
-  const existing = getDB().users.find((u) => u.email?.toLowerCase() === email);
-  if (existing) return existing;
-  const user = {
-    id: uid("u"),
-    role: "client" as const,
+  const db = getDB();
+  const existing = input.id ? db.users.find((u) => u.id === input.id) : db.users.find((u) => u.email?.toLowerCase() === email);
+  if (existing) {
+    if (input.serverAdmin === undefined) return existing;
+    const role: Role = input.serverAdmin ? "admin" : existing.role === "admin" ? "client" : existing.role;
+    const next: User = { ...existing, role, name: existing.name || (input.name ?? "").trim().slice(0, 80), email, needsOnboarding: role === "admin" ? false : existing.needsOnboarding };
+    update((d) => ({ ...d, users: d.users.map((u) => (u.id === existing.id ? next : u)) }));
+    return next;
+  }
+  const user: User = {
+    id: input.id ?? uid("u"),
+    role: input.serverAdmin ? "admin" : "client",
     name: (input.name ?? "").trim().slice(0, 80),
     email,
     authProvider: input.provider,
-    needsOnboarding: true,
+    needsOnboarding: !input.serverAdmin,
+    createdAt: now(),
   };
   update((d) => ({ ...d, users: [...d.users, user] }));
   return user;
 }
 
-export function updateProfile(patch: { name?: string; city?: string; phone?: string }) {
+export async function updateProfile(patch: { name?: string; city?: string; phone?: string }) {
   const actor = currentActor();
   assert(can.editProfile(actor, actor.id), "editProfile");
   update((d) => ({
@@ -70,24 +86,24 @@ function finishOnboarding(userId: string, role: "client" | "vendor") {
 }
 
 /** Client branch: creates the first event with a checklist ordered by what matters most */
-export function completeClientOnboarding(
+export async function completeClientOnboarding(
   input: {
     name: string;
     city: string;
     event: { title: string; date: string; guests: number; budget: number };
     priorities: CategoryId[];
   },
-): EventItem {
+): Promise<EventItem> {
   const actor = currentActor();
   const client: Actor = { id: actor.id, role: "client" };
-  updateProfile({ name: input.name, city: input.city });
-  const e = asActor(client, () => createEvent({ ...input.event, city: input.city }));
+  await updateProfile({ name: input.name, city: input.city });
+  const e = await asActor(client, () => createEvent({ ...input.event, city: input.city }));
   const order: CategoryId[] = [...input.priorities, ...e.checklist.flatMap((c) => (c.category ? [c.category] : []))];
   const seen = new Set<CategoryId>();
   const checklist: ChecklistItem[] = order
     .filter((c) => !seen.has(c) && seen.add(c))
     .map((c, i) => ({ id: `c${i}`, title: CHECKLIST_TITLES[c], done: false, category: c }));
-  asActor(client, () => setChecklist(e.id, checklist));
+  await asActor(client, () => setChecklist(e.id, checklist));
   finishOnboarding(actor.id, "client");
   return { ...e, checklist };
 }
@@ -98,7 +114,7 @@ export function completeClientOnboarding(
  * nothing half-saved (another tab, a failed storage write, a closed tab) and also
  * finishes an earlier interrupted attempt by reusing the vendor it created.
  */
-export function signUpVendor(
+export async function signUpVendor(
   input: {
     ownerName: string;
     name: string;
@@ -110,7 +126,7 @@ export function signUpVendor(
     photos: string[];
     offer: { title: string; price: number; unit: LText };
   },
-): { vendor: Vendor; offerId: string; postId: string } {
+): Promise<{ vendor: Vendor; offerId: string; postId: string }> {
   const actor = currentActor();
   assert(actor.role !== "admin", "signUpVendor");
   const db = getDB();

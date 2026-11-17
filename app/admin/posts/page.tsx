@@ -8,8 +8,10 @@ import { setPostHidden } from "@/lib/data/actions";
 import { useAdminPosts } from "@/lib/data/views/admin";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 export default function AdminPosts() {
+  const { run } = useAction();
   const { t, l, num } = useI18n();
   const [f, setF] = useState<"recent" | "hidden">("recent");
   const { rows, total, hiddenCount } = useAdminPosts(f);
@@ -40,7 +42,7 @@ export default function AdminPosts() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setPostHidden(p.id, !p.hidden)}
+                  onClick={() => run(() => setPostHidden(p.id, !p.hidden))}
                   className="inline-flex items-center gap-1 text-xs text-text-secondary hover:text-foreground"
                 >
                   {p.hidden ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}

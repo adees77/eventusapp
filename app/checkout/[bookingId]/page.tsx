@@ -63,7 +63,7 @@ export default function CheckoutPage() {
         return;
       }
       if (res.status !== "succeeded") throw new Error(res.error ?? "failed");
-      const convId = markBookingPrepaid(booking!.id, res.reference);
+      const convId = await markBookingPrepaid(booking!.id, res.reference);
       setPhase("success");
       setTimeout(() => router.push(routes.chat(convId)), 1600);
     } catch (err) {

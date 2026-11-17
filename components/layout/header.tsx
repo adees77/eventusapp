@@ -14,6 +14,7 @@ import { CreateMenu } from "./create-menu";
 import { HOME_BY_ROLE, NAV_BY_ROLE, isActive } from "./nav-items";
 import { SettingsMenu } from "./settings-menu";
 import { routes } from "@/lib/routes";
+import { brand } from "@/config/brand";
 
 export function Header() {
   const { t } = useI18n();
@@ -30,7 +31,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 bg-background/85 backdrop-blur-md print:hidden">
       <div className="container-app flex h-14 items-center gap-4 md:h-16">
-        <Link href={HOME_BY_ROLE[role]} className="shrink-0" aria-label="EVENTUS">
+        <Link href={HOME_BY_ROLE[role]} className="shrink-0" aria-label={brand.name}>
           <Logo />
         </Link>
 

@@ -6,10 +6,10 @@ import { getDB, migrate, useDataStore } from "../store";
 describe("test accounts", () => {
   beforeEach(() => useDataStore.setState({ db: buildSeed(), hydrated: true }));
 
-  it("email sign-in lands in the seeded motorcade vendor, not a new user", () => {
+  it("email sign-in lands in the seeded motorcade vendor, not a new user", async () => {
     const acc = TEST_ACCOUNTS.find((a) => a.kind === "vendorCars")!;
     const users = getDB().users.length;
-    const u = upsertAuthUser({ email: acc.email.toUpperCase(), provider: "email" });
+    const u = await upsertAuthUser({ email: acc.email.toUpperCase(), provider: "email" });
     expect(u.id).toBe(acc.userId);
     expect(u.role).toBe("vendor");
     expect(getDB().users.length).toBe(users);

@@ -10,8 +10,10 @@ import { Button } from "@/components/ui/button";
 import { updateVendor } from "@/lib/data/actions";
 import type { Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
+import { useAction } from "@/lib/data/use-action";
 
 export function VendorProfileForm({ vendor }: { vendor: Vendor }) {
+  const { run } = useAction();
   const { t, locale } = useI18n();
   const [name, setName] = useState(vendor.name);
   const [tagline, setTagline] = useState(vendor.tagline[locale]);
@@ -37,7 +39,9 @@ export function VendorProfileForm({ vendor }: { vendor: Vendor }) {
       className="grid gap-6 lg:grid-cols-[1fr_1fr]"
       onSubmit={(e) => {
         e.preventDefault();
-        updateVendor(vendor.id, {
+        void run(
+          () =>
+            updateVendor(vendor.id, {
           name: name.trim().slice(0, 80) || vendor.name,
           tagline: { ...vendor.tagline, [locale]: tagline.trim().slice(0, 120) },
           description: { ...vendor.description, [locale]: description.trim().slice(0, 1500) },
@@ -45,8 +49,9 @@ export function VendorProfileForm({ vendor }: { vendor: Vendor }) {
           prepayPercent: Number(prepay),
           portfolio,
           cover: portfolio[0] ?? vendor.cover,
-        });
-        toast.success(t("common.saved"));
+            }),
+          { success: t("common.saved") },
+        );
       }}
     >
       <Section title={t("vp.profile")}>

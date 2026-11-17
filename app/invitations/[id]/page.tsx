@@ -26,6 +26,7 @@ import { invitationStats } from "@/lib/invitations/design";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { routes } from "@/lib/routes";
+import { useAction } from "@/lib/data/use-action";
 
 const TABS = ["design", "guests", "stats", "share"] as const;
 type Tab = (typeof TABS)[number];
@@ -42,6 +43,7 @@ function Editor() {
   const { id } = useParams<{ id: string }>();
   const params = useSearchParams();
   const router = useRouter();
+  const { run, pending } = useAction();
   const { t } = useI18n();
   const actor = useActor();
   const inv = useInvitation(id);
@@ -118,8 +120,8 @@ function Editor() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuItem
-                onClick={() => {
-                  const copy = duplicateInvitation(inv.id);
+                onClick={async () => {
+                  const copy = await run(() => duplicateInvitation(inv.id));
                   if (copy) router.push(routes.invitation(copy.id));
                 }}
               >
@@ -165,10 +167,8 @@ function Editor() {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                deleteInvitation(inv.id);
-                router.replace(routes.invitations);
-              }}
+              pending={pending}
+              onClick={() => run(() => deleteInvitation(inv.id), { onSuccess: () => router.replace(routes.invitations) })}
             >
               {t("invitations.delete")}
             </Button>

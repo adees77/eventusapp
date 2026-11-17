@@ -13,6 +13,7 @@ import type { CategoryId } from "@/lib/data/types";
 import { LOCALES, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { routes } from "@/lib/routes";
+import { brand } from "@/config/brand";
 
 export function Hero() {
   const { t, num } = useI18n();
@@ -70,7 +71,7 @@ function TopNav() {
   const { t, locale, setLocale } = useI18n();
   return (
     <header className="container-app relative z-10 flex h-16 items-center gap-6 md:h-20">
-      <Link href="/" aria-label="EVENTUS" className="[&_*]:!text-white">
+      <Link href="/" aria-label={brand.name} className="[&_*]:!text-white">
         <Logo className="text-white" />
       </Link>
       <nav className="ml-4 hidden items-center gap-1 text-sm text-white/65 lg:flex">

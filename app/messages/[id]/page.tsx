@@ -5,7 +5,6 @@ import { ArrowLeft, ArrowUp } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { BookingSummary } from "@/components/booking/booking-summary";
 import { StatusBadge } from "@/components/booking/status-badge";
 import { DealCard, EscrowBadge } from "@/components/booking/deal-card";
@@ -19,6 +18,7 @@ import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { routes } from "@/lib/routes";
+import { background, useAction } from "@/lib/data/use-action";
 
 export default function ThreadPage() {
   const { id } = useParams<{ id: string }>();
@@ -29,13 +29,14 @@ export default function ThreadPage() {
   const [typing, setTyping] = useState(false);
   const [dealOpen, setDealOpen] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const { run, pending } = useAction();
 
   const allowed = !!conv;
   const lastAt = messages[messages.length - 1]?.createdAt;
 
   useEffect(() => {
     if (conv && allowed && lastAt && conv.readAt[actor.id] !== lastAt && (conv.readAt[actor.id] ?? "") < lastAt) {
-      markRead(conv.id);
+      background(() => markRead(conv.id));
     }
   }, [conv, allowed, lastAt, actor.id]);
 
@@ -80,16 +81,13 @@ export default function ThreadPage() {
     </>
   );
 
-  function send() {
+  async function send() {
     const clean = text.trim();
     if (!clean) return;
-    try {
-      sendMessage(conv!.id, clean);
-      setText("");
-    } catch {
-      toast.error(t("common.error"));
-      return;
-    }
+    let sent = false;
+    await run(() => sendMessage(conv!.id, clean), { onSuccess: () => (sent = true) });
+    if (!sent) return;
+    setText("");
     // DEMO: vendor answers on its own so a solo presenter sees a live chat
     if (actor.role === "client" && demoFeature("vendorAutoReply")) {
       const vendorCount = messages.filter((m) => m.senderId === vendor!.ownerId).length;
@@ -97,7 +95,7 @@ export default function ThreadPage() {
       setTimeout(() => setTyping(true), 600);
       setTimeout(() => {
         setTyping(false);
-        sendAutoReply(conv!.id, replies[vendorCount % replies.length]);
+        background(() => sendAutoReply(conv!.id, replies[vendorCount % replies.length]));
       }, 2400);
     }
   }
@@ -195,7 +193,7 @@ export default function ThreadPage() {
               className="flex items-end gap-2 p-3 lg:px-5"
               onSubmit={(e) => {
                 e.preventDefault();
-                send();
+                void send();
               }}
             >
               <textarea
@@ -204,7 +202,7 @@ export default function ThreadPage() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                     e.preventDefault();
-                    send();
+                    void send();
                   }
                 }}
                 rows={1}
@@ -215,7 +213,8 @@ export default function ThreadPage() {
               />
               <button
                 type="submit"
-                disabled={!text.trim()}
+                disabled={!text.trim() || pending}
+                aria-busy={pending || undefined}
                 aria-label={t("messages.send")}
                 className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-[background-color,opacity] hover:bg-primary-hover active:scale-[0.97] disabled:opacity-30"
               >

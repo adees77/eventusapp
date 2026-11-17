@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { toast } from "sonner";
 import { EscrowBadge } from "@/components/booking/deal-card";
 import { Empty, PageHeader, Section, Segmented } from "@/components/panel";
 import { Button } from "@/components/ui/button";
@@ -11,8 +10,10 @@ import { useDisputes } from "@/lib/data/views/admin";
 import type { EscrowState } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { routes } from "@/lib/routes";
+import { useAction } from "@/lib/data/use-action";
 
 export default function AdminDisputes() {
+  const { run } = useAction();
   const { t, l, money, date } = useI18n();
   const [f, setF] = useState<EscrowState | "all">("disputed");
   const { rows: deals, counts } = useDisputes(f);
@@ -76,20 +77,14 @@ export default function AdminDisputes() {
                       <>
                         <Button
                           className="h-9 px-4"
-                          onClick={() => {
-                            resolveDispute(b.id, "release");
-                            toast.success(t("acab.releasedToast"));
-                          }}
+                          onClick={() => run(() => resolveDispute(b.id, "release"), { success: t("acab.releasedToast") })}
                         >
                           {t("acab.toVendor")}
                         </Button>
                         <Button
                           variant="outline"
                           className="h-9 px-4"
-                          onClick={() => {
-                            resolveDispute(b.id, "refund");
-                            toast.success(t("acab.refundedToast"));
-                          }}
+                          onClick={() => run(() => resolveDispute(b.id, "refund"), { success: t("acab.refundedToast") })}
                         >
                           {t("acab.toClient")}
                         </Button>

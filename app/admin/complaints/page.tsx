@@ -3,15 +3,16 @@
 import { Flag } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { toast } from "sonner";
 import { Empty, PageHeader, Section, Segmented } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { resolveComplaint } from "@/lib/data/actions";
 import { useComplaints, type ComplaintTargetInfo } from "@/lib/data/views/moderation";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 export default function AdminComplaints() {
+  const { run } = useAction();
   const { t, l, date } = useI18n();
   const [f, setF] = useState<"open" | "closed">("open");
   const { rows: list, openCount, closedCount } = useComplaints(f);
@@ -83,20 +84,14 @@ export default function AdminComplaints() {
                         <Button
                           variant="destructive"
                           className="h-9 px-4"
-                          onClick={() => {
-                            resolveComplaint(c.id, true);
-                            toast.success(t("mod.hiddenToast"));
-                          }}
+                          onClick={() => run(() => resolveComplaint(c.id, true), { success: t("mod.hiddenToast") })}
                         >
                           {t("mod.hideIt")}
                         </Button>
                         <Button
                           variant="outline"
                           className="h-9 px-4"
-                          onClick={() => {
-                            resolveComplaint(c.id, false);
-                            toast(t("mod.keptToast"));
-                          }}
+                          onClick={() => run(() => resolveComplaint(c.id, false), { notice: t("mod.keptToast") })}
                         >
                           {t("mod.keepIt")}
                         </Button>

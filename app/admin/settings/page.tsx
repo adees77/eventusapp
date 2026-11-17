@@ -11,21 +11,21 @@ import { useDataStore } from "@/lib/data/store";
 import { readPlatformSettings, useCategories, useCategoryVendorCounts } from "@/lib/data/views/catalog";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 export default function AdminSettings() {
   const { t, l } = useI18n();
   const categories = useCategories();
   const vendorCounts = useCategoryVendorCounts();
   const [s, setS] = useState(readPlatformSettings);
+  const { run, pending } = useAction();
   const save = (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettings(s);
-    setS(readPlatformSettings());
-    toast.success(t("common.saved"));
+    void run(() => updateSettings(s), { success: t("common.saved"), onSuccess: () => setS(readPlatformSettings()) });
   };
   const saveBtn = (
     <div className="sm:col-span-3">
-      <Button type="submit" className="h-10 px-5">
+      <Button type="submit" className="h-10 px-5" pending={pending}>
         {t("common.save")}
       </Button>
     </div>

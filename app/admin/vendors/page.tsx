@@ -3,7 +3,6 @@
 import { MoreHorizontal, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { toast } from "sonner";
 import { Field, PageHeader, Segmented, inputClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -24,8 +23,10 @@ import type { CategoryId, Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { routes } from "@/lib/routes";
+import { useAction } from "@/lib/data/use-action";
 
 export default function AdminVendors() {
+  const { run } = useAction();
   const { t, tn, l } = useI18n();
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Vendor | "new" | null>(null);
@@ -123,10 +124,10 @@ export default function AdminVendors() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuItem onClick={() => setEditing(v)}>{t("admin.edit")}</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => updateVendor(v.id, { hidden: !v.hidden })}>
+                    <DropdownMenuItem onClick={() => run(() => updateVendor(v.id, { hidden: !v.hidden }))}>
                       {v.hidden ? t("admin.show") : t("admin.hide")}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => updateVendor(v.id, { verified: !v.verified })}>
+                    <DropdownMenuItem onClick={() => run(() => updateVendor(v.id, { verified: !v.verified }))}>
                       {v.verified ? t("admin.unverify") : t("admin.verify")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -156,6 +157,7 @@ export default function AdminVendors() {
 }
 
 function VendorForm({ initial, onDone }: { initial: Vendor | null; onDone: () => void }) {
+  const { run } = useAction();
   const { t, l, locale } = useI18n();
   const categories = useCategories();
   const [name, setName] = useState(initial?.name ?? "");
@@ -173,20 +175,24 @@ function VendorForm({ initial, onDone }: { initial: Vendor | null; onDone: () =>
         if (!valid) return;
         const tl = { ru: tagline.trim(), en: tagline.trim() };
         if (initial) {
-          updateVendor(initial.id, { name: name.trim(), category, city, tagline: { ...initial.tagline, [locale]: tagline.trim() } });
-          toast.success(t("common.saved"));
-        } else {
-          createVendor({
-            name,
-            owner,
-            category,
-            city,
-            tagline: tl,
-            cover: unsplash(PHOTOS[CATEGORY_PHOTOS[category]][0], 1600, 900),
+          void run(() => updateVendor(initial.id, { name: name.trim(), category, city, tagline: { ...initial.tagline, [locale]: tagline.trim() } }), {
+            success: t("common.saved"),
+            onSuccess: onDone,
           });
-          toast.success(t("admin.created"));
+        } else {
+          void run(
+            () =>
+              createVendor({
+                name,
+                owner,
+                category,
+                city,
+                tagline: tl,
+                cover: unsplash(PHOTOS[CATEGORY_PHOTOS[category]][0], 1600, 900),
+              }),
+            { success: t("admin.created"), onSuccess: onDone },
+          );
         }
-        onDone();
       }}
     >
       <Field label={t("admin.name")}>

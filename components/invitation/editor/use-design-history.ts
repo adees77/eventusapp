@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { updateInvitation } from "@/lib/data/actions";
 import type { Invitation, InvitationDesign } from "@/lib/data/types";
+import { background } from "@/lib/data/use-action";
 
 const LIMIT = 80;
 /** typing into the same field within this window is one undo step */
@@ -28,7 +29,7 @@ export function useDesignHistory(inv: Invitation) {
   const save = useCallback(
     (d: InvitationDesign) => {
       current.current = d;
-      updateInvitation(inv.id, { design: d });
+      background(() => updateInvitation(inv.id, { design: d }));
       setCounts({ undo: past.current.length, redo: future.current.length });
     },
     [inv.id],

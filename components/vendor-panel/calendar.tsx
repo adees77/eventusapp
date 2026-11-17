@@ -14,8 +14,10 @@ import { useActiveOffers } from "@/lib/data/views/vendor";
 import type { Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 export function VendorCalendar({ vendor }: { vendor: Vendor }) {
+  const { run } = useAction();
   const { t, l, date: fmt } = useI18n();
   const offers = useActiveOffers(vendor.id);
   const [offerId, setOfferId] = useState(offers[0]?.id ?? "");
@@ -79,7 +81,7 @@ export function VendorCalendar({ vendor }: { vendor: Vendor }) {
                 type="button"
                 className="flex size-11 items-center justify-center text-text-secondary disabled:opacity-30"
                 disabled={a.blocked <= 0}
-                onClick={() => setBlockedUnits(offer.id, day, a.blocked - 1)}
+                onClick={() => run(() => setBlockedUnits(offer.id, day, a.blocked - 1))}
                 aria-label="−"
               >
                 <Minus className="size-4" />
@@ -89,7 +91,7 @@ export function VendorCalendar({ vendor }: { vendor: Vendor }) {
                 type="button"
                 className="flex size-11 items-center justify-center text-text-secondary disabled:opacity-30"
                 disabled={a.blocked + a.booked >= a.total}
-                onClick={() => setBlockedUnits(offer.id, day, a.blocked + 1)}
+                onClick={() => run(() => setBlockedUnits(offer.id, day, a.blocked + 1))}
                 aria-label="+"
               >
                 <Plus className="size-4" />

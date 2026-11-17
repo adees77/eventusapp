@@ -9,17 +9,19 @@ import type { FeedItem } from "@/lib/data/feed";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 export function useFeedActions() {
   const { t } = useI18n();
   const actor = useActor();
+  const { run } = useAction();
   const guard = (fn: () => void) => () => {
     if (actor.role !== "client") return toast(t("feed.loginToAct"));
     fn();
   };
   return {
-    like: (postId: string) => guard(() => toggleLike(postId))(),
-    save: (postId: string) => guard(() => toggleSave(postId))(),
+    like: (postId: string) => guard(() => void run(() => toggleLike(postId)))(),
+    save: (postId: string) => guard(() => void run(() => toggleSave(postId)))(),
   };
 }
 

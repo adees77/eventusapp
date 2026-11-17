@@ -21,12 +21,15 @@ export function currentActor(): Actor {
   return { id, role };
 }
 
-/** Runs `fn` as another user — for tests and for steps that must act under a fixed role */
-export function asActor<T>(actor: Actor, fn: () => T): T {
+/**
+ * Runs `fn` as another user — for tests and for steps that must act under a fixed role.
+ * Awaits `fn`, so the override holds across the action's awaits; don't run two at once.
+ */
+export async function asActor<T>(actor: Actor, fn: () => T | Promise<T>): Promise<T> {
   const prev = override;
   override = actor;
   try {
-    return fn();
+    return await fn();
   } finally {
     override = prev;
   }

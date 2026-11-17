@@ -13,8 +13,10 @@ import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { Rating, VerifiedSeal } from "./badges";
 import { routes } from "@/lib/routes";
+import { useAction } from "@/lib/data/use-action";
 
 export function VendorCard({ r, date, priority }: { r: VendorResult; date?: string | null; priority?: boolean }) {
+  const { run } = useAction();
   const { t, l, money } = useI18n();
   const actor = useActor();
   const { vendor, minPrice, availability } = r;
@@ -62,7 +64,7 @@ export function VendorCard({ r, date, priority }: { r: VendorResult; date?: stri
       {actor.role === "client" && (
         <button
           type="button"
-          onClick={() => toggleFavorite(vendor.id)}
+          onClick={() => run(() => toggleFavorite(vendor.id))}
           aria-pressed={fav}
           aria-label={fav ? t("vendor.favorited") : t("vendor.favorite")}
           className="absolute top-3 right-3 flex size-9 items-center justify-center rounded-full bg-card/90 text-foreground shadow-soft backdrop-blur transition-colors hover:bg-card active:scale-[0.97]"

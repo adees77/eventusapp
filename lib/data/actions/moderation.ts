@@ -13,7 +13,7 @@ import { routes } from "@/lib/routes";
 const admins = () => getDB().users.filter((u) => u.role === "admin").map((u) => u.id);
 
 /** The vendor attaches a document; re-uploading a kind replaces the previous file */
-export function uploadDocument(vendorId: string, kind: DocKind, fileName: string) {
+export async function uploadDocument(vendorId: string, kind: DocKind, fileName: string) {
   const actor = currentActor();
   const v = getDB().vendors.find((x) => x.id === vendorId);
   assert(can.manageDocuments(actor, v) && DOC_KINDS.includes(kind), "uploadDocument");
@@ -22,7 +22,7 @@ export function uploadDocument(vendorId: string, kind: DocKind, fileName: string
   update((d) => ({ ...d, documents: [...d.documents.filter((x) => !(x.vendorId === vendorId && x.kind === kind)), doc] }));
 }
 
-export function removeDocument(docId: string) {
+export async function removeDocument(docId: string) {
   const actor = currentActor();
   const db = getDB();
   const doc = db.documents.find((x) => x.id === docId);
@@ -31,7 +31,7 @@ export function removeDocument(docId: string) {
 }
 
 /** Kinds still missing (or rejected) before the vendor can ask for the badge */
-export function requestVerification(vendorId: string) {
+export async function requestVerification(vendorId: string) {
   const actor = currentActor();
   const db = getDB();
   const v = db.vendors.find((x) => x.id === vendorId);
@@ -40,7 +40,7 @@ export function requestVerification(vendorId: string) {
   for (const a of admins()) notify(a, "system", { ru: `${v.name} отправил документы на проверку`, en: `${v.name} sent documents for review` }, routes.adminVerification);
 }
 
-export function reviewDocument(docId: string, status: "approved" | "rejected", note?: string) {
+export async function reviewDocument(docId: string, status: "approved" | "rejected", note?: string) {
   const actor = currentActor();
   assert(can.reviewDocuments(actor), "reviewDocument");
   const clean = note?.trim().slice(0, 300) || undefined;
@@ -51,7 +51,7 @@ export function reviewDocument(docId: string, status: "approved" | "rejected", n
 }
 
 /** Admin gives the badge (approving the papers still pending) or sends the request back with a reason */
-export function decideVerification(vendorId: string, approve: boolean, note?: string) {
+export async function decideVerification(vendorId: string, approve: boolean, note?: string) {
   const actor = currentActor();
   assert(can.reviewDocuments(actor), "decideVerification");
   const db = getDB();
@@ -97,7 +97,7 @@ function hideTarget(d: DB, target: ComplaintTarget, targetId: string, hidden: bo
 }
 
 /** Returns false when this person already has an open report on the same thing */
-export function reportContent(target: ComplaintTarget, targetId: string, reason: ComplaintReason, text?: string): boolean {
+export async function reportContent(target: ComplaintTarget, targetId: string, reason: ComplaintReason, text?: string): Promise<boolean> {
   const actor = currentActor();
   assert(can.report(actor), "report");
   const db = getDB();
@@ -128,7 +128,7 @@ export function reportContent(target: ComplaintTarget, targetId: string, reason:
 }
 
 /** Admin closes every open report on the same thing at once: hides it or keeps it */
-export function resolveComplaint(complaintId: string, hide: boolean) {
+export async function resolveComplaint(complaintId: string, hide: boolean) {
   const actor = currentActor();
   assert(can.resolveComplaint(actor), "resolveComplaint");
   const c = getDB().complaints.find((x) => x.id === complaintId);

@@ -8,6 +8,7 @@ import { submitRsvp } from "@/lib/data/actions";
 import type { BlockStyle, FontKey, Invitation, InvitationBlock, InvitationTheme } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 /**
  * Renders an invitation design as a web page. The same component draws the
@@ -566,6 +567,7 @@ function Rsvp({
   guest?: { id: string; name: string } | null;
   t: ReturnType<typeof useI18n>["t"];
 }) {
+  const { run } = useAction();
   const [name, setName] = useState(guest?.name ?? "");
   const [attending, setAttending] = useState<boolean | null>(null);
   const [guests, setGuests] = useState(1);
@@ -617,8 +619,9 @@ function Rsvp({
           onSubmit={(e) => {
             e.preventDefault();
             if (!live || !valid) return;
-            submitRsvp(data.id, { name, attending: attending!, guests, note, guestId: guest?.id });
-            setSent(true);
+            void run(() => submitRsvp(data.id, { name, attending: attending!, guests, note, guestId: guest?.id }), {
+              onSuccess: () => setSent(true),
+            });
           }}
         >
           <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t("invitations.rsvp.title")}>

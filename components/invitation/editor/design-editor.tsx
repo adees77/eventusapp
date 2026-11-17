@@ -49,6 +49,7 @@ import { BLOCK_TYPES, THEMES, blockId, duplicateBlock, moveBlock, newBlock } fro
 import { cn } from "@/lib/utils";
 import { InvitationPage } from "../page/invitation-page";
 import { useDesignHistory } from "./use-design-history";
+import { background } from "@/lib/data/use-action";
 
 const ICON: Record<BlockType, typeof Text> = {
   cover: LayoutTemplate,
@@ -435,7 +436,8 @@ function PageInspector({
   onTheme: (p: Partial<InvitationTheme>, key?: string) => void;
 }) {
   const { t } = useI18n();
-  const set = (patch: Partial<Invitation>) => updateInvitation(inv.id, patch);
+  // autosave while typing: never blocks or drops keystrokes
+  const set = (patch: Partial<Invitation>) => background(() => updateInvitation(inv.id, patch));
   const th = design.theme;
   return (
     <div className="flex flex-col gap-6 p-4">

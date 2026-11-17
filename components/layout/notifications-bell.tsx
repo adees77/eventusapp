@@ -10,6 +10,7 @@ import type { NotificationKind } from "@/lib/data/types";
 import { DATE_LOCALES, useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { background } from "@/lib/data/use-action";
 
 const ICON: Record<NotificationKind, typeof Bell> = {
   message: MessageCircle,
@@ -57,7 +58,7 @@ export function NotificationsBell() {
           {unread > 0 && (
             <button
               type="button"
-              onClick={() => markNotificationsRead()}
+              onClick={() => background(() => markNotificationsRead())}
               className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
             >
               <CheckCheck className="size-3.5" />
@@ -73,7 +74,7 @@ export function NotificationsBell() {
                 <DropdownMenuItem
                   key={n.id}
                   onClick={() => {
-                    markNotificationsRead([n.id]);
+                    background(() => markNotificationsRead([n.id]));
                     if (n.href) router.push(n.href);
                   }}
                   className="mx-1 flex items-start gap-3 rounded-lg px-3 py-2.5"

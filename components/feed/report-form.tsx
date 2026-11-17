@@ -8,6 +8,7 @@ import { reportContent } from "@/lib/data/actions";
 import type { ComplaintReason, ComplaintTarget } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 const REASONS: ComplaintReason[] = ["fraud", "fake", "offensive", "spam", "quality", "other"];
 
@@ -16,15 +17,19 @@ export function ReportForm({ target, targetId, onDone }: { target: ComplaintTarg
   const { t } = useI18n();
   const [reason, setReason] = useState<ComplaintReason | null>(null);
   const [text, setText] = useState("");
+  const { run, pending } = useAction();
   return (
     <form
       className="flex flex-col gap-4"
       onSubmit={(e) => {
         e.preventDefault();
         if (!reason) return;
-        const ok = reportContent(target, targetId, reason, text);
-        toast(ok ? t("mod.reportSent") : t("mod.reportDup"));
-        onDone();
+        void run(() => reportContent(target, targetId, reason, text), {
+          onSuccess: (ok) => {
+            toast(ok ? t("mod.reportSent") : t("mod.reportDup"));
+            onDone();
+          },
+        });
       }}
     >
       <fieldset>
@@ -55,7 +60,7 @@ export function ReportForm({ target, targetId, onDone }: { target: ComplaintTarg
         maxLength={500}
         className={textareaClass}
       />
-      <Button type="submit" variant="destructive" disabled={!reason} className="h-11">
+      <Button type="submit" variant="destructive" disabled={!reason} pending={pending} className="h-11">
         {t("mod.reportSend")}
       </Button>
     </form>

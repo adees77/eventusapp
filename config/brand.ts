@@ -4,8 +4,10 @@
  * component (and shadcn/ui) picks them up automatically.
  */
 export const brand = {
-  name: "EVENTUS",
-  shortName: "Eventus",
+  name: "EVENTUS AI",
+  shortName: "Eventus AI",
+  /** Public site and the address emails come from (Resend, verified domain) */
+  domain: "eventusai.app",
   tagline: {
     ru: "ИИ-организатор праздников: расскажите о событии — ассистент всё организует",
     en: "AI event planner: tell it about your event and it organises everything",

@@ -15,11 +15,13 @@ import { useI18n } from "@/lib/i18n";
 import { invitationStats } from "@/lib/invitations/design";
 import { useActor } from "@/lib/session";
 import { routes } from "@/lib/routes";
+import { useAction } from "@/lib/data/use-action";
 
 export default function InvitationsPage() {
   const { t, l, locale, num } = useI18n();
   const actor = useActor();
   const router = useRouter();
+  const { run } = useAction();
   const [occasion, setOccasion] = useState<InvitationOccasion | "all">("all");
   const mine = useMyInvitations(actor.id);
   const event = useNextEvent(actor.id);
@@ -32,9 +34,9 @@ export default function InvitationsPage() {
     );
   }
 
-  function start(tpl?: InvitationTemplate) {
-    const inv = createInvitation(draftFromTemplate(tpl, locale, event));
-    router.push(routes.invitation(inv.id));
+  async function start(tpl?: InvitationTemplate) {
+    const inv = await run(() => createInvitation(draftFromTemplate(tpl, locale, event)));
+    if (inv) router.push(routes.invitation(inv.id));
   }
 
   const all = mine.map(invitationStats);

@@ -3,7 +3,6 @@
 import { FileText } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { toast } from "sonner";
 import { Empty, PageHeader, Section, Segmented, inputClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { DocStatus } from "@/components/vendor-panel/documents";
@@ -15,6 +14,7 @@ import type { Vendor, VendorDocument } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { routes } from "@/lib/routes";
+import { useAction } from "@/lib/data/use-action";
 
 type Tab = "pending" | "rejected" | "docs";
 
@@ -55,6 +55,7 @@ export default function AdminVerification() {
 }
 
 function VendorRequest({ vendor: v, catName, city }: { vendor: Vendor; catName: string; city: string }) {
+  const { run } = useAction();
   const { t, date } = useI18n();
   const { docs, required, blockers } = useVendorDocs(v.id);
   const [note, setNote] = useState("");
@@ -102,20 +103,14 @@ function VendorRequest({ vendor: v, catName, city }: { vendor: Vendor; catName: 
           <Button
             variant="outline"
             className="h-10 px-4"
-            onClick={() => {
-              decideVerification(v.id, false, note);
-              toast(t("mod.declinedToast"));
-            }}
+            onClick={() => run(() => decideVerification(v.id, false, note), { notice: t("mod.declinedToast") })}
           >
             {t("mod.declineVendor")}
           </Button>
           <Button
             className="h-10 px-4"
             disabled={blockers.length > 0}
-            onClick={() => {
-              decideVerification(v.id, true);
-              toast.success(t("mod.approvedToast"));
-            }}
+            onClick={() => run(() => decideVerification(v.id, true), { success: t("mod.approvedToast") })}
           >
             <VerifiedSeal className="[&_svg]:size-4 [&_svg]:text-current" />
             {t("mod.approveVendor")}
@@ -127,6 +122,7 @@ function VendorRequest({ vendor: v, catName, city }: { vendor: Vendor; catName: 
 }
 
 function DocRow({ doc: d, required }: { doc: VendorDocument; required: boolean }) {
+  const { run } = useAction();
   const { t, date } = useI18n();
   const [rejecting, setRejecting] = useState(false);
   const [note, setNote] = useState("");
@@ -149,7 +145,7 @@ function DocRow({ doc: d, required }: { doc: VendorDocument; required: boolean }
             <Button variant="outline" className="h-8 px-3 text-xs" onClick={() => setRejecting(true)}>
               {t("mod.rejectDoc")}
             </Button>
-            <Button className="h-8 px-3 text-xs" onClick={() => reviewDocument(d.id, "approved")}>
+            <Button className="h-8 px-3 text-xs" onClick={() => run(() => reviewDocument(d.id, "approved"))}>
               {t("mod.approveDoc")}
             </Button>
           </span>
@@ -161,8 +157,7 @@ function DocRow({ doc: d, required }: { doc: VendorDocument; required: boolean }
           className="mt-3 flex gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            reviewDocument(d.id, "rejected", note);
-            setRejecting(false);
+            void run(() => reviewDocument(d.id, "rejected", note), { onSuccess: () => setRejecting(false) });
           }}
         >
           <input

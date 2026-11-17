@@ -14,6 +14,7 @@ import type { Post, Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { readPhoto } from "@/lib/photos";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 const RATIOS = [
   { v: 1.25, label: "4:5" },
@@ -31,6 +32,7 @@ export function PostComposer({ vendor, onDone }: { vendor: Vendor; onDone: (post
   const [caption, setCaption] = useState("");
   const [offerId, setOfferId] = useState("");
   const [ratio, setRatio] = useState(1.25);
+  const { run, pending } = useAction();
   const fileRef = useRef<HTMLInputElement>(null);
 
   // the vendor's own photos first, then stock shots of their category
@@ -55,9 +57,10 @@ export function PostComposer({ vendor, onDone }: { vendor: Vendor; onDone: (post
       const id = src.match(/photo-([\w-]+)\?/)?.[1];
       return id ? unsplash(id, 900, Math.round(900 * ratio)) : src;
     });
-    const post = createPost({ vendorId: vendor.id, photos, caption, offerId: offerId || undefined, ratio });
-    toast.success(t("vcab.published"));
-    onDone(post);
+    void run(() => createPost({ vendorId: vendor.id, photos, caption, offerId: offerId || undefined, ratio }), {
+      success: t("vcab.published"),
+      onSuccess: onDone,
+    });
   }
 
   return (
@@ -150,7 +153,7 @@ export function PostComposer({ vendor, onDone }: { vendor: Vendor; onDone: (post
           </div>
         </div>
 
-        <Button className="h-11 w-full sm:w-fit sm:px-8" disabled={!picked.length || !caption.trim()} onClick={publish}>
+        <Button className="h-11 w-full sm:w-fit sm:px-8" disabled={!picked.length || !caption.trim()} pending={pending} onClick={publish}>
           {t("vcab.publish")}
         </Button>
       </div>

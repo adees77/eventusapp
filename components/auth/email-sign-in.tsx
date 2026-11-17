@@ -4,13 +4,15 @@ import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/auth/store";
-import { OTP_LENGTH, OTP_MAX_ATTEMPTS, isEmail, resendIn } from "@/lib/auth/otp";
+import { codeLength, useAuth } from "@/lib/auth/store";
+import { LiveAuthError } from "@/lib/auth/supabase";
+import { useAction } from "@/lib/data/use-action";
+import { OTP_MAX_ATTEMPTS, isEmail, resendIn } from "@/lib/auth/otp";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { OtpInput } from "./otp-input";
 
-/** Email → 6-digit code. Demo: the code is shown on screen instead of being emailed. */
+/** Email → one-time code. Real accounts: Supabase emails it; imitation: the code is shown on screen. */
 export function EmailSignIn({ onSignedIn }: { onSignedIn: () => void }) {
   const { t } = useI18n();
   const pending = useAuth((s) => s.pending);
@@ -23,6 +25,8 @@ export function EmailSignIn({ onSignedIn }: { onSignedIn: () => void }) {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const { run, pending: busy } = useAction();
+  const len = codeLength();
 
   // ticking clock for the resend timer
   useEffect(() => {
@@ -31,21 +35,32 @@ export function EmailSignIn({ onSignedIn }: { onSignedIn: () => void }) {
     return () => clearInterval(id);
   }, [pending]);
 
-  function send(target: string) {
-    const p = requestEmailCode(target);
-    setCode("");
+  async function send(target: string) {
     setError(null);
+    const p = await run(() => requestEmailCode(target), {
+      // a known Supabase refusal gets its own words; anything else falls back to the generic toast
+      onError: (e) => {
+        if (!(e instanceof LiveAuthError) || e.reason === "unknown") return false;
+        const message = t(`auth.err.${e.reason}`);
+        if (pending) setError(message);
+        else toast.error(message);
+        return true;
+      },
+    });
+    if (!p) return;
+    setCode("");
     setNow(Date.now());
-    toast(t("auth.demoCode", { code: p.code }), { duration: 8000 });
+    if (p.code) toast(t("auth.demoCode", { code: p.code }), { duration: 8000 });
   }
 
-  function verify(value: string) {
-    const res = verifyEmailCode(value);
+  async function verify(value: string) {
+    const res = await run(() => verifyEmailCode(value));
+    if (!res) return;
     if (res === "ok") return onSignedIn();
     const left = OTP_MAX_ATTEMPTS - (useAuth.getState().pending?.attempts ?? 0);
     setError(
       res === "wrong"
-        ? t("auth.codeWrong", { n: left })
+        ? t(useAuth.getState().pending?.code ? "auth.codeWrong" : "auth.codeWrongLive", { n: left })
         : res === "expired"
           ? t("auth.codeExpired")
           : t("auth.codeLocked"),
@@ -61,7 +76,7 @@ export function EmailSignIn({ onSignedIn }: { onSignedIn: () => void }) {
         onSubmit={(e) => {
           e.preventDefault();
           if (!isEmail(email)) return setEmailError(true);
-          send(email);
+          void send(email);
         }}
       >
         <label htmlFor="auth-email" className="sr-only">
@@ -90,7 +105,7 @@ export function EmailSignIn({ onSignedIn }: { onSignedIn: () => void }) {
             {t("auth.emailInvalid")}
           </p>
         )}
-        <Button type="submit" className="h-12 w-full rounded-xl text-md">
+        <Button type="submit" className="h-12 w-full rounded-xl text-md" pending={busy}>
           {t("auth.emailContinue")}
         </Button>
       </form>
@@ -115,13 +130,13 @@ export function EmailSignIn({ onSignedIn }: { onSignedIn: () => void }) {
       </button>
       <div>
         <h2 className="font-heading tracking-[-0.025em] text-2xl leading-tight">{t("auth.codeTitle")}</h2>
-        <p className="mt-1.5 text-sm text-text-secondary">{t("auth.codeSent", { email: pending.email })}</p>
+        <p className="mt-1.5 text-sm text-text-secondary">{t("auth.codeSent", { email: pending.email, n: len })}</p>
       </div>
       <form
         className="flex flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault();
-          if (code.length === OTP_LENGTH) verify(code);
+          if (code.length === len) void verify(code);
         }}
       >
         <OtpInput
@@ -129,23 +144,24 @@ export function EmailSignIn({ onSignedIn }: { onSignedIn: () => void }) {
           onChange={(v) => {
             setCode(v);
             setError(null);
-            if (v.length === OTP_LENGTH && !locked) verify(v);
+            if (v.length === len && !locked) void verify(v);
           }}
+          length={len}
           invalid={!!error}
           autoFocus
           label={t("auth.codeTitle")}
         />
         <p className={cn("min-h-5 text-sm", error ? "text-destructive" : "text-muted-foreground")} aria-live="polite">
-          {error ?? t("auth.demoCode", { code: pending.code })}
+          {error ?? (pending.code ? t("auth.demoCode", { code: pending.code }) : t("auth.checkInbox"))}
         </p>
-        <Button type="submit" className="h-12 w-full rounded-xl text-md" disabled={code.length < OTP_LENGTH || locked}>
+        <Button type="submit" className="h-12 w-full rounded-xl text-md" pending={busy} disabled={code.length < len || locked}>
           {t("auth.verify")}
         </Button>
       </form>
       <button
         type="button"
         disabled={wait > 0 && !locked}
-        onClick={() => send(pending.email)}
+        onClick={() => void send(pending.email)}
         className="w-fit text-sm text-primary transition-colors hover:text-primary-hover disabled:text-muted-foreground"
       >
         {wait > 0 && !locked ? t("auth.resendIn", { s: wait }) : t("auth.resend")}

@@ -2,7 +2,6 @@
 
 import { FileText, Upload, X } from "lucide-react";
 import { useRef } from "react";
-import { toast } from "sonner";
 import { Section } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { VerifiedSeal } from "@/components/vendor/badges";
@@ -13,6 +12,7 @@ import { useVendorDocs } from "@/lib/data/views/moderation";
 import type { DocKind, Vendor, VendorDocument } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 export function DocStatus({ status }: { status: VendorDocument["status"] }) {
   const { t } = useI18n();
@@ -32,6 +32,7 @@ export function DocStatus({ status }: { status: VendorDocument["status"] }) {
 
 /** Vendor side of verification: upload papers per kind, then send the request */
 export function VendorDocuments({ vendor }: { vendor: Vendor }) {
+  const { run, pending } = useAction();
   const { t } = useI18n();
   const { docs, missing, required } = useVendorDocs(vendor.id);
   const settings = usePlatformSettings();
@@ -75,10 +76,8 @@ export function VendorDocuments({ vendor }: { vendor: Vendor }) {
           <Button
             disabled={missing.length > 0 || hasRejected}
             className="h-10 px-5"
-            onClick={() => {
-              requestVerification(vendor.id);
-              toast.success(t("mod.vSent"));
-            }}
+            pending={pending}
+            onClick={() => run(() => requestVerification(vendor.id), { success: t("mod.vSent") })}
           >
             {t("mod.vSend")}
           </Button>
@@ -105,6 +104,7 @@ function DocSlot({
   doc?: VendorDocument;
   locked: boolean;
 }) {
+  const { run } = useAction();
   const { t } = useI18n();
   const input = useRef<HTMLInputElement>(null);
   return (
@@ -124,7 +124,7 @@ function DocSlot({
           {doc && (
             <button
               type="button"
-              onClick={() => removeDocument(doc.id)}
+              onClick={() => run(() => removeDocument(doc.id))}
               aria-label={t("mod.vRemove")}
               title={t("mod.vRemove")}
               className="flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground"
@@ -143,7 +143,7 @@ function DocSlot({
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) uploadDocument(vendorId, kind, f.name);
+              if (f) void run(() => uploadDocument(vendorId, kind, f.name));
               e.target.value = "";
             }}
           />

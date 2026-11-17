@@ -15,6 +15,8 @@ export const routes = {
   home: "/",
   welcome: "/welcome",
   welcomeVendor: "/welcome?as=vendor",
+  /** Where Google sign-in (Supabase OAuth) returns */
+  authCallback: "/auth/callback",
   onboarding: "/onboarding",
   onboardingVendor: "/onboarding/vendor",
   assistant: "/assistant",

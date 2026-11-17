@@ -2,15 +2,16 @@
 
 import { Star } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 import { textareaClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { leaveReview } from "@/lib/data/actions";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 export function ReviewDialog({ bookingId, vendorName, onClose }: { bookingId: string | null; vendorName: string; onClose: () => void }) {
+  const { run, pending } = useAction();
   const { t } = useI18n();
   const [rating, setRating] = useState(5);
   const [text, setText] = useState("");
@@ -50,16 +51,16 @@ export function ReviewDialog({ bookingId, vendorName, onClose }: { bookingId: st
           </Button>
           <Button
             disabled={!text.trim()}
-            onClick={() => {
-              try {
-                leaveReview(bookingId!, rating, text);
-                toast.success(t("cabinet.reviewThanks"));
-                setText("");
-                onClose();
-              } catch {
-                toast.error(t("common.error"));
-              }
-            }}
+            pending={pending}
+            onClick={() =>
+              run(() => leaveReview(bookingId!, rating, text), {
+                success: t("cabinet.reviewThanks"),
+                onSuccess: () => {
+                  setText("");
+                  onClose();
+                },
+              })
+            }
           >
             {t("cabinet.reviewSubmit")}
           </Button>

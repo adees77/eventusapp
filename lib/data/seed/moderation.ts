@@ -14,7 +14,7 @@ export const DEFAULT_SETTINGS = (fee: number): PlatformSettings => ({
   notifyOnComplaint: true,
   hideUnverified: false,
   supportPhone: "+996 555 000 777",
-  supportEmail: "support@eventus.kg",
+  supportEmail: "support@eventusai.app",
 });
 
 const file = (v: Vendor, kind: DocKind) =>

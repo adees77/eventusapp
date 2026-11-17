@@ -44,3 +44,6 @@ next-env.d.ts
 
 # Claude Code worktrees of other sessions
 .claude/worktrees/
+
+# Supabase CLI cache
+supabase/.temp/

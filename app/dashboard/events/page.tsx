@@ -4,7 +4,6 @@ import { differenceInCalendarDays, parseISO } from "date-fns";
 import { Check, Pencil, Plus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { toast } from "sonner";
 import { CategoryIcon } from "@/components/category-icon";
 import { DatePicker } from "@/components/date-picker";
 import { Empty, Field, PageHeader, Section, inputClass } from "@/components/panel";
@@ -15,6 +14,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { createEvent, setChecklist, updateEvent } from "@/lib/data/actions";
 import { CITIES } from "@/lib/data/seed/catalog";
 import { useClientEvents, useEventBudget } from "@/lib/data/views/client";
+import { useAction } from "@/lib/data/use-action";
 import type { EventItem } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
@@ -29,6 +29,7 @@ export default function EventsPage() {
   const event = events.find((e) => e.id === selectedId) ?? events[0];
   const [editing, setEditing] = useState<EventItem | "new" | null>(null);
   const [newTask, setNewTask] = useState("");
+  const { run } = useAction();
 
   const { booked, prepaid, byCategory } = useEventBudget(actor.id, event?.id);
   const days = event ? differenceInCalendarDays(parseISO(event.date), new Date()) : 0;
@@ -36,22 +37,26 @@ export default function EventsPage() {
 
   function toggleTask(id: string) {
     if (!event) return;
-    setChecklist(
-      event.id,
-      event.checklist.map((c) => (c.id === id ? { ...c, done: !c.done } : c)),
+    void run(() =>
+      setChecklist(
+        event.id,
+        event.checklist.map((c) => (c.id === id ? { ...c, done: !c.done } : c)),
+      ),
     );
   }
 
   function addTask() {
     if (!event || !newTask.trim()) return;
-    setChecklist(event.id, [
-      ...event.checklist,
-      {
-        id: `c-${event.checklist.length + 1}-${event.checklist.map((c) => c.id).join("").length}`,
-        title: newTask.trim().slice(0, 80),
-        done: false,
-      },
-    ]);
+    void run(() =>
+      setChecklist(event.id, [
+        ...event.checklist,
+        {
+          id: `c-${event.checklist.length + 1}-${event.checklist.map((c) => c.id).join("").length}`,
+          title: newTask.trim().slice(0, 80),
+          done: false,
+        },
+      ]),
+    );
     setNewTask("");
   }
 
@@ -211,14 +216,12 @@ export default function EventsPage() {
       <EventDialog
         value={editing}
         onClose={() => setEditing(null)}
-        onSave={(data) => {
+        onSave={async (data) => {
           if (editing === "new") {
-            const e = createEvent(data);
-            setSelectedId(e.id);
-            toast.success(t("dashboard.eventCreated"));
+            const e = await run(() => createEvent(data), { success: t("dashboard.eventCreated") });
+            if (e) setSelectedId(e.id);
           } else if (editing) {
-            updateEvent(editing.id, data);
-            toast.success(t("common.saved"));
+            await run(() => updateEvent(editing.id, data), { success: t("common.saved") });
           }
           setEditing(null);
         }}

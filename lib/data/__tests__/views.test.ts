@@ -13,18 +13,18 @@ const client = { id: DEMO_CLIENT_ID, role: "client" as const };
 describe("acting user", () => {
   beforeEach(() => useDataStore.setState({ db: buildSeed(), hydrated: true }));
 
-  it("actions act as the tab's session, never as a caller-picked user", () => {
+  it("actions act as the tab's session, never as a caller-picked user", async () => {
     useSession.setState({ id: DEMO_CLIENT_ID, role: "client" });
     expect(currentActor()).toEqual(client);
     const vendorId = getDB().vendors[0].id;
     const had = getDB().favorites.some((f) => f.userId === DEMO_CLIENT_ID && f.vendorId === vendorId);
-    toggleFavorite(vendorId);
+    await toggleFavorite(vendorId);
     expect(getDB().favorites.some((f) => f.userId === DEMO_CLIENT_ID && f.vendorId === vendorId)).toBe(!had);
   });
 
-  it("asActor switches the user only inside the callback and fails closed on policy", () => {
+  it("asActor switches the user only inside the callback and fails closed on policy", async () => {
     useSession.setState({ id: DEMO_CLIENT_ID, role: "client" });
-    expect(() => asActor({ id: demoVendorOwnerId, role: "vendor" }, () => toggleFavorite(getDB().vendors[0].id))).toThrow();
+    await expect(asActor({ id: demoVendorOwnerId, role: "vendor" }, () => toggleFavorite(getDB().vendors[0].id))).rejects.toThrow();
     expect(currentActor()).toEqual(client);
   });
 });

@@ -4,7 +4,6 @@
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
-import { toast } from "sonner";
 import { Empty, Field, Section, inputClass, textareaClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,6 +14,7 @@ import type { Offer, Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { parseUnit, unitText, UnitPicker, type UnitValue } from "./unit-picker";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 export function VendorOffers({ vendor }: { vendor: Vendor }) {
   const { t, l, money } = useI18n();
@@ -78,6 +78,7 @@ export function VendorOffers({ vendor }: { vendor: Vendor }) {
 }
 
 export function OfferForm({ vendor, initial, onDone }: { vendor: Vendor; initial: Offer | null; onDone: () => void }) {
+  const { run } = useAction();
   const { t, locale } = useI18n();
   const [title, setTitle] = useState(initial?.title[locale] ?? "");
   const [description, setDescription] = useState(initial?.description[locale] ?? "");
@@ -103,7 +104,9 @@ export function OfferForm({ vendor, initial, onDone }: { vendor: Vendor; initial
       onSubmit={(e) => {
         e.preventDefault();
         if (!valid) return;
-        upsertOffer({
+        void run(
+          () =>
+            upsertOffer({
           id: initial?.id,
           vendorId: vendor.id,
           title: loc(title, initial?.title),
@@ -117,9 +120,9 @@ export function OfferForm({ vendor, initial, onDone }: { vendor: Vendor; initial
           premium: initial?.premium,
           photos: photo ? [photo, ...(initial?.photos.filter((p) => p !== photo) ?? [])] : (initial?.photos ?? []),
           active,
-        });
-        toast.success(t("common.saved"));
-        onDone();
+            }),
+          { success: t("common.saved"), onSuccess: onDone },
+        );
       }}
     >
       <Field label={t("vp.offerTitle")}>
@@ -186,10 +189,7 @@ export function OfferForm({ vendor, initial, onDone }: { vendor: Vendor; initial
             type="button"
             variant="ghost"
             className="text-destructive"
-            onClick={() => {
-              deleteOffer(initial.id);
-              onDone();
-            }}
+            onClick={() => run(() => deleteOffer(initial.id), { onSuccess: onDone })}
           >
             <Trash2 />
             {t("vp.deleteOffer")}

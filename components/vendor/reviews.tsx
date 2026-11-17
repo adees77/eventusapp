@@ -2,7 +2,6 @@
 
 import { BadgeCheck, Flag, Star } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 import { ReportForm } from "@/components/feed/report-form";
 import { textareaClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import type { Review, Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 /** Big rating, review count, completed orders and the 5→1 star distribution */
 export function ReviewSummary({ vendor, reviews, className }: { vendor: Vendor; reviews: Review[]; className?: string }) {
@@ -59,6 +59,7 @@ export function Stars({ value, className, size = "size-3.5" }: { value: number; 
  * reviews); a signed-in client can report a review.
  */
 export function ReviewList({ reviews, limit, vendor }: { reviews: Review[]; limit?: number; vendor?: Vendor }) {
+  const { run } = useAction();
   const { t, l, date } = useI18n();
   const actor = useActor();
   const [all, setAll] = useState(false);
@@ -118,9 +119,7 @@ export function ReviewList({ reviews, limit, vendor }: { reviews: Review[]; limi
                 className="mt-1 flex flex-col gap-2"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  replyToReview(r.id, draft);
-                  setOpen(null);
-                  toast.success(t("common.saved"));
+                  void run(() => replyToReview(r.id, draft), { success: t("common.saved"), onSuccess: () => setOpen(null) });
                 }}
               >
                 <textarea
@@ -163,6 +162,7 @@ export function ReviewList({ reviews, limit, vendor }: { reviews: Review[]; limi
  * (one review per deal); everyone else sees the rule instead of a form.
  */
 export function ReviewComposer({ vendor, compact }: { vendor: Vendor; compact?: boolean }) {
+  const { run } = useAction();
   const { t } = useI18n();
   const actor = useActor();
   const { booking, hadDeal: reviewed } = useReviewEligibility(actor, vendor.id);
@@ -180,14 +180,13 @@ export function ReviewComposer({ vendor, compact }: { vendor: Vendor; compact?: 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!rating || !text.trim()) return;
-    try {
-      leaveReview(booking!.id, rating, text);
-      toast.success(t("cabinet.reviewThanks"));
-      setText("");
-      setRating(0);
-    } catch {
-      toast.error(t("common.error"));
-    }
+    void run(() => leaveReview(booking!.id, rating, text), {
+      success: t("cabinet.reviewThanks"),
+      onSuccess: () => {
+        setText("");
+        setRating(0);
+      },
+    });
   }
 
   return (

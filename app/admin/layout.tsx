@@ -7,6 +7,7 @@ import { useAdminCounters } from "@/lib/data/views/admin";
 import { useI18n } from "@/lib/i18n";
 import { useActor } from "@/lib/session";
 import { routes } from "@/lib/routes";
+import { brand } from "@/config/brand";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
@@ -45,7 +46,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <LogoMark className="h-4 w-auto" />
             </span>
             <div>
-              <div className="text-sm font-medium">EVENTUS</div>
+              <div className="text-sm font-medium">{brand.name}</div>
               <div className="text-xs text-muted-foreground">{t("acab.console")}</div>
             </div>
           </div>

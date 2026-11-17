@@ -58,7 +58,7 @@ export const TOOL_DEFINITIONS = [
   {
     name: "search_vendors",
     description:
-      "Search the EVENTUS catalog of event vendors in Kyrgyzstan. Returns real vendors with prices in KGS (som) and, when a date is given, how many units are free on that date. Always call this before recommending any vendor; never invent vendors, prices or availability. The results are shown to the user as cards with Book buttons.",
+      "Search the EVENTUS AI catalog of event vendors in Kyrgyzstan. Returns real vendors with prices in KGS (som) and, when a date is given, how many units are free on that date. Always call this before recommending any vendor; never invent vendors, prices or availability. The results are shown to the user as cards with Book buttons.",
     input_schema: {
       type: "object" as const,
       properties: {

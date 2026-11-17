@@ -17,11 +17,11 @@ const input = {
 describe("vendor sign-up (the /onboarding/vendor finish)", () => {
   beforeEach(() => useDataStore.setState({ db: buildSeed(), hydrated: true }));
 
-  it("creates profile, details, photos, first offer and post, and finishes onboarding in ONE store write", () => {
-    const u = upsertAuthUser({ email: "new@vendor.kg", name: "Айбек", provider: "google" });
+  it("creates profile, details, photos, first offer and post, and finishes onboarding in ONE store write", async () => {
+    const u = await upsertAuthUser({ email: "new@vendor.kg", name: "Айбек", provider: "google" });
     let writes = 0;
     const unsub = useDataStore.subscribe(() => writes++);
-    const { vendor, offerId, postId } = asActor({ id: u.id, role: "client" }, () => signUpVendor(input));
+    const { vendor, offerId, postId } = await asActor({ id: u.id, role: "client" }, () => signUpVendor(input));
     unsub();
 
     expect(writes).toBe(1);
@@ -35,13 +35,13 @@ describe("vendor sign-up (the /onboarding/vendor finish)", () => {
     expect(db.posts.find((p) => p.id === postId)).toMatchObject({ vendorId: vendor.id, offerId, photos: input.photos });
   });
 
-  it("finishes an interrupted earlier attempt by reusing its vendor instead of creating a second one", () => {
-    const u = upsertAuthUser({ email: "half@vendor.kg", provider: "email" });
-    asActor({ id: u.id, role: "client" }, () => signUpVendor({ ...input, name: "Half", category: "cars", specs: {} }));
+  it("finishes an interrupted earlier attempt by reusing its vendor instead of creating a second one", async () => {
+    const u = await upsertAuthUser({ email: "half@vendor.kg", provider: "email" });
+    await asActor({ id: u.id, role: "client" }, () => signUpVendor({ ...input, name: "Half", category: "cars", specs: {} }));
     // simulate the lost onboarding write
     useDataStore.setState((s) => ({ db: { ...s.db!, users: s.db!.users.map((x) => (x.id === u.id ? { ...x, needsOnboarding: true, role: "client" as const } : x)) } }));
 
-    asActor({ id: u.id, role: "client" }, () => signUpVendor({ ...input, category: "cars", specs: {} }));
+    await asActor({ id: u.id, role: "client" }, () => signUpVendor({ ...input, category: "cars", specs: {} }));
     const db = getDB();
     expect(db.users.find((x) => x.id === u.id)).toMatchObject({ needsOnboarding: false, role: "vendor" });
     const mine = db.vendors.filter((v) => v.ownerId === u.id);
@@ -49,7 +49,7 @@ describe("vendor sign-up (the /onboarding/vendor finish)", () => {
     expect(mine[0]).toMatchObject({ name: "Тест Холл", category: "cars" });
   });
 
-  it("refuses admins", () => {
-    expect(() => asActor({ id: "u-admin", role: "admin" }, () => signUpVendor(input))).toThrow();
+  it("refuses admins", async () => {
+    await expect(asActor({ id: "u-admin", role: "admin" }, () => signUpVendor(input))).rejects.toThrow();
   });
 });

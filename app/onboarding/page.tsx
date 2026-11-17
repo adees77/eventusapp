@@ -300,13 +300,13 @@ export default function OnboardingPage() {
     saveDraft(actor.id, { ...draft, answers: clearStep(answers, s), log });
   }
 
-  function finish() {
+  async function finish() {
     if (finishing) return;
     setFinishing(true);
     try {
       if (answers.role === "vendor") {
         // one atomic write: profile, first service and first post, so the profile and the feed are not empty from day one
-        signUpVendor({
+        await signUpVendor({
           ownerName: answers.name ?? user?.name ?? "",
           name: answers.bizName!,
           category: answers.category!,
@@ -322,7 +322,7 @@ export default function OnboardingPage() {
         clearDraft(actor.id);
         router.replace(routes.vendorHome);
       } else {
-        completeClientOnboarding({
+        await completeClientOnboarding({
           name: answers.name ?? user?.name ?? "",
           city: answers.city!,
           event: { title: eventTitle(answers, t), date: answers.date!, guests: answers.guests!, budget: answers.budget ?? 0 },

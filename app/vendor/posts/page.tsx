@@ -3,7 +3,6 @@
 import { Check, Heart, Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
-import { toast } from "sonner";
 import { Empty, Field, PageHeader, textareaClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,6 +13,7 @@ import { PHOTOS, unsplash } from "@/lib/data/seed/photos";
 import { useVendorPosts } from "@/lib/data/views/vendor";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 const RATIOS = [
   { v: 1.25, label: "4:5" },
@@ -22,6 +22,7 @@ const RATIOS = [
 ];
 
 export default function VendorPosts() {
+  const { run, pending } = useAction();
   const { t, l, num, date } = useI18n();
   const vendor = useMyVendor();
   const { rows: posts, offers } = useVendorPosts(vendor.id);
@@ -47,12 +48,15 @@ export default function VendorPosts() {
       const id = src.match(/photo-([\w-]+)\?/)?.[1];
       return id ? unsplash(id, 900, Math.round(900 * ratio)) : src;
     });
-    createPost({ vendorId: vendor.id, photos, caption, offerId: offerId || undefined, ratio });
-    toast.success(t("vcab.published"));
-    setOpen(false);
-    setPicked([]);
-    setCaption("");
-    setOfferId("");
+    void run(() => createPost({ vendorId: vendor.id, photos, caption, offerId: offerId || undefined, ratio }), {
+      success: t("vcab.published"),
+      onSuccess: () => {
+        setOpen(false);
+        setPicked([]);
+        setCaption("");
+        setOfferId("");
+      },
+    });
   }
 
   return (
@@ -75,10 +79,7 @@ export default function VendorPosts() {
                 <Image src={p.photos[0]} alt="" fill sizes="300px" className="object-cover" />
                 <button
                   type="button"
-                  onClick={() => {
-                    deletePost(p.id);
-                    toast(t("vcab.postDeleted"));
-                  }}
+                  onClick={() => run(() => deletePost(p.id), { notice: t("vcab.postDeleted") })}
                   className="absolute top-2 right-2 flex size-8 items-center justify-center rounded-full bg-card/90 text-muted-foreground opacity-0 shadow-soft transition-opacity group-hover:opacity-100 hover:text-destructive max-lg:opacity-100"
                   aria-label={t("vcab.deletePost")}
                 >
@@ -175,7 +176,7 @@ export default function VendorPosts() {
             <Button variant="outline" onClick={() => setOpen(false)}>
               {t("common.cancel")}
             </Button>
-            <Button disabled={!picked.length || !caption.trim()} onClick={publish}>
+            <Button disabled={!picked.length || !caption.trim()} pending={pending} onClick={publish}>
               <Check />
               {t("vcab.publish")}
             </Button>

@@ -107,15 +107,15 @@ export default function VendorSetupPage() {
   function next() {
     if (!valid[step]) return;
     if (idx < STEPS.length - 1) return setStep(STEPS[idx + 1]);
-    finish();
+    void finish();
   }
 
-  function finish() {
+  async function finish() {
     if (busy || !category) return;
     setBusy(true);
     try {
       // one atomic write; it also finishes an earlier interrupted attempt by reusing its vendor
-      signUpVendor({
+      await signUpVendor({
         ownerName: user?.name ?? bizName,
         name: bizName,
         category,

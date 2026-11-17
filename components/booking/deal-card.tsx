@@ -2,7 +2,6 @@
 
 import { Check, Lock, ShieldCheck } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { textareaClass } from "@/components/panel";
@@ -14,6 +13,7 @@ import { useI18n } from "@/lib/i18n";
 import { escrowOf } from "@/lib/payments/escrow";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 const TONE: Record<EscrowState, string> = {
   none: "bg-gold",
@@ -83,14 +83,7 @@ export function DealCard({ booking, className }: { booking: Booking; className?:
   const party = actor.id === booking.clientId ? "client" : actor.id === vendorOwner ? "vendor" : null;
   const mine = party === "client" ? e.clientConfirmedAt : party === "vendor" ? e.vendorConfirmedAt : undefined;
 
-  function run(fn: () => void, ok?: string) {
-    try {
-      fn();
-      if (ok) toast.success(ok);
-    } catch {
-      toast.error(t("common.error"));
-    }
-  }
+  const { run, pending, isPending } = useAction();
 
   const explain =
     e.state === "held"
@@ -151,17 +144,18 @@ export function DealCard({ booking, className }: { booking: Booking; className?:
           {party && (
             <div className="mt-4 flex flex-col gap-2">
               {mine ? (
-                <Button variant="outline" className="h-10" onClick={() => run(() => unconfirmDeal(booking.id))}>
+                <Button variant="outline" className="h-10" pending={isPending("unconfirm")} onClick={() => run(() => unconfirmDeal(booking.id), { key: "unconfirm" })}>
                   {t("escrow.unconfirm")}
                 </Button>
               ) : (
                 <>
                   <Button
                     className="h-11"
+                    pending={isPending("confirm")}
                     onClick={() =>
-                      run(() => {
-                        const next = confirmDeal(booking.id);
-                        toast.success(next.state === "released" ? t("escrow.releasedToast") : t("escrow.confirmedToast"));
+                      run(() => confirmDeal(booking.id), {
+                        key: "confirm",
+                        success: (next) => (next.state === "released" ? t("escrow.releasedToast") : t("escrow.confirmedToast")),
                       })
                     }
                   >
@@ -229,21 +223,24 @@ export function DealCard({ booking, className }: { booking: Booking; className?:
             {dialog === "cancel" ? (
               <Button
                 variant="destructive"
-                onClick={() => {
-                  run(() => cancelDeal(booking.id), t("escrow.refundedToast"));
-                  setDialog(null);
-                }}
+                pending={pending}
+                onClick={() => run(() => cancelDeal(booking.id), { success: t("escrow.refundedToast"), onSuccess: () => setDialog(null) })}
               >
                 {t("escrow.cancel")}
               </Button>
             ) : (
               <Button
                 disabled={!reason.trim()}
-                onClick={() => {
-                  run(() => openDispute(booking.id, reason), t("escrow.disputeOpened"));
-                  setDialog(null);
-                  setReason("");
-                }}
+                pending={pending}
+                onClick={() =>
+                  run(() => openDispute(booking.id, reason), {
+                    success: t("escrow.disputeOpened"),
+                    onSuccess: () => {
+                      setDialog(null);
+                      setReason("");
+                    },
+                  })
+                }
               >
                 {t("escrow.disputeSubmit")}
               </Button>

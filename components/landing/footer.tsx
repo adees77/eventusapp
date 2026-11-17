@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Logo } from "@/components/brand/logo";
 import { useI18n } from "@/lib/i18n";
 import { routes } from "@/lib/routes";
+import { brand } from "@/config/brand";
 
 export function Footer() {
   const { t } = useI18n();
@@ -16,10 +17,10 @@ export function Footer() {
       <div className="surface-ink overflow-hidden rounded-[28px] md:rounded-[36px]">
         <div className="container-app pt-12 md:pt-16">
           <div
-            className="display bg-gradient-to-b from-white/35 to-white/0 bg-clip-text text-center text-[22vw] leading-[0.8] font-medium tracking-[-0.06em] text-transparent select-none xl:text-[260px]"
+            className="display bg-gradient-to-b from-white/35 to-white/0 bg-clip-text text-center text-[15vw] leading-[0.8] font-medium tracking-[-0.06em] text-transparent select-none xl:text-[180px]"
             aria-hidden
           >
-            EVENTUS
+            {brand.name}
           </div>
         </div>
         <div className="container-app grid grid-cols-1 gap-10 py-12 md:grid-cols-[1.2fr_1fr_1.3fr]">

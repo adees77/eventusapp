@@ -12,7 +12,7 @@ export function notify(userId: string, kind: NotificationKind, text: LText, href
   update((d) => ({ ...d, notifications: [n, ...d.notifications].slice(0, 300) }));
 }
 
-export function markNotificationsRead(ids?: string[]) {
+export async function markNotificationsRead(ids?: string[]) {
   const actor = currentActor();
   update((d) => ({
     ...d,

@@ -1,4 +1,4 @@
-# EVENTUS — демо платформы для организации мероприятий
+# EVENTUS AI — демо платформы для организации мероприятий
 
 Кликабельный прототип маркетплейса услуг для свадеб и тоев в Кыргызстане (старт: Бишкек).
 
@@ -66,12 +66,14 @@ lib/ai/                   протокол, инструменты, Claude-аг�
 lib/payments/provider.ts  абстракция платёжного провайдера + демо-провайдер
 lib/voice/use-speech.ts   голосовой ввод (Web Speech API)
 messages/{ru,en}.json     строки интерфейса
-supabase/schema.sql       схема Postgres + RLS для переезда на Supabase
+supabase/migrations/      схема Postgres: таблицы, RLS, серверные функции (бронь, эскроу), триггеры
+supabase/tests/smoke.sql  сквозная проверка миграций под ролями anon/authenticated (в транзакции с откатом)
+lib/supabase/database.types.ts  типы базы, сгенерированы из миграций
 ```
 
 ### Данные
 - Mock-база хранится в браузере (`lib/data/store.ts`, zustand + localStorage). Вкладки синхронизируются через событие `storage`.
-- Все записи проходят через `lib/data/actions.ts`. Каждое действие проверяет правила из `lib/data/policies.ts`; те же правила записаны как RLS-политики в `supabase/schema.sql`.
+- Все записи проходят через `lib/data/actions/*` (асинхронные). Каждое действие проверяет правила из `lib/data/policies.ts`; те же правила записаны как RLS-политики и серверные функции в `supabase/migrations/`.
 - **Сид** (`lib/data/seed/`): 33 вымышленных исполнителя в 12 категориях, 75 предложений с ценами в сомах, отзывы, событие клиента, стартовые брони и чаты. Фото с Unsplash.
   - Все названия и имена выдуманы.
   - Чтобы пересоздать сид у всех зрителей, увеличьте `seedVersion` в `config/demo.ts`. У одного зрителя: «Сбросить демо».
@@ -125,11 +127,13 @@ Web Speech API: ru-RU по умолчанию; кыргызский (ky-KG) и �
 
 ## Переезд на Supabase
 
-1. Создайте проект и выполните `supabase/schema.sql`: таблицы, RLS-политики, Realtime для сообщений.
-2. Залейте сид: функция `buildSeed()` отдаёт данные в той же форме, что и таблицы.
-3. Замените тела функций в `lib/data/actions.ts` на вызовы supabase-js, а чтение в `useDB` — на запросы или подписки.
-4. Переключатель ролей замените на Supabase Auth: роль берётся из `profiles.role`.
-5. Инструменты ассистента (`lib/ai/tool-exec.ts`) перенесите в серверный роут: им нужен только снимок данных.
+Проект Supabase «eventus» (Франкфурт) уже создан, миграции из `supabase/migrations/` применены, `supabase/tests/smoke.sql` проходит.
+Важно: после каждой новой функции отзывайте `EXECUTE` у `public/anon/authenticated` и выдавайте явно (см. `…_lock_down_functions.sql`) — миграции идут от `supabase_admin`, у которого права по умолчанию открыты.
+
+1. Supabase Auth (email OTP, Google) для живого режима: профиль создаёт триггер `on_auth_user_created`, роль — `profiles.role`. Демо остаётся локальным.
+2. Замените тела функций в `lib/data/actions/*` на вызовы supabase-js: многошаговые записи — `supabase.rpc(...)` (`create_booking`, `confirm_deal`, `sign_up_vendor`…), простые — запросы к таблицам; чтение в `lib/data/views/*` — на запросы или подписки.
+3. Оплата: `confirm_booking_payment` вызывает только webhook провайдера (service role), не браузер.
+4. Инструменты ассистента (`lib/ai/tool-exec.ts`) перенесите в серверный роут.
 
 ## Ограничения демо
 

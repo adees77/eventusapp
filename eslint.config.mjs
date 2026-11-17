@@ -24,6 +24,13 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  {
+    // Actions are async: a call that is neither awaited nor handled loses its error silently.
+    // Use `useAction` in components, `await` elsewhere, or `void` for deliberate fire-and-forget.
+    files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
+    languageOptions: { parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname } },
+    rules: { "@typescript-eslint/no-floating-promises": "error" },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

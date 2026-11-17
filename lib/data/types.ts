@@ -1,6 +1,6 @@
 /**
- * Domain model. Mirrors supabase/schema.sql 1:1 so the mock store can be
- * swapped for Supabase without touching UI code.
+ * Domain model. Mirrors the Postgres schema in supabase/migrations (camelCase here, snake_case there),
+ * so the mock store can be swapped for Supabase without touching UI code.
  */
 
 export type Locale = "ru" | "en";

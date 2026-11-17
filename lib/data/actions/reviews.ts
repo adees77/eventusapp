@@ -10,7 +10,7 @@ import { routes } from "@/lib/routes";
 // ── Reviews ───────────────────────────────────────────────────
 
 /** Client leaves a review once the booking is completed (one per booking) */
-export function leaveReview(bookingId: string, rating: number, text: string) {
+export async function leaveReview(bookingId: string, rating: number, text: string) {
   const actor = currentActor();
   const db = getDB();
   const b = db.bookings.find((x) => x.id === bookingId);
@@ -33,7 +33,7 @@ export function leaveReview(bookingId: string, rating: number, text: string) {
   if (v) notify(v.ownerId, "review", { ru: `Новый отзыв: ${r} из 5`, en: `New review: ${r} of 5` }, routes.vendor(v.slug, "reviews"));
 }
 
-export function replyToReview(reviewId: string, text: string) {
+export async function replyToReview(reviewId: string, text: string) {
   const actor = currentActor();
   const db = getDB();
   const r = db.reviews.find((x) => x.id === reviewId);
@@ -43,7 +43,7 @@ export function replyToReview(reviewId: string, text: string) {
   update((d) => ({ ...d, reviews: d.reviews.map((x) => (x.id === reviewId ? { ...x, reply: clean ? { text: clean, date: now().slice(0, 10) } : undefined } : x)) }));
 }
 
-export function setReviewHidden(reviewId: string, hidden: boolean) {
+export async function setReviewHidden(reviewId: string, hidden: boolean) {
   const actor = currentActor();
   assert(actor.role === "admin", "moderateReview");
   update((d) => ({ ...d, reviews: d.reviews.map((x) => (x.id === reviewId ? { ...x, hidden } : x)) }));

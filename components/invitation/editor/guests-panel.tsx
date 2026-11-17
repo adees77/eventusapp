@@ -11,6 +11,7 @@ import type { Invitation } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { guestStatus, rsvpOfGuest, type GuestStatus } from "@/lib/invitations/design";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 export const STATUS_TONE: Record<GuestStatus, string> = {
   draft: "bg-border",
@@ -36,6 +37,7 @@ export function GuestsPanel({ inv }: { inv: Invitation }) {
   const [phone, setPhone] = useState("");
   const [group, setGroup] = useState("");
   const [seats, setSeats] = useState(1);
+  const { run, pending } = useAction();
   const [bulk, setBulk] = useState<string | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
   const [filter, setFilter] = useState<GuestStatus | "all">("all");
@@ -45,10 +47,13 @@ export function GuestsPanel({ inv }: { inv: Invitation }) {
   function addOne(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
-    addGuests(inv.id, [{ name, phone, group: group || undefined, seats }]);
-    setName("");
-    setPhone("");
-    setSeats(1);
+    void run(() => addGuests(inv.id, [{ name, phone, group: group || undefined, seats }]), {
+      onSuccess: () => {
+        setName("");
+        setPhone("");
+        setSeats(1);
+      },
+    });
   }
 
   function importBulk() {
@@ -57,9 +62,7 @@ export function GuestsPanel({ inv }: { inv: Invitation }) {
       .map((line) => line.split(/[,;\t]/).map((x) => x.trim()))
       .filter(([n]) => n)
       .map(([n, p, s]) => ({ name: n, phone: p, seats: Number(s) || 1, group: group || undefined }));
-    const n = addGuests(inv.id, list);
-    toast.success(t("inv.imported", { n }));
-    setBulk(null);
+    void run(() => addGuests(inv.id, list), { success: (n) => t("inv.imported", { n }), onSuccess: () => setBulk(null) });
   }
 
   async function copy(text: string) {
@@ -82,7 +85,7 @@ export function GuestsPanel({ inv }: { inv: Invitation }) {
           : `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
       window.open(url, "_blank", "noopener");
     }
-    markGuestsSent(inv.id, [g.id]);
+    void run(() => markGuestsSent(inv.id, [g.id]));
   }
 
   const statuses: (GuestStatus | "all")[] = ["all", "draft", "sent", "opened", "coming", "declined"];
@@ -164,11 +167,9 @@ export function GuestsPanel({ inv }: { inv: Invitation }) {
           <Button
             variant="outline"
             className="h-9 px-4"
-            onClick={() => {
-              markGuestsSent(inv.id, picked);
-              toast.success(t("inv.markedSent", { n: picked.length }));
-              setPicked([]);
-            }}
+            onClick={() =>
+              run(() => markGuestsSent(inv.id, picked), { success: t("inv.markedSent", { n: picked.length }), onSuccess: () => setPicked([]) })
+            }
           >
             <Check />
             {t("inv.markSent")} · {picked.length}
@@ -237,7 +238,7 @@ export function GuestsPanel({ inv }: { inv: Invitation }) {
                         <SendBtn label={t("invitations.copyLink")} onClick={() => send(g, "copy")}>
                           <Copy className="size-3.5" />
                         </SendBtn>
-                        <SendBtn label={t("inv.delete")} onClick={() => removeGuest(inv.id, g.id)}>
+                        <SendBtn label={t("inv.delete")} onClick={() => run(() => removeGuest(inv.id, g.id))}>
                           <Trash2 className="size-3.5" />
                         </SendBtn>
                       </div>
@@ -273,7 +274,7 @@ export function GuestsPanel({ inv }: { inv: Invitation }) {
             <Button variant="outline" onClick={() => setBulk(null)}>
               {t("common.cancel")}
             </Button>
-            <Button disabled={!bulk?.trim()} onClick={importBulk}>
+            <Button disabled={!bulk?.trim()} pending={pending} onClick={importBulk}>
               {t("inv.importDo")}
             </Button>
           </DialogFooter>

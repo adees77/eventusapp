@@ -11,9 +11,11 @@ import { escrowOf } from "@/lib/payments/escrow";
 import { BookingRow } from "./booking-row";
 import { ReviewDialog } from "./review-dialog";
 import { routes } from "@/lib/routes";
+import { useAction } from "@/lib/data/use-action";
 
 /** Client bookings with the next action for each: pay, confirm the deal, chat, review */
 export function ClientBookingList({ rows, empty }: { rows: BookingView[]; empty?: React.ReactNode }) {
+  const { run } = useAction();
   const { t } = useI18n();
   const [reviewFor, setReviewFor] = useState<BookingView | null>(null);
 
@@ -44,7 +46,7 @@ export function ClientBookingList({ rows, empty }: { rows: BookingView[]; empty?
                       <Button
                         variant="ghost"
                         className="h-9 px-3 text-muted-foreground"
-                        onClick={() => setBookingStatus(b.id, "cancelled")}
+                        onClick={() => run(() => setBookingStatus(b.id, "cancelled"))}
                       >
                         {t("dashboard.cancel")}
                       </Button>

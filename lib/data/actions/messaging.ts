@@ -10,7 +10,7 @@ import { currentActor, now, uid, update } from "./_core";
 // ── Messaging ─────────────────────────────────────────────────
 
 /** Find or create the conversation between a client and a vendor (optionally for a booking). */
-export function ensureConversation(vendorId: string, bookingId?: string): string {
+export async function ensureConversation(vendorId: string, bookingId?: string): Promise<string> {
   const actor = currentActor();
   const db = getDB();
   const clientId = actor.role === "client" ? actor.id : db.bookings.find((b) => b.id === bookingId)?.clientId;
@@ -52,7 +52,7 @@ export function addSystemMessage(conversationId: string, code: string) {
   pushMessage({ id: uid("m"), conversationId, senderId: "system", text: code, system: true, createdAt: now() });
 }
 
-export function sendMessage(conversationId: string, text: string) {
+export async function sendMessage(conversationId: string, text: string) {
   const actor = currentActor();
   const db = getDB();
   const c = db.conversations.find((x) => x.id === conversationId);
@@ -64,7 +64,7 @@ export function sendMessage(conversationId: string, text: string) {
 }
 
 /** DEMO: vendor answers automatically so a solo presenter sees a live chat */
-export function sendAutoReply(conversationId: string, text: string) {
+export async function sendAutoReply(conversationId: string, text: string) {
   if (!demoFeature("vendorAutoReply")) return;
   const db = getDB();
   const c = db.conversations.find((x) => x.id === conversationId);
@@ -73,7 +73,7 @@ export function sendAutoReply(conversationId: string, text: string) {
   pushMessage({ id: uid("m"), conversationId, senderId: v.ownerId, text, createdAt: now() });
 }
 
-export function markRead(conversationId: string) {
+export async function markRead(conversationId: string) {
   const actorId = currentActor().id;
   const ts = now();
   update((d) => ({

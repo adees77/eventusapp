@@ -14,17 +14,17 @@ function toggleIn<T extends { userId: string }>(list: T[], match: (x: T) => bool
   return list.some(match) ? list.filter((x) => !match(x)) : [...list, item];
 }
 
-export function toggleLike(postId: string) {
+export async function toggleLike(postId: string) {
   const actor = currentActor();
   update((d) => ({ ...d, likes: toggleIn(d.likes, (l) => l.userId === actor.id && l.postId === postId, { userId: actor.id, postId }) }));
 }
 
-export function toggleSave(postId: string) {
+export async function toggleSave(postId: string) {
   const actor = currentActor();
   update((d) => ({ ...d, saved: toggleIn(d.saved, (l) => l.userId === actor.id && l.postId === postId, { userId: actor.id, postId }) }));
 }
 
-export function createPost(input: { vendorId: string; photos: string[]; caption: string; offerId?: string; ratio?: number }): Post {
+export async function createPost(input: { vendorId: string; photos: string[]; caption: string; offerId?: string; ratio?: number }): Promise<Post> {
   const actor = currentActor();
   const db = getDB();
   const v = db.vendors.find((x) => x.id === input.vendorId);
@@ -45,7 +45,7 @@ export function createPost(input: { vendorId: string; photos: string[]; caption:
   return post;
 }
 
-export function deletePost(postId: string) {
+export async function deletePost(postId: string) {
   const actor = currentActor();
   const db = getDB();
   const p = db.posts.find((x) => x.id === postId);
@@ -62,7 +62,7 @@ export function deletePost(postId: string) {
 }
 
 /** Only a client with a finished deal with this vendor can comment (see can.commentPost) */
-export function addComment(postId: string, text: string): PostComment | undefined {
+export async function addComment(postId: string, text: string): Promise<PostComment | undefined> {
   const actor = currentActor();
   const db = getDB();
   const p = db.posts.find((x) => x.id === postId);
@@ -78,7 +78,7 @@ export function addComment(postId: string, text: string): PostComment | undefine
 }
 
 /** The author removes their own comment; admin moderates */
-export function deleteComment(commentId: string) {
+export async function deleteComment(commentId: string) {
   const actor = currentActor();
   const c = getDB().comments.find((x) => x.id === commentId);
   if (!c) return;
@@ -86,7 +86,7 @@ export function deleteComment(commentId: string) {
   update((d) => ({ ...d, comments: d.comments.filter((x) => x.id !== commentId) }));
 }
 
-export function setPostHidden(postId: string, hidden: boolean) {
+export async function setPostHidden(postId: string, hidden: boolean) {
   const actor = currentActor();
   assert(actor.role === "admin", "moderatePost");
   update((d) => ({ ...d, posts: d.posts.map((p) => (p.id === postId ? { ...p, hidden } : p)) }));

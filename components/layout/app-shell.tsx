@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useSyncExternalStore } from "react";
 import { LogoMark } from "@/components/brand/logo";
-import { ensureSessionBound, useAuth } from "@/lib/auth/store";
+import { ensureSessionBound, syncLiveSession, useAuth } from "@/lib/auth/store";
 import { toast } from "sonner";
 import { STORAGE_FULL_EVENT, useDataStore } from "@/lib/data/store";
 import { useT } from "@/lib/i18n";
@@ -14,9 +14,9 @@ import { HOME_BY_ROLE } from "./nav-items";
 import { routes } from "@/lib/routes";
 
 /** Pages that render without the app chrome */
-const BARE = [routes.welcome, routes.onboarding];
+const BARE = [routes.welcome, routes.onboarding, routes.authCallback];
 /** Pages open without an account (guest invitation links) */
-const PUBLIC = [routes.welcome, routes.publicInvitationPrefix];
+const PUBLIC = [routes.welcome, routes.publicInvitationPrefix, routes.authCallback];
 
 const matches = (pathname: string, list: string[]) =>
   list.some((p) => pathname === p || pathname.startsWith(p.endsWith("/") ? p : `${p}/`));
@@ -65,6 +65,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (hydrated && mounted) ensureSessionBound();
   }, [hydrated, mounted, userId]);
+
+  // a real account follows its Supabase session (signed out elsewhere or expired → signed out here)
+  useEffect(() => {
+    if (hydrated && mounted) return syncLiveSession();
+  }, [hydrated, mounted]);
 
   // the account disappeared (demo reset wipes sign-ups) → back to /welcome
   const orphan = hydrated && !!userId && !user;

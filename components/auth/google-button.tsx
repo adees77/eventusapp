@@ -7,8 +7,19 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { isEmail, nameFromEmail } from "@/lib/auth/otp";
 import { useI18n } from "@/lib/i18n";
 
-/** Standard "Continue with Google" button. In the demo it opens a small form instead of the OAuth popup. */
-export function GoogleButton({ onSignIn }: { onSignIn: (input: { name: string; email: string }) => void }) {
+/**
+ * Standard "Continue with Google" button. With real accounts it calls `onStart` (Supabase OAuth redirect);
+ * without them it opens a small form that imitates the Google account picker and calls `onSignIn`.
+ */
+export function GoogleButton({
+  onSignIn,
+  onStart,
+  pending,
+}: {
+  onSignIn: (input: { name: string; email: string }) => void;
+  onStart?: () => void;
+  pending?: boolean;
+}) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -20,8 +31,10 @@ export function GoogleButton({ onSignIn }: { onSignIn: (input: { name: string; e
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        className="flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-card text-md text-foreground transition-colors hover:bg-muted active:translate-y-px"
+        onClick={() => (onStart ? onStart() : setOpen(true))}
+        disabled={pending}
+        aria-busy={pending || undefined}
+        className="flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-card text-md text-foreground transition-colors hover:bg-muted active:translate-y-px disabled:opacity-60"
       >
         <GoogleMark className="size-[18px]" />
         {t("auth.google")}

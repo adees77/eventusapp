@@ -7,7 +7,7 @@ import { currentActor, update } from "./_core";
 
 // ── Platform settings & users (admin) ─────────────────────────
 
-export function updateSettings(patch: Partial<PlatformSettings>) {
+export async function updateSettings(patch: Partial<PlatformSettings>) {
   const actor = currentActor();
   assert(actor.role === "admin", "settings");
   const clamp = (n: number | undefined, max: number) => (n === undefined ? undefined : Math.min(max, Math.max(0, Math.round(n))));
@@ -29,7 +29,7 @@ export function updateSettings(patch: Partial<PlatformSettings>) {
   }));
 }
 
-export function setUserBlocked(userId: string, blocked: boolean) {
+export async function setUserBlocked(userId: string, blocked: boolean) {
   const actor = currentActor();
   assert(actor.role === "admin" && userId !== actor.id, "blockUser");
   update((d) => ({ ...d, users: d.users.map((u) => (u.id === userId ? { ...u, blocked } : u)) }));

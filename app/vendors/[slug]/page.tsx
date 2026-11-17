@@ -27,6 +27,7 @@ import { usePlanner } from "@/lib/planner";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { routes } from "@/lib/routes";
+import { background, useAction } from "@/lib/data/use-action";
 
 const TABS = ["posts", "details", "services", "reviews"] as const;
 const TAB_LABEL = {
@@ -48,6 +49,7 @@ function VendorProfile() {
   const { slug } = useParams<{ slug: string }>();
   const { t, tn, l, money, num, date: fmtDate } = useI18n();
   const router = useRouter();
+  const { run } = useAction();
   const actor = useActor();
   const planner = usePlanner();
   const date = planner.date;
@@ -65,7 +67,7 @@ function VendorProfile() {
   useEffect(() => {
     if (vendor && tracked.current !== vendor.id && actor.id !== vendor.ownerId) {
       tracked.current = vendor.id;
-      trackView(vendor.id);
+      background(() => trackView(vendor.id));
     }
   }, [vendor, actor.id]);
 
@@ -91,10 +93,10 @@ function VendorProfile() {
     router.push(routes.book(offer.id, { date }));
   }
 
-  function write() {
+  async function write() {
     if (!isClient) return toast(t("vendor.onlyClients"));
-    const id = ensureConversation(vendor!.id);
-    router.push(routes.chat(id));
+    const id = await run(() => ensureConversation(vendor!.id));
+    if (id) router.push(routes.chat(id));
   }
 
   const actions = () =>
@@ -122,7 +124,7 @@ function VendorProfile() {
           <Button
             variant="outline"
             className="size-10 px-0"
-            onClick={() => toggleFavorite(vendor.id)}
+            onClick={() => run(() => toggleFavorite(vendor.id))}
             aria-pressed={fav}
             aria-label={fav ? t("vendor.favorited") : t("vendor.favorite")}
           >

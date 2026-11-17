@@ -8,8 +8,10 @@ import { setReviewHidden } from "@/lib/data/actions";
 import { useAdminReviews, type ReviewFilter } from "@/lib/data/views/admin";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/data/use-action";
 
 export default function AdminReviews() {
+  const { run } = useAction();
   const { t, l, date } = useI18n();
   const [f, setF] = useState<ReviewFilter>("low");
   const { rows, lowCount, hiddenCount } = useAdminReviews(f);
@@ -37,7 +39,7 @@ export default function AdminReviews() {
               <Rating value={r.rating} className="mt-1 text-xs" />
               <p className="mt-1 text-sm text-text-secondary">{l(r.text)}</p>
             </div>
-            <Button variant="outline" className="h-8 shrink-0 px-3 text-xs" onClick={() => setReviewHidden(r.id, !r.hidden)}>
+            <Button variant="outline" className="h-8 shrink-0 px-3 text-xs" onClick={() => run(() => setReviewHidden(r.id, !r.hidden))}>
               {r.hidden ? t("admin.show") : t("admin.hide")}
             </Button>
           </li>
