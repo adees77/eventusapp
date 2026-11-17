@@ -59,7 +59,7 @@ supabase/migrations/ Postgres проекта Supabase «eventus» (Франкф�
                      rls (политики + хелперы is_admin/owns_vendor…), rpc (create_booking с блокировкой, эскроу confirm/cancel/dispute/payout, sign_up_vendor…),
                      triggers (профиль из auth.users, защита колонок, уведомления, системные сообщения, рейтинг, автоскрытие, pg_cron автовыплата)
 supabase/tests/smoke.sql  сквозная проверка под ролями (транзакция с откатом) — гонять после каждой миграции через MCP execute_sql
-lib/supabase/        client.ts — браузерный клиент (publishable key из .env.local, `isSupabaseConfigured()`); database.types.ts — сгенерированные типы (перегенерировать после миграции)
+lib/supabase/        client.ts — браузерный клиент (URL и publishable key — env или публичный дефолт в next.config.ts; прод www.eventusai.app (Vercel), Site URL/Redirect URLs в Supabase Auth); database.types.ts — сгенерированные типы (перегенерировать после миграции)
 ```
 Тесты: `**/__tests__/*.test.ts` (node env, alias `@/`).
 
