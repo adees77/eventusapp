@@ -98,6 +98,12 @@ export async function currentLiveUser(): Promise<LiveUser | null> {
   return data.session?.user ? toLiveUser(data.session.user) : null;
 }
 
+/** Access token of the live session — sent as `Authorization: Bearer` to our own API routes */
+export async function liveAccessToken(): Promise<string | null> {
+  const { data } = await supabase().auth.getSession();
+  return data.session?.access_token ?? null;
+}
+
 /**
  * Asks Supabase to move the account to a new address: a confirmation link goes to the new
  * address (with «Secure email change» on, to the current one too); the email changes once confirmed.

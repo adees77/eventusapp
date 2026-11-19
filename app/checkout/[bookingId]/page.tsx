@@ -1,10 +1,11 @@
 "use client";
 
 import { Check, CreditCard, Loader2, QrCode, ShieldCheck, Wallet } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { BookingSummary } from "@/components/booking/booking-summary";
 import { EscrowSteps } from "@/components/booking/deal-card";
+import { PaymentReturn } from "@/components/booking/payment-return";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { AvailabilityError, markBookingPrepaid } from "@/lib/data/actions";
@@ -27,12 +28,23 @@ type Phase = "idle" | "processing" | "success" | "failed";
 export default function CheckoutPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const router = useRouter();
-  const { t, money, l } = useI18n();
+  const search = useSearchParams();
+  const returnedPayment = search.get("payment");
+  const { t, money, l, locale } = useI18n();
   const actor = useActor();
   const { booking, offer, vendor, conversationId } = useCheckout(actor.id, bookingId);
   const [method, setMethod] = useState<PaymentMethod>("card");
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
+
+  // back from the FreedomPay page: the server decides whether it was paid
+  if (returnedPayment) {
+    return (
+      <div className="mx-auto w-full max-w-xl px-4 pt-8 pb-16 md:pt-12">
+        <PaymentReturn paymentId={returnedPayment} failedHint={search.get("failed") === "1"} onRetry={() => router.replace(routes.checkout(bookingId))} />
+      </div>
+    );
+  }
 
   if (!booking || !offer || !vendor || booking.clientId !== actor.id) {
     return (
@@ -58,12 +70,13 @@ export default function CheckoutPage() {
         currency: "KGS",
         method,
         description: `${vendor!.name} — ${l(offer!.title)}`,
+        language: locale === "en" ? "en" : "ru",
       });
       if (res.status === "redirect" && res.redirectUrl) {
         window.location.assign(res.redirectUrl);
         return;
       }
-      if (res.status !== "succeeded") throw new Error(res.error ?? "failed");
+      if (res.status !== "succeeded") throw res.error === "unavailable" ? new AvailabilityError(0) : new Error(res.error ?? "failed");
       const convId = await markBookingPrepaid(booking!.id, res.reference);
       track("prepayment_paid", { category: vendor?.category ?? "unknown" });
       setPhase("success");

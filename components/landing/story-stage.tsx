@@ -11,7 +11,7 @@
  * the lead (headline, phone) travels farther than support, exits short and simultaneous,
  * prefers-reduced-motion shows every end state at once and keeps the phone upright.
  */
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, BriefcaseBusiness, UsersRound } from "lucide-react";
 import {
   AnimatePresence,
   motion,
@@ -123,7 +123,8 @@ export function StoryStage<T extends number>({
           )}
         >
           <TopBar dark={cur.dark} startHref={startHref} onStart={() => track("landing_cta_clicked", { page, cta: "top_start", scene: scene + 1 })} />
-          {hud && <div className="absolute inset-x-0 top-14 z-10 md:top-20">{hud(scene, cur.dark)}</div>}
+          {/* phones: the second row belongs to the «clients | vendors» switch, so the game bar starts at md */}
+          {hud && <div className="absolute inset-x-0 top-20 z-10 max-md:hidden">{hud(scene, cur.dark)}</div>}
 
           {/* copy: lower part on phones, a column on desktop */}
           <div className="container-app absolute inset-x-0 top-[54%] bottom-16 grid grid-cols-1 content-start lg:top-20 lg:bottom-20 lg:grid-cols-2 lg:content-center">
@@ -142,7 +143,7 @@ export function StoryStage<T extends number>({
           <div
             className={cn(
               "pointer-events-none absolute inset-x-0 flex items-center justify-center [perspective:1400px] lg:top-20 lg:bottom-16 lg:h-auto",
-              hud ? "top-28 h-[calc(54%-7rem)]" : "top-16 h-[calc(54%-4rem)]",
+              "top-28 h-[calc(54%-7rem)]", !hud && "md:top-16 md:h-[calc(54%-4rem)]",
             )}
           >
             <motion.div
@@ -209,29 +210,45 @@ function TopBar({ dark, startHref, onStart }: { dark: boolean; startHref: string
   const { t, locale, setLocale } = useI18n();
   const pathname = usePathname();
   const tabs = [
-    [routes.home, t("landing.navHow")],
-    [routes.forVendors, t("landing.navVendors")],
+    { href: routes.home, label: t("landing.navClients"), icon: UsersRound },
+    { href: routes.forVendors, label: t("landing.navVendors"), icon: BriefcaseBusiness },
   ] as const;
   const on = dark ? "bg-white/15" : "bg-foreground/[0.07]";
   return (
-    <header className="container-app absolute inset-x-0 top-0 z-20 flex h-16 items-center gap-3 md:h-20">
+    <header className="container-app absolute inset-x-0 top-0 z-20 flex h-16 items-center gap-2 md:h-20 md:gap-3">
       <Link href={routes.home} aria-label={brand.name} className={cn("shrink-0 whitespace-nowrap", dark && "[&_*]:!text-white")}>
         <Logo />
       </Link>
-      <nav className="ml-4 hidden items-center gap-1 text-sm md:flex">
-        {tabs.map(([href, label]) => (
-          <Link
-            key={href}
-            href={href}
-            aria-current={pathname === href ? "page" : undefined}
-            className={cn("rounded-full px-3.5 py-1.5 whitespace-nowrap transition-colors", pathname === href ? on : "opacity-65 hover:opacity-100")}
-          >
-            {label}
-          </Link>
-        ))}
+      {/* «for clients | I'm a vendor» — the switch between the two stories, centred so vendors find their way at once */}
+      <nav
+        aria-label={t("landing.navLabel")}
+        className={cn(
+          "flex items-center gap-0.5 rounded-full p-1 text-xs backdrop-blur-md sm:text-sm",
+          // phones: its own centred row under the logo; md: in the bar; lg: dead centre of the bar
+          "max-md:absolute max-md:top-full max-md:left-1/2 max-md:-translate-x-1/2 md:mx-auto lg:absolute lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2",
+          dark ? "bg-white/10" : "bg-white/75",
+        )}
+      >
+        {tabs.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href;
+          return (
+            <Link
+              key={href}
+              href={href}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "flex h-8 items-center gap-1.5 rounded-full px-3 font-medium whitespace-nowrap transition-colors sm:h-9 sm:px-4",
+                active ? "bg-ink text-white" : "opacity-75 hover:opacity-100",
+              )}
+            >
+              <Icon className={cn("size-3.5 max-sm:hidden", active && "text-sun")} />
+              {label}
+            </Link>
+          );
+        })}
       </nav>
-      <div className="ml-auto flex items-center gap-1.5">
-        <div className="hidden gap-0.5 sm:flex">
+      <div className="ml-auto flex shrink-0 items-center gap-1.5 md:ml-0 lg:ml-auto">
+        <div className="hidden gap-0.5 lg:flex">
           {LOCALES.map((x) => (
             <button
               key={x}
@@ -244,10 +261,10 @@ function TopBar({ dark, startHref, onStart }: { dark: boolean; startHref: string
             </button>
           ))}
         </div>
-        <Link href={routes.welcome} className="hidden h-9 items-center px-3 text-sm opacity-75 transition-opacity hover:opacity-100 sm:flex">
+        <Link href={routes.welcome} className="hidden h-9 items-center px-3 text-sm opacity-75 transition-opacity hover:opacity-100 md:flex">
           {t("landing.signIn")}
         </Link>
-        <LinkButton href={startHref} variant="sun" className="h-9 px-4" onClick={onStart}>
+        <LinkButton href={startHref} variant="sun" className="h-9 px-3.5 sm:px-4" onClick={onStart}>
           {t("landing.start")}
         </LinkButton>
       </div>
@@ -314,7 +331,7 @@ function useStageLayout(ref: React.RefObject<HTMLDivElement | null>) {
       setLayout(
         desktop
           ? { desktop, shift: Math.min(w * 0.24, 340), scale: Math.min(1, (h - 80 - 64 - 32) / PHONE_H) }
-          : { desktop, shift: 0, scale: Math.min(0.72, (h * 0.54 - 64 - 16) / PHONE_H) },
+          : { desktop, shift: 0, scale: Math.min(0.72, (h * 0.54 - (window.innerWidth < 768 ? 104 : 80)) / PHONE_H) },
       );
     };
     calc();

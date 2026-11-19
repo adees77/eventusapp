@@ -1,20 +1,17 @@
 /**
- * Payment provider abstraction.
+ * Payment provider abstraction (browser side).
  *
- * DEMO: `DemoPaymentProvider` simulates a successful prepayment — no money
- * moves and no card data is collected anywhere in the app.
+ * DEMO: `DemoPaymentProvider` simulates a successful prepayment — no money moves and no card data
+ * is collected anywhere in the app.
  *
- * To go live:
- *  1. Implement `PaymentProvider` for your PSP (a local bank acquiring, a
- *     wallet, or an international provider) in a new file.
- *  2. Create the payment on the SERVER (route handler / server action) with
- *     the secret key from env (PAYMENT_SECRET_KEY) — never in the browser.
- *  3. Redirect the user to the provider's hosted page (`redirectUrl`) so card
- *     data never touches our servers (PCI scope stays minimal).
- *  4. Confirm via the provider's webhook (route handler) and only then mark
- *     the booking prepaid — see markBookingPrepaid in lib/data/actions.ts.
- *  5. Return `getPaymentProvider()` → your provider.
+ * FreedomPay (`NEXT_PUBLIC_PAYMENT_PROVIDER=freedompay`, live mode only): the server creates the
+ * payment (app/api/payments/init, secret keys never reach the browser) and the client goes to the
+ * FreedomPay page. The booking becomes prepaid only when FreedomPay confirms to the server
+ * (webhook app/api/payments/freedompay/result, or status reconciliation). Needs the booking to live
+ * in Supabase — turn the flag on only after bookings are moved there (stage 4).
  */
+import { liveAccessToken } from "@/lib/auth/supabase";
+import { isDemoMode } from "@/lib/demo/mode";
 
 export type PaymentMethod = "card" | "qr" | "wallet";
 
@@ -24,6 +21,7 @@ export interface CreatePaymentInput {
   currency: "KGS";
   method: PaymentMethod;
   description: string;
+  language?: "ru" | "en";
 }
 
 export interface PaymentResult {
@@ -31,7 +29,15 @@ export interface PaymentResult {
   reference: string;
   /** Hosted payment page for real providers */
   redirectUrl?: string;
+  /** `unavailable` — the units were taken meanwhile; other codes — app/api/payments/init */
   error?: string;
+}
+
+export type PaymentState = "created" | "pending" | "paid" | "failed" | "rejected" | "refund_pending" | "refunded";
+
+export interface PaymentStatusResult {
+  status: PaymentState;
+  conversationId: string | null;
 }
 
 export interface PaymentProvider {
@@ -52,7 +58,35 @@ export const DemoPaymentProvider: PaymentProvider = {
   },
 };
 
+async function authHeaders(): Promise<Record<string, string>> {
+  const token = await liveAccessToken();
+  if (!token) throw new Error("Not signed in");
+  return { authorization: `Bearer ${token}` };
+}
+
+export const FreedomPayProvider: PaymentProvider = {
+  id: "freedompay",
+  isDemo: false,
+  async pay(input) {
+    const res = await fetch("/api/payments/init", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...(await authHeaders()) },
+      body: JSON.stringify({ bookingId: input.bookingId, language: input.language }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { paymentId?: string; redirectUrl?: string; error?: string };
+    if (!res.ok || !data.redirectUrl) return { status: "failed", reference: "", error: data.error ?? "error" };
+    return { status: "redirect", reference: data.paymentId ?? "", redirectUrl: data.redirectUrl };
+  },
+};
+
+/** After FreedomPay sends the client back: the server's view of the attempt */
+export async function fetchPaymentStatus(paymentId: string): Promise<PaymentStatusResult> {
+  const res = await fetch(`/api/payments/status?payment=${encodeURIComponent(paymentId)}`, { headers: await authHeaders(), cache: "no-store" });
+  if (!res.ok) throw new Error(`status ${res.status}`);
+  return (await res.json()) as PaymentStatusResult;
+}
+
 export function getPaymentProvider(): PaymentProvider {
-  // TODO(payments): return the real provider when PAYMENT_PROVIDER is configured
+  if (process.env.NEXT_PUBLIC_PAYMENT_PROVIDER === "freedompay" && !isDemoMode()) return FreedomPayProvider;
   return DemoPaymentProvider;
 }

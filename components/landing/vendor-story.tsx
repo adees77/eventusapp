@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The vendors' landing (/for-vendors): «be an EVENTUS vendor for a day» in six scenes, from a working
+ * The vendors' landing (/for-vendors): «become an EVENTUS vendor in one day» in six scenes, from a working
  * cabinet and a verified profile to clients, the AI assistant and the money. Selling points: an event-only feed (no fighting memes and ads for
  * attention), warm requests with date and budget, an AI assistant that answers at night, prepayment
  * before the date closes, automatic payout, reviews only from real deals.

@@ -760,6 +760,113 @@ export type Database = {
           },
         ]
       }
+      payment_events: {
+        Row: {
+          created_at: string
+          id: number
+          kind: string
+          payload: Json
+          payment_id: string | null
+          provider_payment_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          kind: string
+          payload?: Json
+          payment_id?: string | null
+          provider_payment_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          kind?: string
+          payload?: Json
+          payment_id?: string | null
+          provider_payment_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_events_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          booking_id: string
+          card_pan: string | null
+          client_id: string
+          created_at: string
+          currency: string
+          failure_code: string | null
+          failure_description: string | null
+          id: string
+          paid_at: string | null
+          provider: string
+          provider_payment_id: string | null
+          redirect_url: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          testing: boolean
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          card_pan?: string | null
+          client_id: string
+          created_at?: string
+          currency?: string
+          failure_code?: string | null
+          failure_description?: string | null
+          id?: string
+          paid_at?: string | null
+          provider?: string
+          provider_payment_id?: string | null
+          redirect_url?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          testing?: boolean
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          card_pan?: string | null
+          client_id?: string
+          created_at?: string
+          currency?: string
+          failure_code?: string | null
+          failure_description?: string | null
+          id?: string
+          paid_at?: string | null
+          provider?: string
+          provider_payment_id?: string | null
+          redirect_url?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          testing?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_settings: {
         Row: {
           auto_hide_complaints: number
@@ -1468,6 +1575,37 @@ export type Database = {
           total: number
         }[]
       }
+      attach_payment: {
+        Args: { p_payment: string; p_provider_payment_id: string; p_redirect_url: string; p_testing: boolean }
+        Returns: undefined
+      }
+      payment_check: {
+        Args: { p_amount: number; p_currency: string; p_payment: string; p_provider_payment_id: string }
+        Returns: boolean
+      }
+      payment_closed: {
+        Args: { p_payment: string; p_status: Database["public"]["Enums"]["payment_status"] }
+        Returns: undefined
+      }
+      payment_failed: {
+        Args: { p_code: string; p_description: string; p_payment: string; p_provider_payment_id: string }
+        Returns: undefined
+      }
+      payment_succeeded: {
+        Args: {
+          p_amount: number
+          p_card_pan: string
+          p_currency: string
+          p_payment: string
+          p_provider_payment_id: string
+          p_testing: boolean
+        }
+        Returns: Json
+      }
+      start_payment: {
+        Args: { p_booking: string }
+        Returns: { amount: number; currency: string; description: string; payment_id: string }[]
+      }
       open_dispute: {
         Args: { p_booking: string; p_reason: string }
         Returns: undefined
@@ -1595,6 +1733,14 @@ export type Database = {
         | "review"
         | "follow"
         | "system"
+      payment_status:
+        | "created"
+        | "pending"
+        | "paid"
+        | "failed"
+        | "rejected"
+        | "refund_pending"
+        | "refunded"
       transaction_kind: "hold" | "release" | "fee" | "refund" | "payout"
       user_role: "client" | "vendor" | "admin"
       verification_state: "pending" | "rejected"
@@ -1792,6 +1938,7 @@ export const Constants = {
         "follow",
         "system",
       ],
+      payment_status: ["created", "pending", "paid", "failed", "rejected", "refund_pending", "refunded"],
       transaction_kind: ["hold", "release", "fee", "refund", "payout"],
       user_role: ["client", "vendor", "admin"],
       verification_state: ["pending", "rejected"],

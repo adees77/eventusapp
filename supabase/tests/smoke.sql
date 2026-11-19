@@ -11,7 +11,7 @@ declare
   c3 uuid := gen_random_uuid();  -- client
   vo uuid := gen_random_uuid();  -- becomes a vendor
   ad uuid := gen_random_uuid();  -- admin
-  res jsonb; vid uuid; oid uuid; pid uuid; b1 uuid; b2 uuid; conv uuid; st text; n int; ok boolean;
+  res jsonb; vid uuid; oid uuid; pid uuid; b1 uuid; b2 uuid; conv uuid; st text; n int; ok boolean; pay uuid; pay2 uuid;
   d1 date := current_date + 30;
   d2 date := current_date + 31;
 begin
@@ -81,8 +81,47 @@ begin
   exception when insufficient_privilege then null; end;
   perform set_config('role', 'none', true);
 
-  -- ── payment webhook (service) → escrow held ──
-  conv := public.confirm_booking_payment(b1, 'pay-1');
+  -- ── payment: client starts, FreedomPay webhook (service) → escrow held ──
+  assert not has_function_privilege('authenticated', 'public.payment_succeeded(uuid, text, numeric, text, text, boolean)', 'execute'), 'FAIL: user can mark payment paid';
+  assert not has_function_privilege('anon', 'public.start_payment(uuid)', 'execute'), 'FAIL: anon can start payment';
+  perform set_config('request.jwt.claims', json_build_object('sub', c2, 'role', 'authenticated')::text, true);
+  perform set_config('role', 'authenticated', true);
+  begin perform public.start_payment(b1); raise exception 'FAIL: paid for someone else''s booking' using errcode = 'T0001';
+  exception when sqlstate 'P0002' then null; end;
+  perform set_config('request.jwt.claims', json_build_object('sub', c1, 'role', 'authenticated')::text, true);
+  perform set_config('role', 'authenticated', true);
+  pay := (select payment_id from public.start_payment(b1));
+  pay2 := (select payment_id from public.start_payment(b1));
+  assert (select amount from public.payments where id = pay) = 6000, 'FAIL: payment amount = prepay';
+  begin update public.payments set status = 'paid' where id = pay; raise exception 'FAIL: client updated payment' using errcode = 'T0001';
+  exception when insufficient_privilege then null; end;
+  perform set_config('role', 'none', true);
+
+  perform public.attach_payment(pay, 'fp-1', 'https://pay.example/1', true);
+  assert public.payment_check(pay, 'fp-1', 6000, 'kgs'), 'FAIL: payment check ok';
+  assert not public.payment_check(pay, 'fp-1', 5999, 'KGS'), 'FAIL: payment check wrong sum';
+  res := public.payment_succeeded(pay, 'fp-1', 6000, 'KGS', '4400-44XX-XXXX-4444', true);
+  assert res ->> 'outcome' = 'ok', 'FAIL: payment succeeded';
+  conv := (res ->> 'conversation')::uuid;
+  assert public.payment_succeeded(pay, 'fp-1', 6000, 'KGS', null, true) ->> 'outcome' = 'duplicate', 'FAIL: webhook retry';
+  assert public.payment_succeeded(pay, 'fp-other', 6000, 'KGS', null, true) ->> 'outcome' = 'unknown', 'FAIL: foreign payment id';
+  -- a second attempt paid after the booking is already held → money goes back
+  perform public.attach_payment(pay2, 'fp-2', 'https://pay.example/2', true);
+  assert not public.payment_check(pay2, 'fp-2', 6000, 'KGS'), 'FAIL: check after paid';
+  assert public.payment_succeeded(pay2, 'fp-2', 6000, 'KGS', null, true) ->> 'outcome' = 'refund', 'FAIL: double payment refunded';
+  assert (select status from public.payments where id = pay2) = 'refund_pending', 'FAIL: refund pending';
+  perform public.payment_closed(pay2, 'refunded');
+  assert (select count(*) from public.transactions where booking_id = b1 and kind = 'hold') = 1, 'FAIL: single hold';
+
+  perform set_config('request.jwt.claims', json_build_object('sub', c2, 'role', 'authenticated')::text, true);
+  perform set_config('role', 'authenticated', true);
+  assert (select count(*) from public.payments) = 0, 'FAIL: client sees others payments';
+  perform set_config('role', 'none', true);
+  perform set_config('request.jwt.claims', json_build_object('sub', vo, 'role', 'authenticated')::text, true);
+  perform set_config('role', 'authenticated', true);
+  assert (select count(*) from public.payments where booking_id = b1) = 2, 'FAIL: vendor sees booking payments';
+  assert (select count(*) from public.payment_events) = 0, 'FAIL: vendor reads payment events';
+  perform set_config('role', 'none', true);
   assert (select escrow_state from public.bookings where id = b1) = 'held', 'FAIL: escrow held';
   assert (select count(*) from public.transactions where booking_id = b1 and kind = 'hold' and amount = 6000) = 1, 'FAIL: hold entry';
   assert exists (select 1 from public.messages where conversation_id = conv and system and text = 'escrow_held'), 'FAIL: system message';

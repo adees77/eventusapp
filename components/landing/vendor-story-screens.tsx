@@ -6,13 +6,13 @@
  * The hero is a real motorcade vendor from the catalog (its cover and portfolio photos), so every screen
  * looks like a working vendor account rather than an empty template.
  */
-import { BadgeCheck, Bot, CalendarCheck, Check, Clock, Eye, FileText, Heart, Images, Inbox, Moon, Star, Trophy, UserRound, Wallet } from "lucide-react";
+import { BadgeCheck, Bot, CalendarCheck, Check, Clock, Eye, Heart, Images, Inbox, Moon, Search, Star, Trophy, UserRound, Wallet } from "lucide-react";
 import { motion } from "motion/react";
-import { Monogram, VerifiedSeal } from "@/components/vendor/badges";
+import { Monogram } from "@/components/vendor/badges";
 import type { Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { CountUp, EASE, Float, PHOTO_CARD, Photo, TypingDots, useDur, usePop, useSteps, useVendor, type Side } from "./story-kit";
+import { CountUp, Dots, EASE, Float, PHOTO_CARD, Photo, TypingDots, useDur, usePop, useSteps, useVendor, useVendors, type Side } from "./story-kit";
 
 export type VendorN = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -192,94 +192,111 @@ function CabinetScreen() {
   );
 }
 
+/** The vendor's profile exactly as a client sees it in the app: works, services with prices, free dates */
 function ProfileScreen() {
   const { t, money } = useI18n();
   const pop = usePop();
-  const dur = useDur();
-  const { name, photo } = useHero();
-  const docs = useSteps([0.8, 1.3, 1.8]); // passport ✓, registration ✓, badge
+  const { v, name, photo } = useHero();
+  const busy = new Set([13, 15]);
   return (
     <>
-      <motion.div {...pop(0.05, 12)} className="grid h-28 grid-cols-[2fr_1fr] gap-1.5">
-        <Photo src={photo(1)} sizes="170px" className="rounded-2xl" />
-        <div className="grid gap-1.5">
-          <Photo src={photo(2)} sizes="85px" className="rounded-xl" />
-          <Photo src={photo(3)} sizes="85px" className="rounded-xl" />
-        </div>
+      <motion.div {...pop(0.05, 12)}>
+        <HeroHeader v={v} name={name} src={photo(0)} />
       </motion.div>
-      <div className="mt-3 flex items-center gap-1.5 text-[15px] font-semibold">
-        {name}
-        {docs >= 3 && (
-          <motion.span initial={{ scale: dur(0.2) || 1, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 400, damping: 12 }}>
-            <VerifiedSeal className="[&_svg]:size-4" />
-          </motion.span>
-        )}
+      <div className="mt-2 flex gap-1 text-[11px]">
+        {[t("landing.vTabWorks"), t("landing.vTabServices"), t("landing.vTabReviews")].map((x, i) => (
+          <span key={x} className={cn("rounded-full px-2.5 py-1", i === 0 ? "bg-ink text-white" : "bg-foreground/[0.05] text-muted-foreground")}>
+            {x}
+          </span>
+        ))}
       </div>
-      <span className="mt-1 w-fit rounded-full bg-foreground/[0.05] px-2.5 py-0.5 text-2xs">{t("landing.storyCapCars")}</span>
-      <div className="mt-2.5 flex flex-col gap-1.5">
+      <div className="mt-2 grid grid-cols-3 gap-1">
+        {[1, 2, 3, 4, 5, 6].map((i, k) => (
+          <motion.div key={i} {...pop(0.2 + k * 0.07, 6)}>
+            <Photo src={photo(i)} sizes="90px" className="aspect-square rounded-lg" />
+          </motion.div>
+        ))}
+      </div>
+      <div className="mt-2.5 text-2xs font-medium text-muted-foreground">{t("landing.vPrices")}</div>
+      <div className="mt-1 flex flex-col gap-1">
         {[
           [t("landing.vService1"), PRICE],
           [t("landing.vService2"), 75_000],
         ].map(([label, price], i) => (
-          <motion.div key={String(label)} {...pop(0.3 + i * 0.1, 6)} className="flex items-center justify-between rounded-xl bg-foreground/[0.045] px-3 py-2 text-[12px]">
+          <motion.div key={String(label)} {...pop(0.7 + i * 0.1, 6)} className="flex items-center justify-between rounded-xl bg-foreground/[0.045] px-3 py-1.5 text-[12px]">
             <span>{label}</span>
-            <span className="text-muted-foreground tabular-nums">{money(Number(price))}</span>
+            <span className="font-medium tabular-nums">{money(Number(price))}</span>
           </motion.div>
         ))}
       </div>
-      <div className="mt-3 text-2xs font-medium text-muted-foreground">{t("landing.vDocs")}</div>
-      {/* documents as little paper sheets that get stamped */}
-      <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-        {[t("landing.vDoc1"), t("landing.vDoc2")].map((d, i) => (
-          <motion.div key={d} {...pop(0.45 + i * 0.1, 8)} className="relative flex flex-col gap-1.5 rounded-xl bg-cream p-2.5">
-            <FileText className="size-5 text-primary" strokeWidth={1.6} />
-            <span className="block h-1 w-10 rounded-full bg-foreground/10" />
-            <span className="block h-1 w-7 rounded-full bg-foreground/10" />
-            <span className="truncate text-[11px] font-medium">{d}</span>
-            {docs > i && (
-              <motion.span
-                initial={{ scale: dur(1.8) || 1, opacity: 0, rotate: -18 }}
-                animate={{ scale: 1, opacity: 1, rotate: -12 }}
-                transition={{ type: "spring", stiffness: 320, damping: 16 }}
-                className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-success text-white shadow-lift"
-              >
-                <Check className="size-4" />
-              </motion.span>
+      <div className="mt-2.5 flex items-center justify-between text-2xs font-medium text-muted-foreground">
+        {t("landing.vFreeDates")}
+        <Dots free={5} total={7} delay={1} />
+      </div>
+      <div className="mt-1 grid grid-cols-7 gap-1 text-center">
+        {[12, 13, 14, 15, 16, 17, 18].map((d) => (
+          <span
+            key={d}
+            className={cn(
+              "flex h-7 items-center justify-center rounded-lg text-[11px] tabular-nums",
+              busy.has(d) ? "bg-foreground/[0.04] text-muted-foreground line-through" : "bg-primary/10 font-medium text-primary",
             )}
-          </motion.div>
+          >
+            {d}
+          </span>
         ))}
       </div>
     </>
   );
 }
 
+/** The EVENTUS feed as a social network: search, categories and a grid of works — only celebrations */
 function ClientsScreen() {
-  const { t, num } = useI18n();
+  const { t } = useI18n();
   const pop = usePop();
+  const all = useVendors();
   const { name, photo } = useHero();
+  const others = (["halls", "photo", "decor", "cakes", "hosts"] as const).map((c) => all[c]);
+  const tile = (src: string | undefined, label: string, likes: number, i: number, mine?: boolean) => (
+    <motion.div key={label + i} {...pop(0.15 + i * 0.08, 10)} className={cn("relative overflow-hidden rounded-xl", mine && "ring-2 ring-sun")}>
+      <Photo src={src} sizes="125px" className={i % 3 === 0 ? "h-[128px]" : "h-[96px]"} />
+      <span className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-gradient-to-t from-ink/80 to-transparent px-1.5 pt-4 pb-1 text-[9px] text-white">
+        <span className="truncate font-medium">{label}</span>
+        <span className="flex shrink-0 items-center gap-0.5 tabular-nums">
+          <Heart className="size-2.5 fill-white" />
+          {mine ? <CountUp to={likes} delay={0.6} duration={1.4} /> : likes}
+        </span>
+      </span>
+      {mine && <span className="absolute top-1 left-1 rounded-full bg-sun px-1.5 py-0.5 text-[9px] font-medium text-sun-foreground">{t("landing.vYourPost")}</span>}
+    </motion.div>
+  );
   return (
     <>
-      <span className="w-fit rounded-full bg-primary/10 px-3 py-1 text-2xs font-medium text-primary">{t("landing.vOnlyEvents")}</span>
-      <motion.div {...pop(0.1, 14)} className="mt-2.5 flex items-center gap-2">
-        <Monogram name={name} className="size-7 rounded-full text-[9px]" />
-        <span className="truncate text-[12px] font-medium">{name}</span>
-        <VerifiedSeal className="[&_svg]:size-3.5" />
-      </motion.div>
-      <motion.div {...pop(0.18, 14)}>
-        <Photo src={photo(4)} sizes="260px" className="mt-2 h-[150px] rounded-2xl" />
-      </motion.div>
-      <div className="mt-2 flex items-center gap-4 text-[12px] tabular-nums">
-        <span className="flex items-center gap-1">
-          <Heart className="size-4 fill-destructive text-destructive" />
-          <CountUp to={248} delay={0.4} duration={1.5} />
-        </span>
-        <span className="flex items-center gap-1 text-muted-foreground">
-          <Eye className="size-4" />
-          <CountUp to={1248} delay={0.4} duration={1.7} format={num} />
-        </span>
+      <div className="flex h-8 items-center gap-2 rounded-full bg-foreground/[0.045] px-3 text-[11px] text-muted-foreground">
+        <Search className="size-3.5" />
+        <span className="truncate">{t("feed.search")}</span>
+      </div>
+      <div className="mt-2 flex gap-1 overflow-hidden text-[10px]">
+        {[t("landing.vOnlyEvents"), t("landing.storyCapCars"), t("landing.storyCapHalls"), t("landing.storyCapPhoto")].map((c, i) => (
+          <span key={c} className={cn("shrink-0 rounded-full px-2 py-0.5", i === 0 ? "bg-ink text-white" : "bg-foreground/[0.05]")}>
+            {c}
+          </span>
+        ))}
+      </div>
+      <div className="mt-2 grid min-h-0 flex-1 grid-cols-2 gap-1.5 overflow-hidden">
+        <div className="flex flex-col gap-1.5">
+          {tile(photo(4), name, 248, 0, true)}
+          {tile(others[0]?.cover, others[0]?.name ?? "", 131, 1)}
+          {tile(others[4]?.cover, others[4]?.name ?? "", 87, 5)}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          {tile(others[1]?.cover, others[1]?.name ?? "", 96, 2)}
+          {tile(others[2]?.cover, others[2]?.name ?? "", 174, 3)}
+          {tile(others[3]?.cover, others[3]?.name ?? "", 112, 4)}
+        </div>
       </div>
       {/* the request lands on top of the feed, like a push */}
-      <motion.div {...pop(1.1, -26)} className="mt-auto rounded-3xl bg-ink p-3 text-white shadow-[0_18px_40px_-16px_rgba(5,4,30,0.6)]">
+      <motion.div {...pop(1.1, -26)} className="relative z-10 -mt-10 rounded-3xl bg-ink p-3 text-white shadow-[0_18px_40px_-16px_rgba(5,4,30,0.6)]">
         <div className="flex items-center gap-2">
           <Monogram name={t("landing.vReqClient")} className="size-8 rounded-full text-[10px]" />
           <span className="min-w-0">
@@ -289,7 +306,6 @@ function ClientsScreen() {
             <span className="block truncate text-[10px] text-white/65">{t("landing.vReqEvent")}</span>
           </span>
         </div>
-        <div className="mt-2 rounded-xl bg-white/10 px-2.5 py-1.5 text-[11px]">{t("landing.vReqBudget")}</div>
         <div className="mt-2 flex items-center justify-between gap-2">
           <span className="inline-flex items-center gap-1 text-[10px] text-white/70">
             <Bot className="size-3" />
@@ -344,6 +360,14 @@ function ChatScreen() {
           </motion.div>
         )}
       </div>
+      {/* the vendor sees everything and can step in at any moment */}
+      {step >= 4 && (
+        <motion.div {...pop(0.5, 10)} className="flex items-center gap-2 rounded-2xl bg-foreground/[0.045] p-2 pl-3 text-[11px] text-text-secondary">
+          <Eye className="size-3.5 shrink-0" />
+          <span className="min-w-0 flex-1 leading-snug">{t("landing.vAiNote")}</span>
+          <span className="shrink-0 rounded-full bg-ink px-2.5 py-1 text-[10px] font-medium text-white">{t("landing.vAiTakeOver")}</span>
+        </motion.div>
+      )}
     </>
   );
 }
@@ -353,6 +377,7 @@ const DAY = 14;
 function MoneyScreen() {
   const { t, money } = useI18n();
   const dur = useDur();
+  const pop = usePop();
   const step = useSteps([0.5, 1.1, 1.8]); // prepayment in, date closed, money out
   const week = t("landing.vWeek").split(",");
   const rows = [
@@ -362,7 +387,21 @@ function MoneyScreen() {
   ];
   return (
     <>
-      <div className="pb-2 text-[17px] font-semibold">{t("landing.vService1")}</div>
+      <motion.div {...pop(0.05, 12)} className="mb-3 rounded-2xl bg-ink p-3 text-white">
+        <div className="flex items-center gap-2">
+          <Monogram name={t("landing.vReqClient")} className="size-8 rounded-full text-[10px]" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[12px] font-medium">
+              {t("landing.vNewBooking")} · {t("landing.vReqClient")}
+            </span>
+            <span className="block truncate text-[10px] text-white/65">{t("landing.vService1")}</span>
+          </span>
+        </div>
+        <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-sun px-2.5 py-1 text-[10px] font-medium text-sun-foreground">
+          <Check className="size-3" />
+          {t("landing.vHot")}
+        </span>
+      </motion.div>
       {/* one week around the date; it fills when the date closes */}
       <div className="grid grid-cols-7 gap-1 text-center">
         {week.map((d, i) => {
@@ -385,7 +424,7 @@ function MoneyScreen() {
           );
         })}
       </div>
-      <div className="mt-5 flex flex-col">
+      <div className="mt-4 flex flex-col">
         {rows.map((r, i) => {
           const on = step > i;
           const Icon = r.icon;
@@ -461,6 +500,25 @@ function ResultScreen() {
 
 /* ───────────── floating details around the phone ───────────── */
 
+/** Simplified Instagram / TikTok marks for the «other feeds» comparison (lucide has no brand icons) */
+function InstagramGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className} aria-hidden>
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="0.6" fill="currentColor" />
+    </svg>
+  );
+}
+
+function TikTokGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z" />
+    </svg>
+  );
+}
+
 /** Dona-style achievement toast */
 function Achievement({ side, top, out, delay, inner, name }: { side: Side; top: string; out: number; delay: number; inner?: boolean; name: string }) {
   const { t } = useI18n();
@@ -488,6 +546,7 @@ function CarCard({ src, caption }: { src?: string; caption: string }) {
 
 export function VendorFloats({ n, side }: { n: VendorN; side: Side }) {
   const { t, money } = useI18n();
+  const pop = usePop();
   const { photo } = useHero();
   const f = { side };
   switch (n) {
@@ -508,44 +567,70 @@ export function VendorFloats({ n, side }: { n: VendorN; side: Side }) {
     case 2:
       return (
         <>
-          <Float {...f} top="10%" out={-104} delay={0.4}>
+          <Float {...f} top="8%" out={-104} delay={0.4}>
             <Clock className="size-4 text-primary" />
             {t("landing.vMinutes")}
           </Float>
-          <Achievement {...f} top="62%" out={-150} delay={1.9} name={t("landing.vA1")} />
+          <Float {...f} inner top="30%" out={-178} delay={0.7} className="flex-col items-start gap-1.5 py-3">
+            {[t("landing.vChk1"), t("landing.vChk2"), t("landing.vChk3"), t("landing.vChk4")].map((c, i) => (
+              <motion.span key={c} {...pop(0.9 + i * 0.25, 0)} className="flex items-center gap-2">
+                <span className="flex size-4 items-center justify-center rounded-full bg-success text-white">
+                  <Check className="size-2.5" />
+                </span>
+                {c}
+              </motion.span>
+            ))}
+          </Float>
+          <Achievement {...f} top="66%" out={-150} delay={2.1} name={t("landing.vA1")} />
         </>
       );
     case 3:
       return (
         <>
-          <Float {...f} top="12%" out={-120} delay={0.6} className="bg-sun text-sun-foreground">
+          <Float {...f} top="6%" out={-172} delay={0.5} className="flex-col items-start gap-1.5 py-3">
+            <span className="flex items-center gap-1.5 text-text-secondary">
+              <InstagramGlyph className="size-4" />
+              <TikTokGlyph className="size-4" />
+              {t("landing.vSocial")}
+            </span>
+            <span className="font-normal text-muted-foreground line-through">{t("landing.vSocialNoise")}</span>
+            <span className="font-normal text-muted-foreground line-through">{t("landing.vSocialAds")}</span>
+          </Float>
+          <Float {...f} inner top="36%" out={-110} delay={1} className="bg-sun text-sun-foreground">
             {t("landing.vNoAds")}
           </Float>
-          <Float {...f} inner top="40%" out={-104} delay={1.3}>
-            <Check className="size-4 text-success" />
-            {t("landing.vDateFree")}
-          </Float>
-          <Achievement {...f} top="66%" out={-140} delay={1.6} name={t("landing.vA3")} />
+          <Achievement {...f} top="68%" out={-140} delay={1.6} name={t("landing.vA3")} />
         </>
       );
     case 4:
       return (
         <>
-          <Float {...f} top="10%" out={-140} delay={0.4} className="bg-ink text-white">
+          <Float {...f} top="8%" out={-140} delay={0.4} className="bg-ink text-white">
             <Moon className="size-4 text-sun" />
             {t("landing.vBusy")}
           </Float>
-          <Achievement {...f} top="62%" out={-140} delay={2.4} name={t("landing.vA4")} />
+          <Float {...f} inner top="44%" out={-215} delay={2.6}>
+            <UserRound className="size-4 text-primary" />
+            {t("landing.vStepBack")}
+          </Float>
+          <Achievement {...f} top="66%" out={-140} delay={2.4} name={t("landing.vA4")} />
         </>
       );
     case 5:
       return (
         <>
-          <Float {...f} top="14%" out={-112} delay={0.7} className="bg-sun text-sun-foreground">
+          <Float {...f} top="8%" out={-112} delay={0.7} className="bg-sun text-sun-foreground">
             +{money(PREPAY)}
           </Float>
-          <Achievement {...f} inner top="58%" out={-110} delay={2.1} name={t("landing.vA6")} />
-          <Float {...f} top="74%" out={-120} delay={2.5}>
+          <Float {...f} inner top="34%" out={-218} delay={1.2} className="flex-col items-start gap-1 py-3">
+            <span className="font-normal text-muted-foreground line-through">{t("landing.vNoHaggle")}</span>
+            <span className="flex items-center gap-1.5">
+              <Check className="size-4 text-success" />
+              {t("landing.vHotFloat")}
+            </span>
+          </Float>
+          <Achievement {...f} top="60%" out={-110} delay={2.1} name={t("landing.vA6")} />
+          <Float {...f} top="78%" out={-120} delay={2.5}>
             <Star className="size-4 fill-sun text-sun" />
             5.0 · {t("landing.vNewReview")}
           </Float>
