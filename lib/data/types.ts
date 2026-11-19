@@ -496,6 +496,8 @@ export interface DB {
   version: number;
   /** version of the demo vendors' details (lib/data/seed/specs.ts); bumped when the schema grows */
   specsVersion?: number;
+  /** live mode: the demo catalog (vendors, posts, reviews…) has been taken out — real sign-ups only */
+  demoCatalogRemoved?: boolean;
   users: User[];
   categories: Category[];
   vendors: Vendor[];

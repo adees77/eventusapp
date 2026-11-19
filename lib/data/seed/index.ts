@@ -461,24 +461,36 @@ export function buildSeed(now = new Date()): DB {
  * posts, reviews, papers) and the platform admin — but none of the demo's made-up clients
  * and their bookings, chats, events, invitations, money or complaints.
  */
+/**
+ * The live database starts empty: no demo vendors, posts or reviews — only the categories and platform
+ * settings. Everything else comes from real sign-ups. The demo catalog lives in buildSeed() only.
+ */
 export function buildLiveSeed(): DB {
   const demo = buildSeed();
-  const keepUser = new Set(demo.users.filter((u) => u.role !== "client").map((u) => u.id));
   return {
     ...demo,
-    users: demo.users.filter((u) => keepUser.has(u.id)),
+    demoCatalogRemoved: true,
+    users: [],
+    vendors: [],
+    offers: [],
+    blocks: [],
     bookings: [],
     events: [],
     conversations: [],
     messages: [],
+    reviews: [],
     favorites: [],
+    stats: [],
+    invitations: [],
+    posts: [],
     likes: [],
+    comments: [],
     saved: [],
     follows: [],
     transactions: [],
     notifications: [],
+    documents: [],
     complaints: [],
-    invitations: [],
   };
 }
 

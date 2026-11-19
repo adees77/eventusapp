@@ -92,7 +92,7 @@ export const useDataStore = create<DataState>()(
 );
 
 /** Additive schema changes that don't need a full re-seed (keeps the user's demo data) */
-export function migrate(input: DB): DB {
+export function migrate(input: DB, mode: DataMode = getMode()): DB {
   let db = input;
   let cached: DB | undefined;
   const seed = () => (cached ??= buildSeed());
@@ -202,7 +202,52 @@ export function migrate(input: DB): DB {
   }
   if (!db.settings.requiredDocs) db = { ...db, settings: { ...seed().settings, ...db.settings } };
   if (db.settings.hidePrices === undefined) db = { ...db, settings: { ...db.settings, hidePrices: true } };
+  if (mode === "live" && !db.demoCatalogRemoved) db = withoutDemoCatalog(db, seed());
   return db;
+}
+
+/**
+ * Live databases saved before it started empty still hold the demo catalog: drop every seeded user,
+ * vendor and everything hanging off them (offers, posts, reviews, chats and bookings with them),
+ * keeping real sign-ups and their own events and invitations.
+ */
+export function withoutDemoCatalog(db: DB, demo: DB): DB {
+  const seededUsers = new Set(demo.users.map((u) => u.id));
+  const seededVendors = new Set(demo.vendors.map((v) => v.id));
+  const vendors = db.vendors.filter((v) => !seededVendors.has(v.id) && !seededUsers.has(v.ownerId));
+  const vendorIds = new Set(vendors.map((v) => v.id));
+  const ofVendor = <T extends { vendorId: string }>(xs: T[]) => xs.filter((x) => vendorIds.has(x.vendorId));
+  const offers = ofVendor(db.offers);
+  const offerIds = new Set(offers.map((o) => o.id));
+  const posts = ofVendor(db.posts);
+  const postIds = new Set(posts.map((p) => p.id));
+  const bookings = ofVendor(db.bookings);
+  const bookingIds = new Set(bookings.map((b) => b.id));
+  const conversations = ofVendor(db.conversations);
+  const convIds = new Set(conversations.map((c) => c.id));
+  return {
+    ...db,
+    demoCatalogRemoved: true,
+    users: db.users.filter((u) => !seededUsers.has(u.id)),
+    vendors,
+    offers,
+    blocks: db.blocks.filter((b) => offerIds.has(b.offerId)),
+    posts,
+    comments: db.comments.filter((c) => postIds.has(c.postId)),
+    likes: db.likes.filter((l) => postIds.has(l.postId)),
+    saved: db.saved.filter((l) => postIds.has(l.postId)),
+    follows: ofVendor(db.follows),
+    favorites: ofVendor(db.favorites),
+    reviews: ofVendor(db.reviews),
+    stats: ofVendor(db.stats),
+    documents: ofVendor(db.documents),
+    complaints: ofVendor(db.complaints),
+    bookings,
+    conversations,
+    messages: db.messages.filter((m) => convIds.has(m.conversationId)),
+    transactions: db.transactions.filter((t) => (!t.vendorId || vendorIds.has(t.vendorId)) && (!t.bookingId || bookingIds.has(t.bookingId))),
+    notifications: db.notifications.filter((n) => !seededUsers.has(n.userId)),
+  };
 }
 
 /** Rebuilds the money ledger for bookings that were paid before the ledger existed */
@@ -253,7 +298,7 @@ export function switchDataMode(mode: DataMode) {
   } catch {
     stored = undefined;
   }
-  useDataStore.setState({ db: usable(stored) ? migrate(stored) : seedFor(mode), hydrated: true });
+  useDataStore.setState({ db: usable(stored) ? migrate(stored, mode) : seedFor(mode), hydrated: true });
 }
 
 /** Cross-tab sync: another tab wrote to localStorage → take its snapshot here, without writing it back */

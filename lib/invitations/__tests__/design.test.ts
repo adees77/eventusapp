@@ -68,7 +68,7 @@ describe("store migration v2 → v3", () => {
     delete v2.posts;
     delete v2.transactions;
     delete v2.settings;
-    const db = migrate(v2 as DB);
+    const db = migrate(v2 as DB, "demo");
     expect(db.version).toBe(3);
     expect(db.users.some((u) => u.id === "u-new")).toBe(true);
     expect(db.posts.length).toBeGreaterThan(50);

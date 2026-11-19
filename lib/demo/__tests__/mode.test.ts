@@ -12,12 +12,10 @@ describe("data modes", () => {
     useAuth.getState().signOut();
   });
 
-  it("the live database has the catalog but none of the demo's people and activity", () => {
+  it("the live database starts empty: categories only, none of the demo's catalog, people or activity", () => {
     const db = buildLiveSeed();
-    expect(db.vendors.length).toBeGreaterThan(10);
-    expect(db.offers.length).toBeGreaterThan(10);
-    expect(db.users.some((u) => u.role === "client")).toBe(false);
-    for (const k of ["bookings", "conversations", "messages", "events", "invitations", "transactions", "notifications"] as const) {
+    expect(db.categories.length).toBeGreaterThan(0);
+    for (const k of ["users", "vendors", "offers", "posts", "reviews", "bookings", "conversations", "messages", "events", "invitations", "transactions", "notifications"] as const) {
       expect(db[k]).toHaveLength(0);
     }
   });

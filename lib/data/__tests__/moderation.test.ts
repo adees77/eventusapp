@@ -55,7 +55,7 @@ describe("verification", () => {
   it("old saved demos get documents, complaints and new settings", () => {
     const db = buildSeed();
     const old = { ...db, documents: undefined, complaints: undefined, settings: { feePercent: 7, defaultPrepayPercent: 30, autoReleaseDays: 3 } };
-    const m = migrate(old as never);
+    const m = migrate(old as never, "demo");
     expect(m.documents.length).toBeGreaterThan(0);
     expect(m.complaints.length).toBeGreaterThan(0);
     expect(m.settings.requiredDocs).toEqual(["passport", "registration"]);

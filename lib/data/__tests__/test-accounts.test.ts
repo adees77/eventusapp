@@ -23,6 +23,6 @@ describe("test accounts", () => {
     const db = buildSeed();
     const old = { ...db, users: db.users.map((u) => ({ ...u, email: undefined })) };
     const acc = TEST_ACCOUNTS[0];
-    expect(migrate(old).users.find((u) => u.id === acc.userId)?.email).toBe(acc.email);
+    expect(migrate(old, "demo").users.find((u) => u.id === acc.userId)?.email).toBe(acc.email);
   });
 });

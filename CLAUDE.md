@@ -48,7 +48,7 @@ lib/data/
   queries.ts, feed.ts  чистые хелперы для views/ai (searchVendors, activeOffers, conversationsFor…; ранжирование ленты, similarPosts)
   availability.ts    свободно = всего − блок − брони; неоплаченная держит 15 мин; фоновая занятость
   specs.ts           схема характеристик по категориям (цена+период: x, xQty, xPer)
-  seed/              buildSeed() — демо целиком; buildLiveSeed() — только каталог (без клиентов и их активности); `SEED_VERSION` — поднять при смене формы сида;
+  seed/              buildSeed() — демо целиком; buildLiveSeed() — пустая live-база (только категории и настройки; старые live-базы чистит `withoutDemoCatalog` в migrate); макеты лендинга всегда из демо-каталога (`useShowcase`); `SEED_VERSION` — поднять при смене формы сида;
                      catalog, posts, photos (Unsplash), specs, moderation (документы, жалобы, DEFAULT_SETTINGS, DEFAULT_PREPAY_PERCENT)
 lib/ai/              protocol, tool-defs (zod), tool-exec (в браузере по стору), claude-agent, deepseek-agent,
                      mock-agent (без ключей), system-prompt, use-chat, chat-store, onboarding-extract; vendor-{protocol,agent,mock} — ИИ-помощник исполнителя (карточку собирает `selectAssistantRequest` в views/messaging)
