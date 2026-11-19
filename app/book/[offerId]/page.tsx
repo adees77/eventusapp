@@ -14,6 +14,7 @@ import { AvailabilityError, createBooking } from "@/lib/data/actions";
 import { useAvailabilityLookup } from "@/lib/data/views/availability";
 import { useOfferForBooking } from "@/lib/data/views/bookings";
 import { useClientEvents } from "@/lib/data/views/client";
+import { track } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
 import { usePlanner } from "@/lib/planner";
 import { useActor } from "@/lib/session";
@@ -77,6 +78,7 @@ function Book() {
     setSubmitting(true);
     try {
       const b = await createBooking({ offerId: offer!.id, date, qty: safeQty, eventId: eventId || undefined, note });
+      track("booking_created", { category: vendor?.category ?? "unknown" });
       router.push(routes.checkout(b.id));
     } catch (err) {
       setSubmitting(false);

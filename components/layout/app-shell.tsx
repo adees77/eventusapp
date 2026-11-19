@@ -14,9 +14,9 @@ import { HOME_BY_ROLE } from "./nav-items";
 import { routes } from "@/lib/routes";
 
 /** Pages that render without the app chrome */
-const BARE = [routes.welcome, routes.onboarding, routes.authCallback, routes.forVendors];
+const BARE = [routes.welcome, routes.onboarding, routes.authCallback, routes.forVendors, routes.privacy, routes.terms];
 /** Pages open without an account (guest invitation links, the vendors' landing) */
-const PUBLIC = [routes.welcome, routes.publicInvitationPrefix, routes.authCallback, routes.forVendors];
+const PUBLIC = [routes.welcome, routes.publicInvitationPrefix, routes.authCallback, routes.forVendors, routes.privacy, routes.terms];
 
 const matches = (pathname: string, list: string[]) =>
   list.some((p) => pathname === p || pathname.startsWith(p.endsWith("/") ? p : `${p}/`));

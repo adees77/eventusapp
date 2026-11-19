@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { codeLength, useAuth } from "@/lib/auth/store";
 import { LiveAuthError } from "@/lib/auth/supabase";
 import { useAction } from "@/lib/data/use-action";
 import { OTP_MAX_ATTEMPTS, isEmail, resendIn } from "@/lib/auth/otp";
+import { track } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { OtpInput } from "./otp-input";
@@ -15,6 +17,7 @@ import { OtpInput } from "./otp-input";
 /** Email → one-time code. Real accounts: Supabase emails it; imitation: the code is shown on screen. */
 export function EmailSignIn({ onSignedIn }: { onSignedIn: () => void }) {
   const { t } = useI18n();
+  const asVendor = useSearchParams().get("as") === "vendor";
   const pending = useAuth((s) => s.pending);
   const requestEmailCode = useAuth((s) => s.requestEmailCode);
   const verifyEmailCode = useAuth((s) => s.verifyEmailCode);
@@ -76,6 +79,7 @@ export function EmailSignIn({ onSignedIn }: { onSignedIn: () => void }) {
         onSubmit={(e) => {
           e.preventDefault();
           if (!isEmail(email)) return setEmailError(true);
+          track("sign_up_started", { method: "email", as: asVendor ? "vendor" : "client" });
           void send(email);
         }}
       >

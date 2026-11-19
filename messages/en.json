@@ -1635,5 +1635,28 @@
     "emailInvalid": "Check the email address",
     "emailFailed": "Could not change the email. Please try again",
     "emailSent": "We sent a link to {email}. Confirm it in the email and the address will change. If confirmation from the old address is on, a letter goes there too."
+  },
+  "legal": {
+    "cookieTitle": "Cookies and analytics",
+    "cookieText": "Necessary files keep you signed in and remember your language — the site doesn’t work without them. Analytics help us see which screens work better and run only with your consent.",
+    "cookieMore": "Learn more",
+    "cookieAccept": "Allow analytics",
+    "cookieDecline": "Only necessary",
+    "cookieSettings": "Customise",
+    "cookieSave": "Save",
+    "cookieNecessary": "Necessary",
+    "cookieNecessaryText": "Sign-in, language and your data in the app",
+    "cookieAlways": "Always on",
+    "cookieAnalytics": "Analytics",
+    "cookieAnalyticsText": "Which pages and buttons are used — no names, phones or message text",
+    "footCookies": "Cookie settings",
+    "updated": "Edition of {date}",
+    "contents": "Contents",
+    "home": "Home",
+    "inn": "Reg. no.",
+    "agreeLead": "By continuing you agree to the",
+    "agreeTerms": "Terms of Use",
+    "agreeAnd": "and",
+    "agreePrivacy": "Privacy Policy"
   }
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { track } from "@/lib/analytics";
+import { charsBucket } from "@/lib/analytics/events";
 import { format } from "date-fns";
 import { useCallback, useRef, useState } from "react";
 import { getDB } from "@/lib/data/store";
@@ -54,6 +56,7 @@ export function useChat(threadId: string | null, onThreadCreated: (id: string) =
         onThreadCreated(id);
       }
       append(id, { role: "user", content: clean });
+      track("assistant_message_sent", { chars: charsBucket(clean.length) });
 
       const controller = new AbortController();
       abortRef.current = controller;

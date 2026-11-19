@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Golos_Text, Marck_Script } from "next/font/google";
 import { cookies } from "next/headers";
+import { AnalyticsProvider } from "@/components/analytics/analytics-provider";
+import { ConsentBanner } from "@/components/analytics/consent-banner";
 import { AppShell } from "@/components/layout/app-shell";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -48,7 +50,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full">
         <I18nProvider initialLocale={locale}>
           <TooltipProvider>
-            <AppShell>{children}</AppShell>
+            <AppShell>
+              <AnalyticsProvider />
+              {children}
+            </AppShell>
+            <ConsentBanner />
             <Toaster position="top-center" />
           </TooltipProvider>
         </I18nProvider>

@@ -8,6 +8,7 @@
  */
 import { ArrowRight, Check } from "lucide-react";
 import { LinkButton } from "@/components/ui/link-button";
+import { track } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { routes } from "@/lib/routes";
@@ -39,12 +40,18 @@ export function VendorStory() {
         ))}
       </ul>
       <div className="flex flex-wrap items-center gap-2">
-        <LinkButton href={routes.welcomeVendor} variant="sun" className="h-11 px-5 text-md lg:h-12 lg:px-6">
+        <LinkButton
+          href={routes.welcomeVendor}
+          variant="sun"
+          className="h-11 px-5 text-md lg:h-12 lg:px-6"
+          onClick={() => track("landing_cta_clicked", { page: "vendor", cta: "vendor_start", scene: 6 })}
+        >
           {t("landing.vCta")}
           <ArrowRight />
         </LinkButton>
         <LinkButton
           href={routes.home}
+          onClick={() => track("landing_cta_clicked", { page: "vendor", cta: "client_info", scene: 6 })}
           className={cn("hidden h-11 px-5 sm:inline-flex lg:h-12", dark ? "bg-white/10 text-white hover:bg-white/15" : "bg-foreground/[0.06] text-foreground hover:bg-foreground/10")}
         >
           {t("landing.vCtaClient")}
@@ -55,6 +62,7 @@ export function VendorStory() {
 
   return (
     <StoryStage
+      page="vendor"
       label={t("landing.vLabel")}
       scenes={SCENES}
       startHref={routes.welcomeVendor}

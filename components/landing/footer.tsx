@@ -2,9 +2,11 @@
 
 /** Landing: footer */
 import { Mail } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Logo } from "@/components/brand/logo";
+import { useConsent } from "@/lib/analytics/consent";
 import { useI18n } from "@/lib/i18n";
 import { routes } from "@/lib/routes";
 import { brand } from "@/config/brand";
@@ -12,6 +14,7 @@ import { brand } from "@/config/brand";
 export function Footer() {
   const { t } = useI18n();
   const [email, setEmail] = useState("");
+  const openCookies = useConsent((x) => x.openSettings);
   return (
     <footer className="p-2 md:p-3">
       <div className="surface-ink overflow-hidden rounded-[28px] md:rounded-[36px]">
@@ -71,9 +74,16 @@ export function Footer() {
         </div>
         <div className="container-app flex flex-col gap-3 pb-8 text-xs text-white/45 md:flex-row md:items-center md:justify-between">
           <span>{t("landing.footer")}</span>
-          <span className="flex gap-5">
-            <span>{t("landing.footPrivacy")}</span>
-            <span>{t("landing.footTerms")}</span>
+          <span className="flex flex-wrap gap-x-5 gap-y-2">
+            <Link href={routes.privacy} className="hover:text-white">
+              {t("landing.footPrivacy")}
+            </Link>
+            <Link href={routes.terms} className="hover:text-white">
+              {t("landing.footTerms")}
+            </Link>
+            <button type="button" onClick={openCookies} className="hover:text-white">
+              {t("legal.footCookies")}
+            </button>
           </span>
         </div>
       </div>

@@ -7,6 +7,7 @@
 import { ArrowRight } from "lucide-react";
 import { TryDemoButton } from "@/components/demo/try-demo-button";
 import { LinkButton } from "@/components/ui/link-button";
+import { track } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { routes } from "@/lib/routes";
@@ -31,12 +32,18 @@ export function Story() {
 
   const ctas = (n: ClientN, dark: boolean) => (
     <div className="flex flex-wrap items-center gap-2">
-      <LinkButton href={routes.welcome} variant="sun" className="h-11 px-5 text-md lg:h-12 lg:px-6">
+      <LinkButton
+        href={routes.welcome}
+        variant="sun"
+        className="h-11 px-5 text-md lg:h-12 lg:px-6"
+        onClick={() => track("landing_cta_clicked", { page: "client", cta: "client_start", scene: n })}
+      >
         {t("landing.ctaClient")}
         <ArrowRight />
       </LinkButton>
       <LinkButton
         href={routes.forVendors}
+        onClick={() => track("landing_cta_clicked", { page: "client", cta: "vendor_info", scene: n })}
         className={cn("hidden h-11 px-5 sm:inline-flex lg:h-12", dark ? "bg-white/10 text-white hover:bg-white/15" : "bg-foreground/[0.06] text-foreground hover:bg-foreground/10")}
       >
         {n === 1 ? t("landing.ctaVendor") : t("landing.storyVendorCta")}
@@ -47,6 +54,7 @@ export function Story() {
 
   return (
     <StoryStage
+      page="client"
       label={t("landing.storyKicker")}
       scenes={SCENES}
       startHref={routes.welcome}

@@ -27,6 +27,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Logo } from "@/components/brand/logo";
 import { LinkButton } from "@/components/ui/link-button";
+import { track } from "@/lib/analytics";
+import type { StoryPage } from "@/lib/analytics/events";
 import { useShowcase } from "@/lib/data/views/landing";
 import type { CategoryId } from "@/lib/data/types";
 import { LOCALES, useI18n } from "@/lib/i18n";
@@ -39,6 +41,8 @@ const PHONE_W = 290;
 const PHONE_H = 600;
 /** categories whose real vendors (cover, name, rating) appear in the mocks */
 const SHOWCASE: CategoryId[] = ["cars", "halls", "photo", "decor", "cakes", "hosts"];
+/** scenes already reported this visit, per story */
+const seenScenes: Record<StoryPage, Set<number>> = { client: new Set(), vendor: new Set() };
 
 /** How the phone stands in a scene: turn (ry) and lean (rz) in degrees, tilt back (rx), lift (y, px), scale. */
 export type Pose = { ry: number; rz?: number; rx?: number; y?: number; s?: number };
@@ -46,6 +50,7 @@ export type SceneDef<T extends number> = { n: T; bg: string; dark: boolean; side
 export type CopyDef = { kicker: string; title: ReactNode; h1?: boolean; text: string; extra?: ReactNode; /** hide the paragraph on phones (scenes with a long extra) */ compact?: boolean };
 
 export function StoryStage<T extends number>({
+  page,
   label,
   scenes,
   copy,
@@ -54,6 +59,8 @@ export function StoryStage<T extends number>({
   hud,
   startHref,
 }: {
+  /** which story this is — tags its analytics events */
+  page: StoryPage;
   label: string;
   scenes: SceneDef<T>[];
   copy: (n: T, dark: boolean) => CopyDef;
@@ -88,7 +95,14 @@ export function StoryStage<T extends number>({
   const k = layout.desktop ? 1 : 0.55; // phones get a softer version of each pose
   const pose = cur.pose;
 
-  const goTo = (i: number) => {
+  useEffect(() => {
+    if (seenScenes[page].has(scene)) return;
+    seenScenes[page].add(scene);
+    track("story_scene_viewed", { page, scene: scene + 1 });
+  }, [page, scene]);
+
+  const goTo = (i: number, action?: "next" | "prev" | "jump" | "top") => {
+    if (action) track("story_dock_used", { page, action, scene: scene + 1 });
     const el = sectionRef.current;
     if (!el) return;
     if (i < 0 || i >= total) return window.scrollTo({ top: i < 0 ? 0 : el.offsetTop + el.offsetHeight, behavior: reduce ? "auto" : "smooth" });
@@ -108,7 +122,7 @@ export function StoryStage<T extends number>({
             cur.dark ? "text-white" : "text-foreground",
           )}
         >
-          <TopBar dark={cur.dark} startHref={startHref} />
+          <TopBar dark={cur.dark} startHref={startHref} onStart={() => track("landing_cta_clicked", { page, cta: "top_start", scene: scene + 1 })} />
           {hud && <div className="absolute inset-x-0 top-14 z-10 md:top-20">{hud(scene, cur.dark)}</div>}
 
           {/* copy: lower part on phones, a column on desktop */}
@@ -191,7 +205,7 @@ function FloatLayer({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function TopBar({ dark, startHref }: { dark: boolean; startHref: string }) {
+function TopBar({ dark, startHref, onStart }: { dark: boolean; startHref: string; onStart: () => void }) {
   const { t, locale, setLocale } = useI18n();
   const pathname = usePathname();
   const tabs = [
@@ -233,7 +247,7 @@ function TopBar({ dark, startHref }: { dark: boolean; startHref: string }) {
         <Link href={routes.welcome} className="hidden h-9 items-center px-3 text-sm opacity-75 transition-opacity hover:opacity-100 sm:flex">
           {t("landing.signIn")}
         </Link>
-        <LinkButton href={startHref} variant="sun" className="h-9 px-4">
+        <LinkButton href={startHref} variant="sun" className="h-9 px-4" onClick={onStart}>
           {t("landing.start")}
         </LinkButton>
       </div>
@@ -330,7 +344,19 @@ function Rings({ scene }: { scene: number }) {
 }
 
 /** Dona-style dock: back, step dashes (the active one fills with scroll), «Далее» / «Наверх». */
-function Dock({ scene, total, inScene, dark, onGo }: { scene: number; total: number; inScene: MotionValue<number>; dark: boolean; onGo: (i: number) => void }) {
+function Dock({
+  scene,
+  total,
+  inScene,
+  dark,
+  onGo,
+}: {
+  scene: number;
+  total: number;
+  inScene: MotionValue<number>;
+  dark: boolean;
+  onGo: (i: number, action: "next" | "prev" | "jump" | "top") => void;
+}) {
   const { t } = useI18n();
   const last = scene === total - 1;
   return (
@@ -342,7 +368,7 @@ function Dock({ scene, total, inScene, dark, onGo }: { scene: number; total: num
     >
       <button
         type="button"
-        onClick={() => onGo(scene - 1)}
+        onClick={() => onGo(scene - 1, "prev")}
         disabled={scene === 0}
         aria-label={t("landing.storyPrev")}
         className="flex size-9 items-center justify-center rounded-full transition-colors hover:bg-white/10 disabled:opacity-30"
@@ -359,7 +385,7 @@ function Dock({ scene, total, inScene, dark, onGo }: { scene: number; total: num
             <button
               key={i}
               type="button"
-              onClick={() => onGo(i)}
+              onClick={() => onGo(i, "jump")}
               aria-label={t("landing.storyScene", { n: i + 1, total })}
               aria-current={active ? "step" : undefined}
               className="flex h-6 items-center px-[3px]"
@@ -375,7 +401,7 @@ function Dock({ scene, total, inScene, dark, onGo }: { scene: number; total: num
       </div>
       <button
         type="button"
-        onClick={() => onGo(last ? -1 : scene + 1)}
+        onClick={() => onGo(last ? -1 : scene + 1, last ? "top" : "next")}
         className="flex h-9 items-center gap-2 rounded-full bg-white pr-1.5 pl-4 text-sm font-medium text-ink transition-transform active:scale-[0.97]"
       >
         {last ? t("landing.storyTop") : t("landing.storyNext")}

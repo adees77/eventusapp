@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { createInvitation } from "@/lib/data/actions";
 import { draftFromTemplate, type InvitationTemplate } from "@/lib/data/invitation-templates";
 import { useMyInvitations, useNextEvent } from "@/lib/data/views/client";
+import { track } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
 import { guestRows, invitationStats, type RsvpBucket } from "@/lib/invitations/design";
 import { useActor } from "@/lib/session";
@@ -38,7 +39,10 @@ export default function InvitationsPage() {
 
   async function start(tpl?: InvitationTemplate) {
     const inv = await run(() => createInvitation(draftFromTemplate(tpl, locale, event)));
-    if (inv) router.push(routes.invitation(inv.id));
+    if (inv) {
+      track("invitation_created", { from: tpl ? "template" : "scratch" });
+      router.push(routes.invitation(inv.id));
+    }
   }
 
   // every guest of every invitation, tagged with the invitation they belong to

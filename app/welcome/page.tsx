@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Logo } from "@/components/brand/logo";
@@ -18,6 +19,7 @@ import { TEST_ACCOUNTS } from "@/lib/data/seed";
 import { PHOTOS, unsplash } from "@/lib/data/seed/photos";
 import { LOCALES, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { routes } from "@/lib/routes";
 
 export default function WelcomePage() {
   return (
@@ -105,7 +107,17 @@ function Welcome() {
 
           {!pending && (
             <>
-              <p className="mt-6 text-xs leading-relaxed text-muted-foreground">{t("auth.terms")}</p>
+              <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
+                {t("legal.agreeLead")}{" "}
+                <Link href={routes.terms} className="text-primary underline-offset-4 hover:underline">
+                  {t("legal.agreeTerms")}
+                </Link>{" "}
+                {t("legal.agreeAnd")}{" "}
+                <Link href={routes.privacy} className="text-primary underline-offset-4 hover:underline">
+                  {t("legal.agreePrivacy")}
+                </Link>
+                .
+              </p>
               <TryDemoButton className="mt-10 text-primary" label={t("auth.demoLink")} />
               {/* seeded test accounts: open the demo as that account (demos and QA) */}
               {demoConfig.enabled && (

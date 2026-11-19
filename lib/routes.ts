@@ -17,6 +17,8 @@ export const routes = {
   welcomeVendor: "/welcome?as=vendor",
   /** Marketing story for vendors (the second landing tab) */
   forVendors: "/for-vendors",
+  privacy: "/privacy",
+  terms: "/terms",
   /** Where Google sign-in (Supabase OAuth) returns */
   authCallback: "/auth/callback",
   onboarding: "/onboarding",

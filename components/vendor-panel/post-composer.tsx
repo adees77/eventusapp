@@ -11,6 +11,7 @@ import { createPost } from "@/lib/data/actions";
 import { CATEGORY_PHOTOS, PHOTOS, unsplash } from "@/lib/data/seed/photos";
 import { useActiveOffers } from "@/lib/data/views/vendor";
 import type { Post, Vendor } from "@/lib/data/types";
+import { track } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
 import { readPhoto } from "@/lib/photos";
 import { cn } from "@/lib/utils";
@@ -59,7 +60,10 @@ export function PostComposer({ vendor, onDone }: { vendor: Vendor; onDone: (post
     });
     void run(() => createPost({ vendorId: vendor.id, photos, caption, offerId: offerId || undefined, ratio }), {
       success: t("vcab.published"),
-      onSuccess: onDone,
+      onSuccess: (post) => {
+        track("post_published", { photos: photos.length });
+        onDone(post);
+      },
     });
   }
 

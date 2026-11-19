@@ -1,10 +1,12 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Field, inputClass } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { isEmail, nameFromEmail } from "@/lib/auth/otp";
+import { track } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
 
 /**
@@ -23,6 +25,7 @@ export function GoogleButton({
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const asVendor = useSearchParams().get("as") === "vendor";
   const [email, setEmail] = useState("");
   const [touched, setTouched] = useState(false);
   const valid = isEmail(email) && name.trim().length >= 2;
@@ -31,7 +34,11 @@ export function GoogleButton({
     <>
       <button
         type="button"
-        onClick={() => (onStart ? onStart() : setOpen(true))}
+        onClick={() => {
+          track("sign_up_started", { method: "google", as: asVendor ? "vendor" : "client" });
+          if (onStart) onStart();
+          else setOpen(true);
+        }}
         disabled={pending}
         aria-busy={pending || undefined}
         className="flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-card text-md text-foreground transition-colors hover:bg-muted active:translate-y-px disabled:opacity-60"

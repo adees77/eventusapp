@@ -11,6 +11,7 @@ import { AvailabilityError, markBookingPrepaid } from "@/lib/data/actions";
 import { useCheckout } from "@/lib/data/views/bookings";
 import { useI18n } from "@/lib/i18n";
 import { getPaymentProvider, type PaymentMethod } from "@/lib/payments/provider";
+import { track } from "@/lib/analytics";
 import { useActor } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { routes } from "@/lib/routes";
@@ -64,6 +65,7 @@ export default function CheckoutPage() {
       }
       if (res.status !== "succeeded") throw new Error(res.error ?? "failed");
       const convId = await markBookingPrepaid(booking!.id, res.reference);
+      track("prepayment_paid", { category: vendor?.category ?? "unknown" });
       setPhase("success");
       setTimeout(() => router.push(routes.chat(convId)), 1600);
     } catch (err) {

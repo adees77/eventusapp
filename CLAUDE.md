@@ -16,6 +16,7 @@
 ```
 app/                 маршруты (client components; данные — только через хуки lib/data/views, запись — lib/data/actions)
   page.tsx           лендинг клиента = Story (9 сцен, `landing.story*`) + Footer   for-vendors/ — лендинг исполнителя (VendorStory, 6 сцен-игра с кортежем из каталога, `landing.v*`)
+  privacy/, terms/   юр. документы (тексты — `lib/legal/{privacy,terms}.ts` как `{ru,en}`, реквизиты — `config/legal.ts`, числа — из settings); публичные, без оболочки
   assistant/         чат с ИИ (вендоров редиректит в /vendor; `?q=` — новый чат с запросом; открытый тред помнится per user — `chat-store.active`)
   vendors/           лента-соцсеть + [slug] профиль (шапка; вкладки — components/vendor-profile/*)   book/[offerId], checkout/[bookingId]
   messages/[id]      чат клиент↔вендор  dashboard/*     кабинет клиента (events, bookings, payments, saved, profile)
@@ -52,6 +53,7 @@ lib/data/
 lib/ai/              protocol, tool-defs (zod), tool-exec (в браузере по стору), claude-agent, deepseek-agent,
                      mock-agent (без ключей), system-prompt, use-chat, chat-store, onboarding-extract; vendor-{protocol,agent,mock} — ИИ-помощник исполнителя (карточку собирает `selectAssistantRequest` в views/messaging)
 lib/feed-prefs.ts, lib/photos.ts (файл → data URL)
+lib/analytics/       PostHog (EU) только после согласия в баннере (`consent.ts`, ключ `eventus-consent`, `CONSENT_VERSION`) и при `NEXT_PUBLIC_POSTHOG_KEY`; `track(event, props)` — события только из `events.ts` (без ПДн и текста); `useVariant(flag, variants)` — A/B; components/analytics/ — провайдер (pageview, identify) и баннер cookie
 lib/data/remote-account.ts  мост до этапа 4: итог онбординга → RPC complete_client_onboarding/sign_up_vendor; при входе `syncAccountWithServer` (actions/account) восстанавливает аккаунт с сервера или досылает локальный
 lib/auth/            store.ts — вход: live = Supabase Auth (supabase.ts: код на почту, Google OAuth; id аккаунта = auth.uid, админ — из profiles.role; syncLiveSession), без env — имитация; signInDemo(userId?) → режим demo; lib/session.ts — аккаунт вкладки (sessionStorage), роль берётся из профиля; lib/planner.ts — дата/город/гости
 lib/payments/        provider.ts (DemoPaymentProvider), escrow.ts (P2P-эскроу, комиссия)
@@ -70,6 +72,7 @@ lib/supabase/        client.ts — браузерный клиент (URL и pub
 - Все строки UI — в **оба** `messages/ru.json` и `en.json` (одинаковые ключи; плюралы ru `one|few|many`, en `one|other`). Секции верхнего уровня: common nav home chat catalog vendor booking checkout messages dashboard vp admin invitations auth onboarding escrow feed profile cabinet vcab acab inv landing notif vsetup reviews specs create owner …  Найти секцию: `grep -n '"<секция>": {' messages/ru.json`.
 - Тексты сида — `LText` `{ru, en}`.
 - Ключи ИИ только на сервере. Порядок провайдеров: DeepSeek → Claude → mock (`AI_PROVIDER` форсит).
+- Аналитика: событие сначала в `lib/analytics/events.ts`, в свойствах — никаких имён/телефонов/почты/текста. Новые собираемые данные или сторонний сервис → обновить `lib/legal/privacy.ts` (+ `updated`), новая цель аналитики → поднять `CONSENT_VERSION`.
 
 ## Как вносить изменения (рецепты)
 - **Новый экран**: `app/<путь>/page.tsx` + адрес в `lib/routes.ts` + данные хуком из `lib/data/views/<раздел>.ts` (селектор `selectX` + `useX`). Страница > ~300 строк → блоки в `components/<раздел>/*`.
