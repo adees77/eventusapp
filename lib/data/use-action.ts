@@ -16,7 +16,9 @@
  */
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth/store";
 import { useT } from "@/lib/i18n";
+import { routes } from "@/lib/routes";
 import { PolicyError } from "./policies";
 import { AvailabilityError } from "./actions/bookings";
 
@@ -54,6 +56,11 @@ export function useAction() {
   const run = useCallback(
     async <R>(fn: () => Promise<R>, opts: RunOptions<R> = {}): Promise<R | undefined> => {
       if (busy.current) return undefined;
+      // a guest browsing the feed: every write needs an account — invite to sign up instead of failing
+      if (!useAuth.getState().userId) {
+        toast(t("guest.needAccount"), { action: { label: t("demo.signUp"), onClick: () => window.location.assign(routes.welcome) } });
+        return undefined;
+      }
       busy.current = true;
       setRunning(opts.key ?? "");
       setError(null);
@@ -93,5 +100,6 @@ export function useAction() {
 
 /** Fire-and-forget write (view counters, read receipts, autosave): logs instead of throwing */
 export function background(fn: () => Promise<unknown>): void {
+  if (!useAuth.getState().userId) return; // guests leave no trace (view counters, read receipts)
   fn().catch((e) => console.warn("[background action]", e));
 }

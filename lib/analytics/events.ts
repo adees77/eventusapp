@@ -14,7 +14,7 @@ export interface AnalyticsEvents {
   /** the story dock was used instead of scrolling */
   story_dock_used: { page: StoryPage; action: "next" | "prev" | "jump" | "top"; scene: number };
   /** a call to action on a landing was pressed */
-  landing_cta_clicked: { page: StoryPage; cta: "client_start" | "vendor_start" | "vendor_info" | "client_info" | "top_start" | "demo"; scene: number };
+  landing_cta_clicked: { page: StoryPage; cta: "client_start" | "vendor_start" | "vendor_info" | "client_info" | "top_start" | "demo" | "guest_feed" | "vendor_demo"; scene: number };
   /** sign-in or sign-up was started on /welcome */
   sign_up_started: { method: "google" | "email" | "demo"; as: "client" | "vendor" };
   /** an account appeared in this tab (fired by the analytics provider) */

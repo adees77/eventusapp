@@ -6,13 +6,13 @@
  * Motion: transform + opacity only; small in-screen sequences are timed from mount (useSteps);
  * reduced motion shows every end state at once.
  */
-import { BadgeCheck, Bot, Check, Mic, MessageCircle, ShieldCheck, SquarePlus } from "lucide-react";
+import { BadgeCheck, Bot, Check, Mic, MessageCircle, ShieldCheck } from "lucide-react";
 import { motion } from "motion/react";
 import { LogoMark } from "@/components/brand/logo";
 import { Monogram, VerifiedSeal } from "@/components/vendor/badges";
+import { InstallFloat, InstallScreen } from "./install-demo";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { brand } from "@/config/brand";
 import {
   CountUp,
   Cover,
@@ -422,29 +422,6 @@ function InviteScreen() {
   );
 }
 
-function InstallScreen() {
-  const { t } = useI18n();
-  const pop = usePop();
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
-      <motion.span {...pop(0.1, 18)} className="flex size-24 items-center justify-center rounded-[28px] bg-ink shadow-lift">
-        <LogoMark className="h-7 w-auto text-white" />
-      </motion.span>
-      <motion.div {...pop(0.25)} className="flex flex-col items-center gap-2">
-        <span className="display text-[22px]">{brand.name}</span>
-        <span className="rounded-full bg-primary/10 px-3 py-1 text-2xs font-medium text-primary">{t("landing.storyFree")}</span>
-      </motion.div>
-      <motion.span {...pop(0.4)} className="rounded-full bg-sun px-6 py-2.5 text-sm font-medium text-sun-foreground">
-        {t("landing.storyOpen")}
-      </motion.span>
-      <motion.span {...pop(0.6)} className="mt-6 flex items-center gap-2 rounded-2xl bg-foreground/[0.045] px-3.5 py-2.5 text-xs">
-        <SquarePlus className="size-4 text-primary" />
-        {t("landing.storyInstall")}
-      </motion.span>
-    </div>
-  );
-}
-
 /* ───────────── floating details around the phone ───────────── */
 
 export function ClientFloats({ n, side }: { n: ClientN; side: Side }) {
@@ -574,6 +551,8 @@ export function ClientFloats({ n, side }: { n: ClientN; side: Side }) {
           </Float>
         </>
       );
+    case 9:
+      return <InstallFloat side={side} />;
     default:
       return null;
   }

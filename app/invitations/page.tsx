@@ -14,10 +14,52 @@ import { draftFromTemplate, type InvitationTemplate } from "@/lib/data/invitatio
 import { useMyInvitations, useNextEvent } from "@/lib/data/views/client";
 import { track } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
-import { guestRows, invitationStats, type RsvpBucket } from "@/lib/invitations/design";
+import { guestRows, invitationStats, RSVP_BUCKETS, type RsvpBucket } from "@/lib/invitations/design";
 import { useActor } from "@/lib/session";
 import { routes } from "@/lib/routes";
 import { useAction } from "@/lib/data/use-action";
+
+/** Sample answers for the empty state: shows what the ring will do once guests reply */
+const EXAMPLE = { coming: 42, waiting: 18, declined: 6, draft: 9 } satisfies Record<RsvpBucket, number>;
+
+/**
+ * Nothing sent yet: a worked example instead of a blank ring — the ring filled with sample answers
+ * (marked «Example»), what each colour means and the three steps to get real answers here.
+ */
+function InvitationsExample({ onCreate }: { onCreate: () => void }) {
+  const { t, tn, num } = useI18n();
+  const [picked, setPicked] = useState<string | null>(null);
+  const slices = RSVP_BUCKETS.map((b) => ({ key: b, label: t(`inv.bucket_${b}`), value: EXAMPLE[b], color: BUCKET_COLOR[b] }));
+  const total = Object.values(EXAMPLE).reduce((a, b) => a + b, 0);
+  const steps = [t("inv.exStep1"), t("inv.exStep2"), t("inv.exStep3")];
+  return (
+    <div className="grid items-center gap-6 md:grid-cols-[260px_minmax(0,1fr)] md:gap-12">
+      <div className="relative">
+        <span className="absolute top-0 left-0 z-10 rounded-full bg-cream px-2.5 py-1 text-2xs font-medium text-text-secondary">{t("inv.exChip")}</span>
+        <div className="opacity-90">
+          <RsvpDonut slices={slices} selected={picked} onSelect={setPicked} center={{ value: num(total), label: tn("inv.guestsN", total) }} />
+        </div>
+      </div>
+      <div className="min-w-0 max-md:text-center">
+        <h2 className="display text-2xl md:text-[30px]">{t("inv.exTitle")}</h2>
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-text-secondary max-md:mx-auto">{t("inv.exText")}</p>
+        <DonutLegend slices={slices} selected={picked} onSelect={setPicked} className="mt-4 max-w-md max-md:mx-auto max-md:text-left" />
+        <ol className="mt-5 flex max-w-md flex-col gap-2 text-sm max-md:mx-auto max-md:text-left">
+          {steps.map((s, i) => (
+            <li key={s} className="flex items-start gap-3 rounded-2xl bg-background px-3.5 py-2.5">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-ink text-[11px] text-white tabular-nums">{i + 1}</span>
+              <span className="leading-snug">{s}</span>
+            </li>
+          ))}
+        </ol>
+        <Button variant="sun" className="mt-5 h-11 px-5" onClick={onCreate}>
+          <Plus strokeWidth={2} />
+          {t("inv.createTitle")}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function InvitationsPage() {
   const { t, tn, locale, num } = useI18n();
@@ -106,23 +148,7 @@ export default function InvitationsPage() {
             </Reveal>
           </>
         ) : (
-          <div className="grid items-center gap-6 md:grid-cols-[260px_minmax(0,1fr)] md:gap-12">
-            <RsvpDonut
-              slices={slices}
-              selected={null}
-              onSelect={() => {}}
-              center={{ value: "0", label: "" }}
-              empty={<span className="text-xs leading-snug text-muted-foreground">{t("inv.emptyRing")}</span>}
-            />
-            <div className="max-md:text-center">
-              <h2 className="display text-2xl md:text-[30px]">{t("inv.emptyTitle")}</h2>
-              <p className="mt-2 max-w-md text-sm leading-relaxed text-text-secondary max-md:mx-auto">{t("inv.emptyText")}</p>
-              <Button variant="sun" className="mt-5 h-11 px-5" onClick={() => setCreating(true)}>
-                <Plus strokeWidth={2} />
-                {t("inv.createTitle")}
-              </Button>
-            </div>
-          </div>
+          <InvitationsExample onCreate={() => setCreating(true)} />
         )}
       </section>
 

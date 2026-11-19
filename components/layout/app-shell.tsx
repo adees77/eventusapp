@@ -9,14 +9,15 @@ import { STORAGE_FULL_EVENT, useDataStore } from "@/lib/data/store";
 import { useT } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { BottomNav } from "./bottom-nav";
+import { GuestBar } from "./guest-bar";
 import { Header } from "./header";
 import { HOME_BY_ROLE } from "./nav-items";
 import { routes } from "@/lib/routes";
 
 /** Pages that render without the app chrome */
 const BARE = [routes.welcome, routes.onboarding, routes.authCallback, routes.forVendors, routes.privacy, routes.terms];
-/** Pages open without an account (guest invitation links, the vendors' landing) */
-const PUBLIC = [routes.welcome, routes.publicInvitationPrefix, routes.authCallback, routes.forVendors, routes.privacy, routes.terms];
+/** Pages open without an account (guest invitation links, the vendors' landing, the feed and vendor profiles) */
+const PUBLIC = [routes.feed, routes.welcome, routes.publicInvitationPrefix, routes.authCallback, routes.forVendors, routes.privacy, routes.terms];
 
 const matches = (pathname: string, list: string[]) =>
   list.some((p) => pathname === p || pathname.startsWith(p.endsWith("/") ? p : `${p}/`));
@@ -95,6 +96,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!ready || target) return <Splash />;
   if (isLanding || matches(pathname, BARE) || pathname.startsWith(routes.publicInvitationPrefix)) return <>{children}</>;
+
+  // a guest looking at the feed without an account: a slim bar with sign-in instead of the app's menus
+  if (!userId)
+    return (
+      <div className="flex min-h-dvh flex-col">
+        <GuestBar />
+        <main className="flex flex-1 flex-col">{children}</main>
+      </div>
+    );
 
   return (
     <div className="flex min-h-dvh flex-col">

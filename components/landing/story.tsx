@@ -5,13 +5,14 @@
  * The engine is story-stage.tsx; phone screens and floats are in story-screens.tsx.
  */
 import { ArrowRight } from "lucide-react";
-import { TryDemoButton } from "@/components/demo/try-demo-button";
+import Link from "next/link";
 import { LinkButton } from "@/components/ui/link-button";
 import { track } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { routes } from "@/lib/routes";
 import { ClientFloats, ClientScreen, type ClientN } from "./story-screens";
+import { InstallControls } from "./install-demo";
 import { StoryStage, type SceneDef } from "./story-stage";
 
 /** background, text mode, phone side and pose per scene — every scene stands the phone a little differently */
@@ -48,7 +49,15 @@ export function Story() {
       >
         {n === 1 ? t("landing.ctaVendor") : t("landing.storyVendorCta")}
       </LinkButton>
-      {n === 1 && <TryDemoButton className={cn("ml-1 hidden sm:block", dark ? "text-white/60 hover:text-white" : "text-text-secondary")} />}
+      {n === 1 && (
+        <Link
+          href={routes.feed}
+          onClick={() => track("landing_cta_clicked", { page: "client", cta: "guest_feed", scene: n })}
+          className={cn("ml-1 text-sm underline-offset-4 hover:underline", dark ? "text-white/70 hover:text-white" : "text-text-secondary")}
+        >
+          {t("landing.guestFeed")}
+        </Link>
+      )}
     </div>
   );
 
@@ -72,7 +81,15 @@ export function Story() {
             t(`landing.story${n}t`)
           ),
         text: t(`landing.story${n}p`),
-        extra: n === 1 || n === 9 ? ctas(n, dark) : undefined,
+        extra:
+          n === 9 ? (
+            <div className="flex flex-col gap-6">
+              <InstallControls dark={dark} />
+              {ctas(n, dark)}
+            </div>
+          ) : n === 1 ? (
+            ctas(n, dark)
+          ) : undefined,
         compact: n === 1,
       })}
     />

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The vendors' landing (/for-vendors): «become an EVENTUS vendor in one day» in six scenes, from a working
+ * The vendors' landing (/for-vendors): «become an EVENTUS vendor in one day» in seven scenes, from a working
  * cabinet and a verified profile to clients, the AI assistant and the money. Selling points: an event-only feed (no fighting memes and ads for
  * attention), warm requests with date and budget, an AI assistant that answers at night, prepayment
  * before the date closes, automatic payout, reviews only from real deals.
@@ -12,6 +12,8 @@ import { track } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { routes } from "@/lib/routes";
+import { VendorDemoButton } from "@/components/demo/vendor-demo-button";
+import { InstallControls } from "./install-demo";
 import { StoryStage, type SceneDef } from "./story-stage";
 import { VendorFloats, VendorHud, VendorScreen, type VendorN } from "./vendor-story-screens";
 
@@ -22,6 +24,7 @@ const SCENES: SceneDef<VendorN>[] = [
   { n: 4, bg: "bg-cream", dark: false, side: -1, pose: { ry: 12, rz: 4, rx: 6 } },
   { n: 5, bg: "bg-primary", dark: true, side: 1, pose: { ry: -12, rz: -3, rx: 8 } },
   { n: 6, bg: "bg-ink", dark: true, side: -1, pose: { ry: 6, rz: -2 } },
+  { n: 7, bg: "bg-cream", dark: false, side: 1, pose: { ry: -8, rz: 2, rx: 4 } },
 ];
 
 export function VendorStory() {
@@ -39,24 +42,43 @@ export function VendorStory() {
           </li>
         ))}
       </ul>
+      {ctas(dark, 6)}
+    </div>
+  );
+
+  const ctas = (dark: boolean, scene: number) => (
       <div className="flex flex-wrap items-center gap-2">
         <LinkButton
           href={routes.welcomeVendor}
           variant="sun"
           className="h-11 px-5 text-md lg:h-12 lg:px-6"
-          onClick={() => track("landing_cta_clicked", { page: "vendor", cta: "vendor_start", scene: 6 })}
+          onClick={() => track("landing_cta_clicked", { page: "vendor", cta: "vendor_start", scene })}
         >
           {t("landing.vCta")}
           <ArrowRight />
         </LinkButton>
         <LinkButton
           href={routes.home}
-          onClick={() => track("landing_cta_clicked", { page: "vendor", cta: "client_info", scene: 6 })}
+          onClick={() => track("landing_cta_clicked", { page: "vendor", cta: "client_info", scene })}
           className={cn("hidden h-11 px-5 sm:inline-flex lg:h-12", dark ? "bg-white/10 text-white hover:bg-white/15" : "bg-foreground/[0.06] text-foreground hover:bg-foreground/10")}
         >
           {t("landing.vCtaClient")}
         </LinkButton>
       </div>
+  );
+
+  const hero = (dark: boolean) => (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+      <LinkButton
+        href={routes.welcomeVendor}
+        variant="sun"
+        className="h-11 px-5 text-md lg:h-12 lg:px-6"
+        onClick={() => track("landing_cta_clicked", { page: "vendor", cta: "vendor_start", scene: 1 })}
+      >
+        {t("landing.vCta")}
+        <ArrowRight />
+      </LinkButton>
+      <VendorDemoButton className={dark ? "text-white/70 hover:text-white" : "text-text-secondary"} />
     </div>
   );
 
@@ -74,8 +96,18 @@ export function VendorStory() {
         h1: n === 1,
         title: n === 1 ? <span style={{ fontWeight: 600 }}>{t("landing.v1t")}</span> : t(`landing.v${n}t`),
         text: t(`landing.v${n}p`),
-        extra: n === 6 ? final(dark) : undefined,
-        compact: n === 6,
+        extra:
+          n === 1 ? (
+            hero(dark)
+          ) : n === 6 ? (
+            final(dark)
+          ) : n === 7 ? (
+            <div className="flex flex-col gap-6">
+              <InstallControls dark={dark} />
+              {ctas(dark, 7)}
+            </div>
+          ) : undefined,
+        compact: n === 6 || n === 7,
       })}
     />
   );

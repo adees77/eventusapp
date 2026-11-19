@@ -12,9 +12,10 @@ import { Monogram } from "@/components/vendor/badges";
 import type { Vendor } from "@/lib/data/types";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { InstallFloat, InstallScreen } from "./install-demo";
 import { CountUp, Dots, EASE, Float, PHOTO_CARD, Photo, TypingDots, useDur, usePop, useSteps, useVendor, useVendors, type Side } from "./story-kit";
 
-export type VendorN = 1 | 2 | 3 | 4 | 5 | 6;
+export type VendorN = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 /* ─────────────────────────── the game ─────────────────────────── */
 
@@ -24,8 +25,8 @@ const PRICE = 48_000; // 3 Gelandewagens for 4 hours
 const PREPAY = PRICE * 0.3;
 const SEASON = 864_000; // ~18 weddings
 /** achievements unlocked and example earnings after each scene */
-const UNLOCKED = [0, 1, 3, 4, 6, 6];
-const EARNED = [0, 0, 0, 0, PRICE, SEASON];
+const UNLOCKED = [0, 1, 3, 4, 6, 6, 6];
+const EARNED = [0, 0, 0, 0, PRICE, SEASON, SEASON];
 const levelAt = (scene: number) => 1 + Math.floor(UNLOCKED[scene] / 2);
 
 /** The hero vendor: name, cover and portfolio shots (falls back to a generic name in an empty catalog) */
@@ -104,8 +105,10 @@ export function VendorScreen({ n }: { n: VendorN }) {
       return <ChatScreen />;
     case 5:
       return <MoneyScreen />;
-    default:
+    case 6:
       return <ResultScreen />;
+    default:
+      return <InstallScreen />;
   }
 }
 
@@ -636,6 +639,8 @@ export function VendorFloats({ n, side }: { n: VendorN; side: Side }) {
           </Float>
         </>
       );
+    case 7:
+      return <InstallFloat side={side} />;
     default:
       return null;
   }

@@ -13,7 +13,7 @@ import { realAccounts, useAuth } from "@/lib/auth/store";
 import { LiveAuthError } from "@/lib/auth/supabase";
 import { toast } from "sonner";
 import { useAction } from "@/lib/data/use-action";
-import { TryDemoButton } from "@/components/demo/try-demo-button";
+import { VendorDemoButton } from "@/components/demo/vendor-demo-button";
 import { demoConfig } from "@/config/demo";
 import { TEST_ACCOUNTS } from "@/lib/data/seed";
 import { PHOTOS, unsplash } from "@/lib/data/seed/photos";
@@ -118,7 +118,14 @@ function Welcome() {
                 </Link>
                 .
               </p>
-              <TryDemoButton className="mt-10 text-primary" label={t("auth.demoLink")} />
+              {/* clients look at the feed as guests; vendors open a demo cabinet to see their side */}
+              {asVendor ? (
+                <VendorDemoButton className="mt-10 text-primary" />
+              ) : (
+                <Link href={routes.feed} className="mt-10 block w-fit text-sm text-primary underline-offset-4 hover:underline">
+                  {t("landing.guestFeed")}
+                </Link>
+              )}
               {/* seeded test accounts: open the demo as that account (demos and QA) */}
               {demoConfig.enabled && (
                 <div className="mt-8 rounded-3xl bg-cream p-4">
