@@ -1,5 +1,6 @@
 "use client";
 
+import { Eye } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { HOME_BY_ROLE } from "@/components/layout/nav-items";
 import { demoConfig } from "@/config/demo";
@@ -12,7 +13,7 @@ import { cn } from "@/lib/utils";
  * «Посмотреть кабинет исполнителя»: opens the demo as the seeded motorcade vendor — their cabinet,
  * profile, requests and money, the way a real vendor will see it. Hidden when the demo is off.
  */
-export function VendorDemoButton({ className, label }: { className?: string; label?: string }) {
+export function VendorDemoButton({ className, label, icon = true }: { className?: string; label?: string; icon?: boolean }) {
   const { t } = useI18n();
   const router = useRouter();
   if (!demoConfig.enabled) return null;
@@ -25,6 +26,7 @@ export function VendorDemoButton({ className, label }: { className?: string; lab
       }}
       className={cn("w-fit text-sm underline-offset-4 transition-colors hover:underline", className)}
     >
+      {icon && <Eye className="size-4" />}
       {label ?? t("demo.tryVendor")}
     </button>
   );

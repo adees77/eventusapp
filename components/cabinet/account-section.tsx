@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, LogOut, RotateCcw, Shield, Store, User } from "lucide-react";
+import { Check, Info, LogOut, RotateCcw, Shield, Store, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -168,6 +168,10 @@ export function AccountSection() {
         )}
 
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" className="h-10 px-4" onClick={() => router.push(routes.landing)}>
+            <Info />
+            {t("landing.aboutService")}
+          </Button>
           {isDemo && demoConfig.features.reset && (
             <Button variant="outline" className="h-10 px-4" onClick={() => setConfirmReset(true)}>
               <RotateCcw />

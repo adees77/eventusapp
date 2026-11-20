@@ -83,6 +83,15 @@ async function providerEnabled(provider: "google" | "email"): Promise<boolean> {
   }
 }
 
+/** Whether Google sign-in is switched on in Supabase (unknown or offline → true, so the button stays) */
+export async function googleEnabled(): Promise<boolean> {
+  try {
+    return await providerEnabled("google");
+  } catch {
+    return true;
+  }
+}
+
 /** Leaves for Google; comes back to /auth/callback (see app/auth/callback) */
 export async function startGoogleSignIn(asVendor: boolean): Promise<void> {
   // without this check a disabled provider ends on Supabase's raw JSON error page

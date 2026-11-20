@@ -70,7 +70,21 @@
     "tryVendor": "See a vendor’s cabinet"
   },
   "guest": {
-    "needAccount": "Likes, messages and bookings need an account — it’s free"
+    "needAccount": "Likes, messages and bookings need an account — it’s free",
+    "profileTitle": "Create your profile",
+    "profileText": "A profile is free and takes a minute — all you need is an email.",
+    "perk1": "The assistant drafts your plan and budget",
+    "perk2": "Likes, chats with vendors and bookings",
+    "perk3": "Your own invitations and guests’ answers",
+    "createProfile": "Sign up",
+    "haveAccount": "Already have an account? Sign in",
+    "createInvitation": "Sign up and create"
+  },
+  "adminLogin": {
+    "title": "Admin panel",
+    "password": "Password",
+    "wrong": "Wrong password",
+    "enter": "Sign in"
   },
   "home": {
     "titleEvent": "How can I help with the celebration?",
@@ -1167,7 +1181,7 @@
     "storyKicker": "How it works",
     "storyScene": "Step {n} of {total}",
     "storyHeroA": "A toi to be proud of.",
-    "storyHeroB": "No debt, no hundred chats.",
+    "storyHeroB": "No debt, no loans.",
     "story1k": "EVENTUS AI",
     "story1p": "Describe your celebration in one sentence. The assistant builds a plan within your budget, finds vendors who are free and keeps everything in one app — from the first call to the last guest.",
     "story2k": "Sound familiar?",
@@ -1177,8 +1191,8 @@
     "story3t": "One sentence instead of a hundred calls",
     "story3p": "Date, city, guests, budget — by voice or text. The assistant sorts it out and asks only what is missing.",
     "story4k": "Budget",
-    "story4t": "The amount first. Everything else after",
-    "story4p": "Say how much you are ready to spend — your own money, not what the neighbours expect. The assistant suggests how to split it and offers vendors who fit.",
+    "story4t": "Your budget, your rules",
+    "story4p": "You decide how much to spend — no looking over your shoulder at the neighbours. The assistant suggests how to split the amount sensibly and offers only vendors who fit it.",
     "story5k": "Choice",
     "story5t": "Not “a friend of a friend”, a real choice",
     "story5p": "Verified halls, hosts, photographers, motorcades and decor in Bishkek. Only those free on your date, with portfolios, reviews and ratings. Compare calmly, without pressure.",
@@ -1189,8 +1203,8 @@
     "story7t": "A prepayment that won’t disappear",
     "story7p": "You pay the prepayment through EVENTUS AI. We hold the money and release it to the vendor only when you both confirm. If something goes wrong, you get it back or our team settles the dispute.",
     "story8k": "Guests",
-    "story8t": "An exact guest count means no extra tables",
-    "story8p": "The invitation is a beautiful page with a personal link for every guest. Replies collect themselves: you see who is coming and don’t pay the hall for empty seats.",
+    "story8t": "You know exactly how many guests are coming",
+    "story8p": "An invitation is a beautiful page with a personal link for every guest. Answers collect themselves: you see who is coming, book exactly the seats you need and don’t pay for empty tables.",
     "story9k": "Start",
     "story9t": "Your toi is already on this screen",
     "story9p": "Free for couples. Installs on your phone like an app, no App Store or Google Play — see how on iPhone and Android.",
@@ -1392,7 +1406,7 @@
       "Press “I'm a vendor” and tell us about yourself — your profile, first service and first post go live right away, and the assistant starts suggesting you to clients."
     ],
     "finalTitle": "Tell us about your celebration — it takes a minute",
-    "finalText": "By voice or text. The assistant instantly shows who's free on your date.",
+    "finalText": "Your personal AI assistant for the wedding or toi of your dreams: plan, budget, verified vendors and invitations in one app — without the surprise costs that turn into debts and loans.",
     "footer": "© EVENTUS AI, Bishkek. Demo: no real payments are made.",
     "chatUser": "Wedding on June 14 in Bishkek, 150 guests, budget 1.5M som. Where do I start?",
     "chatBot": "Let's start with the venue, motorcade and host — they get booked first. Free on June 14:",
@@ -1509,7 +1523,11 @@
     "andDownloads": "Downloads",
     "andAddHome": "Add to Home screen",
     "andInstallTitle": "Install app?",
-    "andInstall": "Install"
+    "andInstall": "Install",
+    "guestFeedBtn": "Browse the feed",
+    "backToLanding": "To the home page",
+    "aboutService": "About EVENTUS",
+    "openApp": "Open the app"
   },
   "notif": {
     "title": "Notifications",

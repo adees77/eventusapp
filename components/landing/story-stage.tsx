@@ -29,6 +29,7 @@ import { Logo } from "@/components/brand/logo";
 import { LinkButton } from "@/components/ui/link-button";
 import { track } from "@/lib/analytics";
 import type { StoryPage } from "@/lib/analytics/events";
+import { useAuth } from "@/lib/auth/store";
 import { useShowcase } from "@/lib/data/views/landing";
 import type { CategoryId } from "@/lib/data/types";
 import { LOCALES, useI18n } from "@/lib/i18n";
@@ -209,14 +210,17 @@ function FloatLayer({ children }: { children: ReactNode }) {
 function TopBar({ dark, startHref, onStart }: { dark: boolean; startHref: string; onStart: () => void }) {
   const { t, locale, setLocale } = useI18n();
   const pathname = usePathname();
+  // «/» sends a signed-in visitor to their home, so with an account the landing lives at /landing
+  const signedIn = !!useAuth((s) => s.userId);
+  const home = signedIn ? routes.landing : routes.home;
   const tabs = [
-    { href: routes.home, label: t("landing.navClients"), icon: UsersRound },
+    { href: home, label: t("landing.navClients"), icon: UsersRound },
     { href: routes.forVendors, label: t("landing.navVendors"), icon: BriefcaseBusiness },
   ] as const;
   const on = dark ? "bg-white/15" : "bg-foreground/[0.07]";
   return (
     <header className="container-app absolute inset-x-0 top-0 z-20 flex h-16 items-center gap-2 md:h-20 md:gap-3">
-      <Link href={routes.home} aria-label={brand.name} className={cn("shrink-0 whitespace-nowrap", dark && "[&_*]:!text-white")}>
+      <Link href={home} aria-label={brand.name} className={cn("shrink-0 whitespace-nowrap", dark && "[&_*]:!text-white")}>
         <Logo />
       </Link>
       {/* «for clients | I'm a vendor» — the switch between the two stories, centred so vendors find their way at once */}
@@ -230,7 +234,7 @@ function TopBar({ dark, startHref, onStart }: { dark: boolean; startHref: string
         )}
       >
         {tabs.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href;
+          const active = pathname === href || (href === home && pathname === routes.home);
           return (
             <Link
               key={href}
@@ -261,11 +265,14 @@ function TopBar({ dark, startHref, onStart }: { dark: boolean; startHref: string
             </button>
           ))}
         </div>
-        <Link href={routes.welcome} className="hidden h-9 items-center px-3 text-sm opacity-75 transition-opacity hover:opacity-100 md:flex">
-          {t("landing.signIn")}
-        </Link>
-        <LinkButton href={startHref} variant="sun" className="h-9 px-3.5 sm:px-4" onClick={onStart}>
-          {t("landing.start")}
+        {!signedIn && (
+          <Link href={routes.welcome} className="hidden h-9 items-center px-3 text-sm opacity-75 transition-opacity hover:opacity-100 md:flex">
+            {t("landing.signIn")}
+          </Link>
+        )}
+        {/* with an account /welcome forwards to the app's home */}
+        <LinkButton href={signedIn ? routes.welcome : startHref} variant="sun" className="h-9 px-3.5 sm:px-4" onClick={onStart}>
+          {t(signedIn ? "landing.openApp" : "landing.start")}
         </LinkButton>
       </div>
     </header>

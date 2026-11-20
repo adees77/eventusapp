@@ -1,6 +1,7 @@
 "use client";
 
 import { BadgeCheck, Flag, Gavel, Images, LayoutDashboard, Receipt, Settings, Star, Store, Users, Wallet } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { CabinetShell, RoleGate, type CabinetGroup } from "@/components/layout/cabinet-shell";
 import { LogoMark } from "@/components/brand/logo";
 import { useAdminCounters } from "@/lib/data/views/admin";
@@ -10,6 +11,12 @@ import { routes } from "@/lib/routes";
 import { brand } from "@/config/brand";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  // the password entrance renders on its own, before anyone is an admin
+  if (usePathname() === routes.adminLogin) return <>{children}</>;
+  return <AdminCabinet>{children}</AdminCabinet>;
+}
+
+function AdminCabinet({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
   const actor = useActor();
   const { disputes, waiting, complaints } = useAdminCounters();

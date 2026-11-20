@@ -25,6 +25,10 @@ import { safeStorage } from "@/lib/utils";
 import { OTP_LENGTH, OTP_MAX_ATTEMPTS, OTP_TTL_MS, checkCode, createCode, type PendingCode, type VerifyResult } from "./otp";
 import * as live from "./supabase";
 
+/** The account behind the password-protected admin entrance; it has no Supabase session (until stage 4) */
+export const PANEL_ADMIN_ID = "u-admin-panel";
+const PANEL_ADMIN_EMAIL = "admin-panel@eventusai.app";
+
 /** Real Supabase accounts are in use (otherwise live sign-in is imitated in the browser) */
 export const realAccounts = () => isSupabaseConfigured();
 
@@ -48,6 +52,8 @@ interface AuthState {
   /** Open the demo, as the demo client or as one of the seeded TEST_ACCOUNTS */
   signInDemo: (userId?: string) => void;
   signOut: () => void;
+  /** The hidden admin entrance (/admin/admin): the server checked the password, open the admin panel */
+  signInAdminPanel: () => Promise<void>;
   /** Real accounts: a confirmation link is emailed ("sent"); the imitation changes it at once ("done") */
   changeEmail: (email: string) => Promise<"sent" | "done">;
 }
@@ -148,6 +154,13 @@ export const useAuth = create<AuthState>()(
       },
 
       /** Leaving the demo ends in live mode too */
+      signInAdminPanel: async () => {
+        enterMode("live");
+        const user = await upsertAuthUser({ id: PANEL_ADMIN_ID, email: PANEL_ADMIN_EMAIL, name: "Admin", provider: "email", serverAdmin: true });
+        set({ userId: user.id, pending: null });
+        bindSession(user.id);
+      },
+
       signOut: () => {
         if (getMode() === "live") endLiveSession();
         set({ userId: null, pending: null });
@@ -178,7 +191,8 @@ export function ensureSessionBound() {
  */
 export function syncLiveSession(): () => void {
   if (!realAccounts()) return () => {};
-  const isLiveAccount = () => getMode() === "live" && !!useAuth.getState().userId;
+  // the password admin has no Supabase session, so the session check must not sign it out
+  const isLiveAccount = () => getMode() === "live" && !!useAuth.getState().userId && useAuth.getState().userId !== PANEL_ADMIN_ID;
   if (isLiveAccount()) {
     live
       .currentLiveUser()

@@ -14,6 +14,10 @@ const q = (params: Record<string, string | number | undefined | null>) => {
 export const routes = {
   home: "/",
   welcome: "/welcome",
+  /** The client landing for everyone, signed in or not («/» sends signed-in users to their home) */
+  landing: "/landing",
+  /** Hidden admin entrance with a password */
+  adminLogin: "/admin/admin",
   welcomeVendor: "/welcome?as=vendor",
   /** Marketing story for vendors (the second landing tab) */
   forVendors: "/for-vendors",

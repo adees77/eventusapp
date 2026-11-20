@@ -78,7 +78,12 @@ export function VendorStory() {
         {t("landing.vCta")}
         <ArrowRight />
       </LinkButton>
-      <VendorDemoButton className={dark ? "text-white/70 hover:text-white" : "text-text-secondary"} />
+      <VendorDemoButton
+        className={cn(
+          "inline-flex h-11 items-center gap-2 rounded-full px-5 font-medium hover:no-underline lg:h-12",
+          dark ? "bg-white/12 text-white hover:bg-white/20" : "bg-foreground/[0.06] text-foreground hover:bg-foreground/10",
+        )}
+      />
     </div>
   );
 
@@ -102,10 +107,7 @@ export function VendorStory() {
           ) : n === 6 ? (
             final(dark)
           ) : n === 7 ? (
-            <div className="flex flex-col gap-6">
-              <InstallControls dark={dark} />
-              {ctas(dark, 7)}
-            </div>
+            <InstallControls dark={dark} />
           ) : undefined,
         compact: n === 6 || n === 7,
       })}

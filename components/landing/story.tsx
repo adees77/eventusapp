@@ -4,8 +4,7 @@
  * The client landing (/): nine scenes from the chaos of twenty chats to a booked, paid and invited toi.
  * The engine is story-stage.tsx; phone screens and floats are in story-screens.tsx.
  */
-import { ArrowRight } from "lucide-react";
-import Link from "next/link";
+import { ArrowRight, Eye } from "lucide-react";
 import { LinkButton } from "@/components/ui/link-button";
 import { track } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
@@ -31,33 +30,26 @@ const SCENES: SceneDef<ClientN>[] = [
 export function Story() {
   const { t } = useI18n();
 
-  const ctas = (n: ClientN, dark: boolean) => (
+  // first scene only: start, or look around without an account (both read as buttons)
+  const hero = (dark: boolean) => (
     <div className="flex flex-wrap items-center gap-2">
       <LinkButton
         href={routes.welcome}
         variant="sun"
         className="h-11 px-5 text-md lg:h-12 lg:px-6"
-        onClick={() => track("landing_cta_clicked", { page: "client", cta: "client_start", scene: n })}
+        onClick={() => track("landing_cta_clicked", { page: "client", cta: "client_start", scene: 1 })}
       >
         {t("landing.ctaClient")}
         <ArrowRight />
       </LinkButton>
       <LinkButton
-        href={routes.forVendors}
-        onClick={() => track("landing_cta_clicked", { page: "client", cta: "vendor_info", scene: n })}
-        className={cn("hidden h-11 px-5 sm:inline-flex lg:h-12", dark ? "bg-white/10 text-white hover:bg-white/15" : "bg-foreground/[0.06] text-foreground hover:bg-foreground/10")}
+        href={routes.feed}
+        onClick={() => track("landing_cta_clicked", { page: "client", cta: "guest_feed", scene: 1 })}
+        className={cn("h-11 px-5 lg:h-12", dark ? "bg-white/12 text-white hover:bg-white/20" : "bg-foreground/[0.06] text-foreground hover:bg-foreground/10")}
       >
-        {n === 1 ? t("landing.ctaVendor") : t("landing.storyVendorCta")}
+        <Eye />
+        {t("landing.guestFeed")}
       </LinkButton>
-      {n === 1 && (
-        <Link
-          href={routes.feed}
-          onClick={() => track("landing_cta_clicked", { page: "client", cta: "guest_feed", scene: n })}
-          className={cn("ml-1 text-sm underline-offset-4 hover:underline", dark ? "text-white/70 hover:text-white" : "text-text-secondary")}
-        >
-          {t("landing.guestFeed")}
-        </Link>
-      )}
     </div>
   );
 
@@ -81,15 +73,7 @@ export function Story() {
             t(`landing.story${n}t`)
           ),
         text: t(`landing.story${n}p`),
-        extra:
-          n === 9 ? (
-            <div className="flex flex-col gap-6">
-              <InstallControls dark={dark} />
-              {ctas(n, dark)}
-            </div>
-          ) : n === 1 ? (
-            ctas(n, dark)
-          ) : undefined,
+        extra: n === 9 ? <InstallControls dark={dark} /> : n === 1 ? hero(dark) : undefined,
         compact: n === 1,
       })}
     />

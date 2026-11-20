@@ -1,16 +1,17 @@
 "use client";
 
 import Image from "next/image";
+import { Eye } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Logo } from "@/components/brand/logo";
 import { EmailSignIn } from "@/components/auth/email-sign-in";
 import { GoogleButton } from "@/components/auth/google-button";
 import { homeAfterSignIn } from "@/components/auth/after-sign-in";
 import { HOME_BY_ROLE } from "@/components/layout/nav-items";
 import { realAccounts, useAuth } from "@/lib/auth/store";
-import { LiveAuthError } from "@/lib/auth/supabase";
+import { googleEnabled, LiveAuthError } from "@/lib/auth/supabase";
 import { toast } from "sonner";
 import { useAction } from "@/lib/data/use-action";
 import { VendorDemoButton } from "@/components/demo/vendor-demo-button";
@@ -38,6 +39,16 @@ function Welcome() {
   const signInDemo = useAuth((s) => s.signInDemo);
   const pending = useAuth((s) => s.pending);
   const { run, pending: googlePending } = useAction();
+  // Google is offered only once it is switched on in Supabase (Auth → Providers); until then — email only
+  const [google, setGoogle] = useState(true);
+  useEffect(() => {
+    if (!realAccounts()) return;
+    let alive = true;
+    void googleEnabled().then((on) => alive && setGoogle(on));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   function afterSignIn() {
     router.replace(homeAfterSignIn(useAuth.getState().userId, asVendor));
@@ -47,7 +58,10 @@ function Welcome() {
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <div className="flex flex-col px-4 pt-6 pb-8 sm:px-8 lg:px-16 lg:pt-10">
         <div className="flex items-center justify-between">
-          <Logo />
+          {/* back to the landing the visitor came from */}
+          <Link href={asVendor ? routes.forVendors : routes.home} aria-label={t("landing.backToLanding")}>
+            <Logo />
+          </Link>
           <div className="flex gap-1">
             {LOCALES.map((l) => (
               <button
@@ -77,7 +91,7 @@ function Welcome() {
           )}
 
           <div className={cn("flex flex-col gap-5", !pending && "mt-10")}>
-            {!pending && (
+            {!pending && google && (
               <>
                 <GoogleButton
                   onSignIn={(input) => run(() => signInWithGoogle(input), { onSuccess: afterSignIn })}
@@ -120,9 +134,10 @@ function Welcome() {
               </p>
               {/* clients look at the feed as guests; vendors open a demo cabinet to see their side */}
               {asVendor ? (
-                <VendorDemoButton className="mt-10 text-primary" />
+                <VendorDemoButton className="mt-10 inline-flex h-11 items-center gap-2 rounded-full bg-foreground/[0.06] px-5 text-sm font-medium transition-colors hover:bg-foreground/10 hover:no-underline" />
               ) : (
-                <Link href={routes.feed} className="mt-10 block w-fit text-sm text-primary underline-offset-4 hover:underline">
+                <Link href={routes.feed} className="mt-10 inline-flex h-11 items-center gap-2 rounded-full bg-foreground/[0.06] px-5 text-sm font-medium transition-colors hover:bg-foreground/10 hover:no-underline">
+                  <Eye className="size-4" />
                   {t("landing.guestFeed")}
                 </Link>
               )}

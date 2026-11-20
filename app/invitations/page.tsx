@@ -15,6 +15,7 @@ import { useMyInvitations, useNextEvent } from "@/lib/data/views/client";
 import { track } from "@/lib/analytics";
 import { useI18n } from "@/lib/i18n";
 import { guestRows, invitationStats, RSVP_BUCKETS, type RsvpBucket } from "@/lib/invitations/design";
+import { useAuth } from "@/lib/auth/store";
 import { useActor } from "@/lib/session";
 import { routes } from "@/lib/routes";
 import { useAction } from "@/lib/data/use-action";
@@ -26,7 +27,7 @@ const EXAMPLE = { coming: 42, waiting: 18, declined: 6, draft: 9 } satisfies Rec
  * Nothing sent yet: a worked example instead of a blank ring — the ring filled with sample answers
  * (marked «Example»), what each colour means and the three steps to get real answers here.
  */
-function InvitationsExample({ onCreate }: { onCreate: () => void }) {
+function InvitationsExample({ onCreate, guest }: { onCreate: () => void; guest: boolean }) {
   const { t, tn, num } = useI18n();
   const [picked, setPicked] = useState<string | null>(null);
   const slices = RSVP_BUCKETS.map((b) => ({ key: b, label: t(`inv.bucket_${b}`), value: EXAMPLE[b], color: BUCKET_COLOR[b] }));
@@ -54,7 +55,7 @@ function InvitationsExample({ onCreate }: { onCreate: () => void }) {
         </ol>
         <Button variant="sun" className="mt-5 h-11 px-5" onClick={onCreate}>
           <Plus strokeWidth={2} />
-          {t("inv.createTitle")}
+          {t(guest ? "guest.createInvitation" : "inv.createTitle")}
         </Button>
       </div>
     </div>
@@ -68,8 +69,11 @@ export default function InvitationsPage() {
   const { run, pending } = useAction();
   const [creating, setCreating] = useState(false);
   const [picked, setPicked] = useState<string | null>(null);
+  const guest = !useAuth((s) => s.userId);
   const mine = useMyInvitations(actor.id);
   const event = useNextEvent(actor.id);
+  // a guest sees the example; creating one starts with an account
+  const create = () => (guest ? router.push(routes.welcome) : setCreating(true));
 
   if (actor.role !== "client") {
     return (
@@ -99,7 +103,7 @@ export default function InvitationsPage() {
         title={t("invitations.title")}
         subtitle={t("inv.listHint")}
         action={
-          <Button variant="sun" className="h-11 px-5" onClick={() => setCreating(true)}>
+          <Button variant="sun" className="h-11 px-5" onClick={create}>
             <Plus strokeWidth={2} />
             {t("inv.create")}
           </Button>
@@ -148,7 +152,7 @@ export default function InvitationsPage() {
             </Reveal>
           </>
         ) : (
-          <InvitationsExample onCreate={() => setCreating(true)} />
+          <InvitationsExample onCreate={create} guest={guest} />
         )}
       </section>
 
@@ -159,7 +163,7 @@ export default function InvitationsPage() {
             <li>
               <button
                 type="button"
-                onClick={() => setCreating(true)}
+                onClick={create}
                 aria-label={t("inv.createTitle")}
                 className="group flex aspect-[5/7] w-full flex-col items-center justify-center gap-3 rounded-xl bg-cream text-sm text-text-secondary transition-colors hover:text-foreground"
               >

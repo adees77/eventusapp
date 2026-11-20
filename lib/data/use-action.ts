@@ -43,6 +43,17 @@ export function actionErrorMessage(error: unknown, t: T): string {
   return t("common.actionFailed");
 }
 
+/**
+ * A visitor without an account on the pages open to guests (feed, profiles, the invitations example, «Profile»).
+ * Only there: sign-in itself (/welcome) and guests answering an invitation (/i/…) run actions without an account.
+ */
+const GUEST_AREAS = [routes.feed, routes.invitations, routes.me];
+export function guestBrowsing(): boolean {
+  if (typeof window === "undefined" || useAuth.getState().userId) return false;
+  const path = window.location.pathname;
+  return GUEST_AREAS.some((a) => path === a || path.startsWith(`${a}/`));
+}
+
 /** Simulated network latency for checking loading states locally (NEXT_PUBLIC_ACTION_DELAY_MS) */
 const DELAY = Number(process.env.NEXT_PUBLIC_ACTION_DELAY_MS) || 0;
 const latency = () => (DELAY ? new Promise((r) => setTimeout(r, DELAY)) : Promise.resolve());
@@ -57,7 +68,7 @@ export function useAction() {
     async <R>(fn: () => Promise<R>, opts: RunOptions<R> = {}): Promise<R | undefined> => {
       if (busy.current) return undefined;
       // a guest browsing the feed: every write needs an account — invite to sign up instead of failing
-      if (!useAuth.getState().userId) {
+      if (guestBrowsing()) {
         toast(t("guest.needAccount"), { action: { label: t("demo.signUp"), onClick: () => window.location.assign(routes.welcome) } });
         return undefined;
       }
@@ -100,6 +111,6 @@ export function useAction() {
 
 /** Fire-and-forget write (view counters, read receipts, autosave): logs instead of throwing */
 export function background(fn: () => Promise<unknown>): void {
-  if (!useAuth.getState().userId) return; // guests leave no trace (view counters, read receipts)
+  if (guestBrowsing()) return; // guests browsing the feed leave no trace (view counters)
   fn().catch((e) => console.warn("[background action]", e));
 }

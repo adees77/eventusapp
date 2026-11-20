@@ -9,15 +9,18 @@ import { STORAGE_FULL_EVENT, useDataStore } from "@/lib/data/store";
 import { useT } from "@/lib/i18n";
 import { useSession } from "@/lib/session";
 import { BottomNav } from "./bottom-nav";
-import { GuestBar } from "./guest-bar";
+import { GuestBar, GuestTabbar } from "./guest-bar";
 import { Header } from "./header";
 import { HOME_BY_ROLE } from "./nav-items";
 import { routes } from "@/lib/routes";
 
 /** Pages that render without the app chrome */
-const BARE = [routes.welcome, routes.onboarding, routes.authCallback, routes.forVendors, routes.privacy, routes.terms];
+const BARE = [routes.landing, routes.adminLogin, routes.welcome, routes.onboarding, routes.authCallback, routes.forVendors, routes.privacy, routes.terms];
 /** Pages open without an account (guest invitation links, the vendors' landing, the feed and vendor profiles) */
-const PUBLIC = [routes.feed, routes.welcome, routes.publicInvitationPrefix, routes.authCallback, routes.forVendors, routes.privacy, routes.terms];
+const PUBLIC = [routes.landing, routes.feed, routes.welcome, routes.publicInvitationPrefix, routes.authCallback, routes.forVendors, routes.privacy, routes.terms];
+
+/** Open to guests on these exact paths only (the invitations example, the «Profile» tab, the admin entrance) */
+const PUBLIC_EXACT: string[] = [routes.invitations, routes.me, routes.adminLogin];
 
 const matches = (pathname: string, list: string[]) =>
   list.some((p) => pathname === p || pathname.startsWith(p.endsWith("/") ? p : `${p}/`));
@@ -47,7 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // a new tab has an empty sessionStorage: wait until it is attached to the account
   const ready = hydrated && mounted && (!userId || bound);
   const isLanding = pathname === "/";
-  const isPublic = isLanding || matches(pathname, PUBLIC);
+  const isPublic = isLanding || matches(pathname, PUBLIC) || PUBLIC_EXACT.includes(pathname);
   const needsOnboarding = !!userId && !!user?.needsOnboarding;
   const target = !ready
     ? null
@@ -102,7 +105,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-dvh flex-col">
         <GuestBar />
-        <main className="flex flex-1 flex-col">{children}</main>
+        <main className="flex flex-1 flex-col pb-tabbar lg:pb-0">{children}</main>
+        <GuestTabbar />
       </div>
     );
 
